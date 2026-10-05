@@ -55,6 +55,9 @@ pub struct SessionInfo {
     pub first_name: String,
     pub last_name: String,
     pub user_id: String,
+    /// Anlage an den STARFACE-Cloud-Diensten (Login über den zentralen
+    /// STARFACE-Login, gRPC über das Cloud-Gateway)
+    pub cloud: bool,
 }
 
 pub struct Session {
@@ -78,7 +81,11 @@ impl Session {
             .and_then(|u| u.host_str().map(str::to_owned))
             .ok_or_else(|| Error::Server(server.to_owned()))?;
         let token = TokenHandle::new(tokens.access_token.clone());
-        let hub = OneHub::connect(&host, sf_onehub::DEFAULT_PORT, token.clone()).await?;
+        // Cloud-Anlagen: gRPC über das Gateway der STARFACE-Cloud
+        let (grpc_host, grpc_port) = auth
+            .grpc_endpoint()
+            .unwrap_or_else(|| (host.clone(), sf_onehub::DEFAULT_PORT));
+        let hub = OneHub::connect(&grpc_host, grpc_port, token.clone()).await?;
 
         let server_version = hub.server_version().await?;
         let user = hub
@@ -109,6 +116,7 @@ impl Session {
             first_name: user.first_name,
             last_name: user.last_name,
             user_id: user.user_id.map(|u| u.id).unwrap_or_default(),
+            cloud: auth.discovery().edge_node_id.is_some(),
         };
         Ok(Self {
             hub,
@@ -264,7 +272,10 @@ mod tests {
                 let mut buf = vec![0u8; 8192];
                 let n = sock.read(&mut buf).await.unwrap();
                 let req = String::from_utf8_lossy(&buf[..n]).into_owned();
-                let (status, body) = if req.starts_with("GET /.well-known") {
+                let (status, body) = if req.starts_with("GET /rpc/oauth/login-config") {
+                    // Anlage ohne Login-Konfiguration (ältere Version)
+                    (404, String::new())
+                } else if req.starts_with("GET /.well-known") {
                     (
                         200,
                         format!(
