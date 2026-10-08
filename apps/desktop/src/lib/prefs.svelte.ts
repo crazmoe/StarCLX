@@ -44,6 +44,8 @@ export type Prefs = {
   default_country_code: string;
   minimize_to_tray: boolean;
   always_on_top: boolean;
+  /** Titelleiste des Desktops statt der eigenen schmalen Leiste */
+  system_titlebar: boolean;
   hotkeys: Hotkeys;
   fkey_columns: number;
   workspace: "tabs" | "free";

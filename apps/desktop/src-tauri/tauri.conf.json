@@ -16,7 +16,8 @@
         "title": "StarCLX",
         "width": 1000,
         "height": 700,
-        "visible": false
+        "visible": false,
+        "decorations": false
       }
     ],
     "security": {

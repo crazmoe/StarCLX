@@ -531,6 +531,7 @@
           <Toggle bind:checked={draft.start_minimized} label={t("Programm minimiert starten")} />
           <Toggle bind:checked={draft.minimize_to_tray} label={t("Beim Minimieren nur als Symbol im Infobereich anzeigen")} />
           <Toggle bind:checked={draft.always_on_top} label={t("Immer im Vordergrund")} />
+          <Toggle bind:checked={draft.system_titlebar} label={t("Titelleiste des Systems verwenden")} />
           {#if desktop.wayland && draft.always_on_top}
             <p class="small muted">{t("Unter Wayland bestimmt der Desktop, ob ein Fenster oben bleibt. Bei GNOME geht es über Alt+Leertaste → „Immer im Vordergrund“.")}</p>
           {/if}
