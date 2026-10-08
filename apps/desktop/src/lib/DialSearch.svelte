@@ -119,7 +119,7 @@
 </form>
 
 <style>
-  .dial { position: relative; display: flex; align-items: center; gap: 0.5rem; }
+  .dial { position: relative; display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .search {
     display: flex; align-items: center; gap: 0.5rem; padding: 0 0.9rem;
     background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; width: 20rem; flex: 0 1 auto; min-width: 10rem;
