@@ -122,7 +122,7 @@
   .dial { position: relative; display: flex; align-items: center; gap: 0.5rem; }
   .search {
     display: flex; align-items: center; gap: 0.5rem; padding: 0 0.9rem;
-    background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; width: 20rem; flex: 0 1 auto; min-width: 0;
+    background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; width: 20rem; flex: 0 1 auto; min-width: 10rem;
   }
   .search:focus-within { border-color: var(--accent); }
   .search input { border: none; background: none; padding: 0.55rem 0; flex: 1; min-width: 0; outline: none; }
