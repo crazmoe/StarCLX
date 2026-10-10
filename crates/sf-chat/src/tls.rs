@@ -73,7 +73,11 @@ impl ServerConnector for StartTls {
             }
         }
         let tcp = stream.into_inner().into_inner();
-        let name = ServerName::try_from(jid.domain().as_str().to_owned())
+        // Das Zertifikat gilt für den Namen, unter dem die Anlage erreicht
+        // wird (wie bei HTTPS), nicht für die Chat-Domäne: Die bleibt oft
+        // die IP, auch wenn die Anlage längst einen Namen mit Zertifikat hat.
+        let host = self.host.trim_start_matches('[').trim_end_matches(']');
+        let name = ServerName::try_from(host.to_owned())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
         let tls = tokio_rustls::TlsConnector::from(Arc::new(sf_tls::client_config()))
             .connect(name, tcp)

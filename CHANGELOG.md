@@ -46,6 +46,9 @@
   `tel:`-Links für alle Benutzer (GNOME und KDE)
 
 ### Behoben
+- Chat: Die Anmeldung prüft das Zertifikat gegen den eingetragenen Servernamen statt gegen die
+  Chat-Domäne der Anlage. Bisher schlug sie mit „certificate not valid for name“ fehl, wenn die
+  Anlage per Namen mit gültigem Zertifikat erreicht wird, ihre Chat-Domäne aber noch die IP ist.
 - Nach einem Kontowechsel zeigte der Chat noch Gespräche und letzte Nachrichten des vorher
   angemeldeten Kontos; sie werden jetzt beim Abmelden verworfen
 - Unter Einstellungen → Erreichbarkeit → Umleitungen fehlten Umleitungen, solange es für sie
