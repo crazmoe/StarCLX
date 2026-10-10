@@ -12,6 +12,17 @@
 - Bestehende Anmeldungen ziehen beim ersten Start automatisch in die Kontenliste um, ebenso das
   vorherige primäre Telefon und die Umleitungstasten; beides gilt jetzt je Konto
 
+### Warteschlangen (iQueue)
+- Neuer Reiter bzw. neue Kachel „Warteschlangen“ für Agenten einer iQueue: wartende Anrufer mit
+  Platz, Wartezeit und dem Agenten, bei dem es gerade klingelt, dazu freie Agenten, mittlere
+  Wartezeit, Anrufe und verpasste Anrufe. Alles kommt live von der Anlage.
+- In der Queue an- und abmelden; ein wartender Anruf lässt sich aufs eigene Telefon holen
+- Die Nachbearbeitung nach einem Queue-Gespräch erscheint als eigener Status (orange), auch im
+  Besetztlampenfeld der Kollegen. Setzen oder vorzeitig beenden lässt sie sich nicht; das bietet
+  die Anlage nicht an.
+- Meldet die Anlage einen Agenten selbst ab (etwa „Untätige Agenten automatisch ausloggen“),
+  zeigt StarCLX einen Hinweis
+
 ### Verbindungsabbruch
 - Ist die Anlage nicht mehr erreichbar (z. B. VPN getrennt), zeigt das Hauptfenster einen einzigen
   Hinweis „Keine Verbindung zur Anlage“ statt Fehlermeldungen in jedem Modul; die Einzelfehler
