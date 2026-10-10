@@ -26,6 +26,7 @@
   import { canDial, initPhone, phone, run, isRingingIn } from "$lib/plugins/call/phone.svelte";
   import { loadPrefs, prefs, savePrefs, type Tile } from "$lib/prefs.svelte";
   import Workspace, { tilesOf } from "$lib/Workspace.svelte";
+  import WindowButtons from "$lib/WindowButtons.svelte";
   import { t } from "$lib/i18n.svelte";
 
   type SessionInfo = { server: string; server_version: string; display_name: string; user_id: string };
@@ -168,6 +169,9 @@
     if (tab === "doorcam" && !hasDoorCams) tab = "journal";
   });
 
+  /** Eigene Fensterknöpfe, wenn der Desktop keine Titelleiste zeichnet */
+  const frameless = $derived(!!prefs.value && !prefs.value.system_titlebar);
+
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
   const free = $derived(prefs.value?.workspace === "free");
   let tiles = $state<Tile[]>([]);
@@ -233,7 +237,9 @@
 
 {#if phase === "session" && session}
   <div class="shell">
-    <header class="top">
+    <!-- Die Leiste ersetzt die Titelleiste: leere Stellen ziehen das Fenster,
+         Doppelklick maximiert -->
+    <header class="top" data-tauri-drag-region>
       <div class="menuwrap">
         <button class="me" title="{session.display_name} · {stateText[phone.status.state]}" onclick={() => (menuOpen = !menuOpen)} aria-expanded={menuOpen}>
           {#if session.user_id && avatarOf(session.user_id)}<img class="pic" src={avatarOf(session.user_id)} alt="" />{:else}{initials(session.display_name)}{/if}
@@ -246,12 +252,13 @@
         {/if}
       </div>
       <DialSearch />
-      <div class="spacer"></div>
+      <div class="spacer" data-tauri-drag-region></div>
       {#if free && !editing}
         <button class="arrange" title={t("Anordnung bearbeiten")} onclick={editStart}><Icon name="edit" size={20} /></button>
       {/if}
       <CallManager />
-      <div class="brand"><img src={logo} alt="" /> StarCLX</div>
+      <div class="brand" data-tauri-drag-region><img src={logo} alt="" /> StarCLX</div>
+      {#if frameless}<WindowButtons />{/if}
     </header>
 
     {#if !free || editing}
@@ -319,6 +326,9 @@
     <Settings onclose={() => (settingsOpen = false)} onlogout={logout} server={session.server} userId={session.user_id} displayName={session.display_name} />
   {/if}
 {:else}
+{#if frameless}
+  <div class="loginbar" data-tauri-drag-region><WindowButtons /></div>
+{/if}
 <main class="login">
   <div class="brand big"><img src={logo} alt="" /> StarCLX</div>
   {#if phase === "restoring"}
@@ -356,7 +366,7 @@
 
 <style>
   .shell {
-    display: grid; grid-template-rows: auto auto 1fr;
+    display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr);
     height: 100vh; overflow: hidden;
   }
   .top {
@@ -380,12 +390,12 @@
   .spacer { flex: 1; }
   .brand { font-weight: 700; letter-spacing: 0.12em; color: var(--accent); white-space: nowrap; }
   .brand { display: flex; align-items: center; gap: 0.4rem; letter-spacing: 0.06em; }
-  .brand img { width: 1.6em; height: 1.6em; }
+  .brand img { width: 1.6em; height: 1.6em; pointer-events: none; }
   .brand.big { font-size: 1.6rem; margin-bottom: 1.5rem; }
 
   .scrim { position: fixed; inset: 0; z-index: 14; background: transparent; border: none; padding: 0; cursor: default; }
-  .tabs { display: flex; gap: 0.2rem; padding: 0 0.6rem; background: var(--bar); border-top: 1px solid var(--bar-2); }
-  .tab { display: flex; align-items: center; gap: 0.45rem; background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.55rem 0.9rem; color: var(--muted); }
+  .tabs { display: flex; gap: 0.2rem; padding: 0 0.6rem; overflow-x: auto; scrollbar-width: none; background: var(--bar); border-top: 1px solid var(--bar-2); }
+  .tab { flex: none; display: flex; align-items: center; gap: 0.45rem; background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.55rem 0.9rem; color: var(--muted); }
   .unread { background: var(--accent); color: #111; border-radius: 999px; padding: 0 0.45rem; font-size: 0.78rem; font-weight: 700; }
   .arrange { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; padding: 0; color: var(--muted); }
   .tab.lock.on { color: #111; background: var(--accent); border-radius: 6px 6px 0 0; }
@@ -396,6 +406,7 @@
   .muted { color: var(--muted); }
   .notice { color: var(--accent); }
 
+  .loginbar { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: flex-end; padding: 0.4rem 0.6rem; }
   .login { max-width: 26rem; margin: 15vh auto 0; padding: 0 1rem; }
   .login form { display: flex; flex-direction: column; gap: 0.75rem; }
   .primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }

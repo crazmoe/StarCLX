@@ -117,6 +117,8 @@ pub fn apply_window(app: &AppHandle, prefs: &Prefs) {
         return;
     };
     let _ = w.set_always_on_top(prefs.always_on_top);
+    // Ohne Systemrahmen zeigt die Oberfläche eigene Fensterknöpfe
+    let _ = w.set_decorations(prefs.system_titlebar);
     let _ = w.set_theme(match prefs.theme.as_str() {
         "dark" => Some(Theme::Dark),
         "light" => Some(Theme::Light),
