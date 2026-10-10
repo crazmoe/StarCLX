@@ -134,6 +134,39 @@ pub async fn set_signaling_number(hub: &OneHub, id: &str) -> sf_onehub::Result<(
     Ok(())
 }
 
+/// Rechte der Anlage, nach denen sich der Client richtet (dieselben Namen
+/// wertet der Windows-Client aus; Admin-Oberfläche: Benutzer → Rechte).
+pub const KNOWN_PERMISSIONS: &[&str] = &[
+    "login",
+    "instant_messaging",
+    "uci_autoprovisioning",
+    "redirection",
+    "group_redirection",
+    "fkey_module_key",
+    "ifmc",
+    "ifmc_edit",
+    "calllist",
+    "voicemail",
+    "call_recording",
+    "conference",
+    "addressbook",
+];
+
+/// Rechte des Benutzers, klein geschrieben. `None`, wenn die Anlage keines
+/// der bekannten Rechte nennt: Dann ist das Format unbekannt, und der Client
+/// sperrt lieber nichts.
+pub async fn permissions(hub: &OneHub) -> sf_onehub::Result<Option<Vec<String>>> {
+    let list = hub.me().get_permissions(()).await?.into_inner().permissions;
+    Ok(recognized(list))
+}
+
+fn recognized(list: Vec<String>) -> Option<Vec<String>> {
+    let list: Vec<String> = list.into_iter().map(|p| p.trim().to_lowercase()).collect();
+    list.iter()
+        .any(|p| KNOWN_PERMISSIONS.contains(&p.as_str()))
+        .then_some(list)
+}
+
 /// Änderung an den eigenen Einstellungen, auch von anderen Clients
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MeChange {
@@ -275,6 +308,16 @@ pub async fn set_primary_phone(hub: &OneHub, phone_id: &str) -> sf_onehub::Resul
 mod tests {
     use super::*;
     use v1::types::phone_number::Number;
+
+    #[test]
+    fn permissions_only_in_known_format() {
+        assert_eq!(
+            recognized(vec!["Voicemail".into(), " calllist".into()]),
+            Some(vec!["voicemail".into(), "calllist".into()])
+        );
+        assert_eq!(recognized(vec!["Darf Voicemails abhören".into()]), None);
+        assert_eq!(recognized(vec![]), None);
+    }
 
     #[test]
     fn formats_numbers() {

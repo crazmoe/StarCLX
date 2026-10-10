@@ -9,6 +9,7 @@
   import Icon from "../../Icon.svelte";
   import Toggle from "../../Toggle.svelte";
   import { t } from "../../i18n.svelte";
+  import { can, permissions } from "../../permissions.svelte";
 
   let { server }: { server: string } = $props();
 
@@ -36,8 +37,13 @@
   let busy = $state(false);
   let editing = $state<Fmc | null>(null);
 
-  onMount(() => {
+  // Lädt auch neu, wenn sich die Rechte ändern
+  $effect(() => {
+    void permissions.list;
     load();
+  });
+
+  onMount(() => {
     const off = listen("reach-changed", () => load());
     return () => off.then((f) => f());
   });
@@ -52,10 +58,11 @@
 
   async function load() {
     try {
+      // Nur abfragen, wofür der Benutzer das Recht hat
       const [r, f, m] = await Promise.all([
-        invoke<Redirect[]>("redirects"),
-        invoke<Fmc[]>("fmc_phones"),
-        invoke<Mailbox[]>("mailboxes"),
+        can("redirection") ? invoke<Redirect[]>("redirects") : [],
+        can("ifmc") ? invoke<Fmc[]>("fmc_phones") : [],
+        can("voicemail") ? invoke<Mailbox[]>("mailboxes") : [],
       ]);
       redirects = r;
       edits = Object.fromEntries(r.map((x) => [x.id, editOf(x)]));
@@ -117,12 +124,19 @@
     s.days = s.days.includes(d) ? s.days.filter((x) => x !== d) : [...s.days, d].sort();
   }
 
+  /** Gruppenumleitungen nur mit eigenem Recht */
+  const locked = (r: Redirect) => r.read_only || (r.group && !can("group_redirection"));
+  const fmcEdit = $derived(can("ifmc_edit"));
+
   const webApp = () => openUrl(server.replace(/\/+$/, ""));
 </script>
 
 <section id="voicemail">
   <h3>Voicemail</h3>
   <div class="card">
+    {#if !can("voicemail")}
+      <p class="small muted">{t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.")}</p>
+    {:else}
     {#if mailboxes.length > 1}
       <label class="row"><span>{t("Voicemail-Box")}</span>
         <select bind:value={mailbox}>{#each mailboxes as m}<option value={m.id}>{m.name}</option>{/each}</select>
@@ -135,6 +149,7 @@
       {t("Die Anlage ruft dich an. Im Menü der Box: 0 = Abwesenheitsansage, 1 = Begrüssung, 3 = Namensansage aufnehmen.")}
       {#if !mailboxes.length}{t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.")}{/if}
     </p>
+    {/if}
     <button class="link" onclick={webApp}>{t("Weitere Einstellungen: zur Web-App wechseln")}</button>
   </div>
 </section>
@@ -142,31 +157,34 @@
 <section id="redirects">
   <h3>{t("Umleitungen")}</h3>
   <div class="card">
-    {#if !redirects.length}
+    {#if !can("redirection")}
+      <p class="muted">{t("Keine Berechtigung für Umleitungen auf der Anlage.")}</p>
+    {:else if !redirects.length}
       <p class="muted">{error ? "" : t("Keine Umleitungen verfügbar.")}</p>
     {/if}
     {#each groups as [title, list]}
       <h4>{title}</h4>
       {#each list as r (r.id)}
         {@const e = edits[r.id]}
-        <div class="redirect" class:locked={r.read_only}>
-          <Toggle checked={r.enabled} disabled={busy || r.read_only} label={kinds[r.kind]} onchange={(v: boolean) => act("redirect_enable", { id: r.id, enabled: v })} />
+        <div class="redirect" class:locked={locked(r)}>
+          <Toggle checked={r.enabled} disabled={busy || locked(r)} label={kinds[r.kind]} onchange={(v: boolean) => act("redirect_enable", { id: r.id, enabled: v })} />
           {#if e}
             <div class="dest">
-              <select bind:value={e.dest} disabled={r.read_only}>
+              <select bind:value={e.dest} disabled={locked(r)}>
                 <option value="number">{t("Rufnummer")}</option>
                 {#each r.mailboxes as m}<option value="mailbox:{m.id}">Voicemail: {m.name}</option>{/each}
               </select>
               {#if e.dest === "number"}
-                <input type="text" bind:value={e.number} placeholder={t("Zielrufnummer")} disabled={r.read_only} />
+                <input type="text" bind:value={e.number} placeholder={t("Zielrufnummer")} disabled={locked(r)} />
               {/if}
               {#if r.kind === "timeout"}
-                <label class="secs">{t("nach")} <input type="number" min="1" max="300" bind:value={e.timeout} disabled={r.read_only} /> s</label>
+                <label class="secs">{t("nach")} <input type="number" min="1" max="300" bind:value={e.timeout} disabled={locked(r)} /> s</label>
               {/if}
-              {#if dirty(r)}<button class="primary" disabled={busy} onclick={() => applyRedirect(r)}>{t("Übernehmen")}</button>{/if}
+              {#if dirty(r) && !locked(r)}<button class="primary" disabled={busy} onclick={() => applyRedirect(r)}>{t("Übernehmen")}</button>{/if}
             </div>
           {/if}
-          {#if r.read_only}<p class="small muted">{t("Vom Administrator gesperrt.")}</p>{/if}
+          {#if r.read_only}<p class="small muted">{t("Vom Administrator gesperrt.")}</p>
+          {:else if locked(r)}<p class="small muted">{t("Keine Berechtigung, Gruppen umzuleiten.")}</p>{/if}
         </div>
       {/each}
     {/each}
@@ -177,12 +195,16 @@
   <h3>{t("Parallelruf (iFMC)")}</h3>
   <div class="card">
     <p class="small muted">{t("Weitere Geräte, z. B. das Handy, klingeln bei Anrufen mit. Call2Go braucht ein aktives Gerät.")}</p>
+    {#if !can("ifmc")}
+      <p class="small muted">{t("Keine Berechtigung für den Parallelruf auf der Anlage.")}</p>
+    {:else}
+    {#if !fmcEdit}<p class="small muted">{t("Ändern ist auf der Anlage nicht freigegeben.")}</p>{/if}
     {#each fmc as p (p.id)}
       <div class="fmc">
-        <Toggle checked={p.enabled} disabled={busy} label={p.number} onchange={(v: boolean) => act("fmc_enable", { id: p.id, enabled: v })} />
+        <Toggle checked={p.enabled} disabled={busy || !fmcEdit} label={p.number} onchange={(v: boolean) => act("fmc_enable", { id: p.id, enabled: v })} />
         <span class="muted small">{[p.delay ? t("nach {n} s", { n: p.delay }) : t("sofort"), p.confirm && t("mit Tastendruck"), p.schedules.length && t("zeitgesteuert")].filter(Boolean).join(" · ")}</span>
-        <button class="x" title={t("Bearbeiten")} onclick={() => (editing = structuredClone($state.snapshot(p)))}><Icon name="settings" size={18} /></button>
-        <button class="x" title={t("Löschen")} disabled={busy} onclick={() => confirm(t("{number} entfernen?", { number: p.number })) && act("fmc_delete", { id: p.id })}><Icon name="trash" size={18} /></button>
+        <button class="x" title={t("Bearbeiten")} disabled={!fmcEdit} onclick={() => (editing = structuredClone($state.snapshot(p)))}><Icon name="settings" size={18} /></button>
+        <button class="x" title={t("Löschen")} disabled={busy || !fmcEdit} onclick={() => confirm(t("{number} entfernen?", { number: p.number })) && act("fmc_delete", { id: p.id })}><Icon name="trash" size={18} /></button>
       </div>
     {/each}
     {#if editing}
@@ -208,8 +230,9 @@
           <button onclick={() => (editing = null)}>{t("Abbrechen")}</button>
         </div>
       </div>
-    {:else}
+    {:else if fmcEdit}
       <button class="add" onclick={newFmc}>{t("Gerät hinzufügen")}</button>
+    {/if}
     {/if}
   </div>
 </section>
@@ -239,6 +262,7 @@
   .primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; padding: 0.3rem 0.8rem; }
   .fmc { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 0.6rem; border-bottom: 1px solid var(--line); }
   .x { background: none; border: none; padding: 0.2rem; color: var(--muted); display: grid; }
+  .x:disabled { opacity: 0.4; }
   .editor { display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--line); border-radius: 4px; padding: 0.7rem; margin-top: 0.4rem; }
   .sched { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
   .day { padding: 0.2rem 0.45rem; font-size: 0.85rem; }

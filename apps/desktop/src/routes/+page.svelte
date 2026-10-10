@@ -28,6 +28,7 @@
   import Workspace, { tilesOf } from "$lib/Workspace.svelte";
   import { t } from "$lib/i18n.svelte";
   import { connection, initConnection } from "$lib/connection.svelte";
+  import { can, initPermissions, loadPermissions, permissions, type Permission } from "$lib/permissions.svelte";
 
   type SessionInfo = { server: string; server_version: string; display_name: string; user_id: string };
   type UntrustedCert = { host: string; port: number; fingerprint: string; reason: string };
@@ -49,6 +50,7 @@
     session = null;
     voicemail.list = [];
     voicemail.disabled = false;
+    permissions.list = null;
     conferences.list = [];
     conferenceEdit.id = null;
     resetFkeys();
@@ -104,7 +106,7 @@
 
   onMount(() => {
     const offs = [
-      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadVoicemails(); loadConferences(); }),
+      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); }),
       listen<string>("login-error", (e) => { notice = e.payload; phase = "login"; }),
       listen<string>("logged-out", (e) => showLogin(e.payload)),
       // Kontowechsel: erst trennen, dann das andere Konto verbinden
@@ -115,13 +117,14 @@
       listen("dial-request", takeDialRequest),
       // Nach dem Standby: Voicemails neu holen (Funktionstasten und
       // Umleitungen hören selbst auf "resumed" bzw. "reach-changed")
-      listen("resumed", () => { if (session) { loadVoicemails(); loadConferences(); } }),
+      listen("resumed", () => { if (session) { loadPermissions(); loadVoicemails(); loadConferences(); } }),
     ];
     initPhone();
     initConnection();
     takeDialRequest();
     initChat();
     initVoicemail();
+    initPermissions();
     initConferences();
     loadPrefs().catch(() => {});
     restore();
@@ -187,7 +190,7 @@
     serverLocked = (await invoke<string[]>("locked_prefs").catch((): string[] => [])).includes("server");
     try {
       const info = await invoke<SessionInfo | null>("restore_session");
-      if (info) { session = info; phase = "session"; loadVoicemails(); loadConferences(); return; }
+      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); return; }
     } catch (e) {
       notice = t("Automatische Anmeldung fehlgeschlagen: {e}", { e: String(e) });
     }
@@ -246,10 +249,26 @@
   $effect(() => {
     if (tab === "doorcam" && !hasDoorCams) tab = "journal";
   });
-  /** Ohne Voicemail-Recht bleibt der Reiter sichtbar, aber ausgegraut */
-  const tabOff = (id: Tab) => id === "voicemail" && voicemail.disabled;
+  /** Recht, das ein Reiter braucht */
+  const tabPermission: Partial<Record<Tab, Permission>> = {
+    journal: "calllist",
+    voicemail: "voicemail",
+    contacts: "addressbook",
+    chat: "instant_messaging",
+    conference: "conference",
+  };
+  /** Ohne Recht bleibt der Reiter sichtbar, aber ausgegraut */
+  const tabOff = (id: Tab) => {
+    const p = tabPermission[id];
+    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled);
+  };
+  const offText = (id: Tab) =>
+    id === "voicemail"
+      ? t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.")
+      : t("Keine Berechtigung für „{name}“ auf der Anlage.", { name: allTabs.find((x) => x.id === id)?.label ?? id });
+  const firstTab = $derived(tabs.find((x) => !tabOff(x.id))?.id ?? "journal");
   $effect(() => {
-    if (!free && tabOff(tab)) tab = "journal";
+    if (!free && tabOff(tab) && !tabOff(firstTab)) tab = firstTab;
   });
 
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
@@ -344,7 +363,7 @@
           class="tab"
           class:active={free ? tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
           disabled={!free && tabOff(tb.id)}
-          title={free && editing ? t("Kachel ein- oder ausblenden") : tabOff(tb.id) ? t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.") : undefined}
+          title={free && editing ? t("Kachel ein- oder ausblenden") : tabOff(tb.id) ? offText(tb.id) : undefined}
           onclick={() => tabClick(tb.id)}
         >
           <Icon name={tb.icon} size={20} /><span>{tb.label}</span>
@@ -375,7 +394,9 @@
       {/if}
       {#if notice}<p class="banner">{notice}</p>{/if}
       {#snippet view(id: string)}
-        {#if id === "journal"}
+        {#if tabOff(id as Tab)}
+          <p class="off">{offText(id as Tab)}</p>
+        {:else if id === "journal"}
           <Journal />
         {:else if id === "fkeys"}
           <FunctionKeys />
@@ -501,6 +522,7 @@
   .tab.lock.on { color: #111; background: var(--accent); border-radius: 6px 6px 0 0; }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
   .tab:disabled { opacity: 0.4; cursor: default; }
+  .off { color: var(--muted); margin: 0.6rem 0.8rem; }
   .banner { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.4rem; padding: 0.5rem 0.8rem; background: var(--panel); border-left: 3px solid var(--accent); }
   .banner.offline { border-left-color: var(--red); }
   .banner .reg { flex: none; }

@@ -565,5 +565,11 @@ const dict: Record<string, string> = {
   "Oder an einer Anlage anmelden:": "Oppure accedi a un centralino:",
   "Keine Verbindung zur Anlage": "Nessuna connessione al centralino",
   "StarCLX verbindet sich automatisch neu, sobald die Anlage wieder erreichbar ist (z. B. VPN wieder verbunden).": "StarCLX si riconnette automaticamente non appena il centralino è di nuovo raggiungibile (ad es. VPN ricollegata).",
+  "Keine Berechtigung für „{name}“ auf der Anlage.": "Nessuna autorizzazione per «{name}» sul centralino.",
+  "Keine Berechtigung für Umleitungen auf der Anlage.": "Nessuna autorizzazione per le deviazioni sul centralino.",
+  "Keine Berechtigung, Gruppen umzuleiten.": "Nessuna autorizzazione a deviare i gruppi.",
+  "Keine Berechtigung für den Parallelruf auf der Anlage.": "Nessuna autorizzazione per la chiamata parallela sul centralino.",
+  "Ändern ist auf der Anlage nicht freigegeben.": "Le modifiche non sono consentite sul centralino.",
+  "Keine Berechtigung für Gesprächsaufnahmen auf der Anlage.": "Nessuna autorizzazione per la registrazione delle chiamate sul centralino.",
 };
 export default dict;

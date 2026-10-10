@@ -19,10 +19,17 @@
 - Sobald die Anlage wieder antwortet, verbindet StarCLX automatisch neu und lädt alles nach wie
   nach dem Standby (Token, Softphone, Funktionstasten, Voicemail, Umleitungen, Adressbuch)
 
-### Voicemail
-- Hat der Benutzer kein Voicemail-Recht (keine Box), ist der Reiter Voicemail ausgegraut und die
-  Kachel zeigt „Für diesen Benutzer ist keine Voicemail-Box eingerichtet.“ statt einer
-  gRPC-Fehlermeldung. Die Anlage wird dann auch nicht mehr ständig nach Ereignissen gefragt.
+### Rechte der Anlage
+- StarCLX richtet sich nach den Rechten des Benutzers auf der Anlage (Benutzer → Rechte) und graut
+  aus, was fehlt, statt mit einer gRPC-Fehlermeldung zu scheitern: Rufliste, Voicemail,
+  Adressbuch, Chat und Konferenzen als Reiter bzw. Kachel, Umleitungen, Gruppenumleitungen,
+  Parallelruf (Anzeigen und Ändern) und Voicemail-Ansage in den Einstellungen, „An Voicemail“
+  bei eingehenden Anrufen, Gesprächsaufnahme und Funktionstasten „Modul aktivieren“.
+- Änderungen an den Rechten greifen sofort, ohne Neuanmeldung
+- Fehlt ein Recht für einen Ereignisstrom, fragt StarCLX nur noch alle fünf Minuten und ohne
+  Warnung im Protokoll nach
+- Meldet die Anlage ein fehlendes Recht als „Internal error“ (z. B. Voicemail), wird das ebenfalls
+  als fehlendes Recht erkannt
 
 ## 1.4.0 – 2026-10-10
 

@@ -7,6 +7,7 @@
   import { portal } from "../../portal";
   import { prefs } from "../../prefs.svelte";
   import { t } from "../../i18n.svelte";
+  import { can } from "../../permissions.svelte";
 
   onMount(() => { loadFkeys(); });
   const columns = $derived(prefs.value?.fkey_columns ?? 3);
@@ -27,7 +28,8 @@
   {#if fkeys.notice && connection.online}<p class="error">{fkeys.notice}</p>{/if}
   <div class="grid" style="grid-template-columns: repeat({columns}, minmax(0, 1fr))">
     {#each shown as k (k.id)}
-      <FkeyTile key={k} onclick={() => press(k)} />
+      <!-- „Modul aktivieren“ braucht das Recht Tasten → Modulaktivierung -->
+      <FkeyTile key={k} disabled={k.functionKeyType === "MODULEACTIVATION" && !can("fkey_module_key")} onclick={() => press(k)} />
     {/each}
   </div>
   {#if fkeys.loaded && !fkeys.keys.length}

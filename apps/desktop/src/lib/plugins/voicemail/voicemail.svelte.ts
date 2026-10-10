@@ -34,6 +34,8 @@ export function initVoicemail() {
   if (started) return;
   started = true;
   listen("voicemail-changed", () => loadVoicemails());
+  // Recht erteilt oder entzogen
+  listen("me-permission", () => loadVoicemails());
 }
 
 export const unheard = () => voicemail.list.filter((v) => v.folder === "inbox").length;

@@ -565,5 +565,11 @@ const dict: Record<string, string> = {
   "Oder an einer Anlage anmelden:": "Or sign in to a PBX:",
   "Keine Verbindung zur Anlage": "No connection to the PBX",
   "StarCLX verbindet sich automatisch neu, sobald die Anlage wieder erreichbar ist (z. B. VPN wieder verbunden).": "StarCLX reconnects automatically as soon as the PBX is reachable again (e.g. VPN reconnected).",
+  "Keine Berechtigung für „{name}“ auf der Anlage.": "No permission for “{name}” on the PBX.",
+  "Keine Berechtigung für Umleitungen auf der Anlage.": "No permission for diversions on the PBX.",
+  "Keine Berechtigung, Gruppen umzuleiten.": "No permission to divert groups.",
+  "Keine Berechtigung für den Parallelruf auf der Anlage.": "No permission for parallel ringing on the PBX.",
+  "Ändern ist auf der Anlage nicht freigegeben.": "Changes are not permitted on the PBX.",
+  "Keine Berechtigung für Gesprächsaufnahmen auf der Anlage.": "No permission for call recording on the PBX.",
 };
 export default dict;

@@ -3,6 +3,7 @@
   import { backToFirst, callDrag, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
   import { action, duration, hasSoftphone, isRingingIn, phone, run, who, type Call } from "./phone.svelte";
   import { t } from "../../i18n.svelte";
+  import { can } from "../../permissions.svelte";
   import DoorCamView from "../doorcam/DoorCamView.svelte";
 
   let { call }: { call: Call } = $props();
@@ -119,9 +120,11 @@
       <button class="tab" class:active={forwarding} onclick={() => (forwarding = !forwarding)}>
         <Icon name="forward" /><span>{t("Umleiten")}</span>
       </button>
-      <button class="tab" onclick={() => action("voicemail", call.id)}>
-        <Icon name="voicemail" /><span>Voicemail</span>
-      </button>
+      {#if can("voicemail")}
+        <button class="tab" onclick={() => action("voicemail", call.id)}>
+          <Icon name="voicemail" /><span>Voicemail</span>
+        </button>
+      {/if}
     </nav>
   {:else if connected}
     <nav class="tabs">
@@ -187,7 +190,7 @@
             {/each}
           </div>
         {/if}
-        <button class="row" onclick={() => action("record", call.id)}>
+        <button class="row" disabled={!can("call_recording")} title={can("call_recording") ? undefined : t("Keine Berechtigung für Gesprächsaufnahmen auf der Anlage.")} onclick={() => action("record", call.id)}>
           <span class="dot"><Icon name="record" /></span><span>{call.recording ? t("Aufnahme beenden") : t("Aufnahme starten")}</span>
         </button>
         <button class="row" onclick={() => action("switch_phone", call.id)}>
