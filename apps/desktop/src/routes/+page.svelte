@@ -48,6 +48,7 @@
   function clearSessionData() {
     session = null;
     voicemail.list = [];
+    voicemail.disabled = false;
     conferences.list = [];
     conferenceEdit.id = null;
     resetFkeys();
@@ -245,6 +246,11 @@
   $effect(() => {
     if (tab === "doorcam" && !hasDoorCams) tab = "journal";
   });
+  /** Ohne Voicemail-Recht bleibt der Reiter sichtbar, aber ausgegraut */
+  const tabOff = (id: Tab) => id === "voicemail" && voicemail.disabled;
+  $effect(() => {
+    if (!free && tabOff(tab)) tab = "journal";
+  });
 
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
   const free = $derived(prefs.value?.workspace === "free");
@@ -337,7 +343,8 @@
         <button
           class="tab"
           class:active={free ? tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
-          title={free && editing ? t("Kachel ein- oder ausblenden") : undefined}
+          disabled={!free && tabOff(tb.id)}
+          title={free && editing ? t("Kachel ein- oder ausblenden") : tabOff(tb.id) ? t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.") : undefined}
           onclick={() => tabClick(tb.id)}
         >
           <Icon name={tb.icon} size={20} /><span>{tb.label}</span>
@@ -493,6 +500,7 @@
   .arrange { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; padding: 0; color: var(--muted); }
   .tab.lock.on { color: #111; background: var(--accent); border-radius: 6px 6px 0 0; }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:disabled { opacity: 0.4; cursor: default; }
   .banner { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.4rem; padding: 0.5rem 0.8rem; background: var(--panel); border-left: 3px solid var(--accent); }
   .banner.offline { border-left-color: var(--red); }
   .banner .reg { flex: none; }

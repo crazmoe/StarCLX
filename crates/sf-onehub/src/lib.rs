@@ -77,10 +77,18 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl Error {
     /// Meldung der Anlage, wenn dem Benutzer ein Recht fehlt
-    /// (gRPC `PermissionDenied`), sonst `None`.
+    /// (gRPC `PermissionDenied`), sonst `None`. Manche Dienste (z. B.
+    /// Voicemail) melden das fehlende Recht als `Internal` mit „does not have
+    /// the permission …“; das zählt ebenfalls.
     pub fn permission_denied(&self) -> Option<&str> {
         match self {
             Error::Status(s) if s.code() == tonic::Code::PermissionDenied => Some(s.message()),
+            Error::Status(s)
+                if s.code() == tonic::Code::Internal
+                    && s.message().contains("does not have the permission") =>
+            {
+                Some(s.message())
+            }
             _ => None,
         }
     }
@@ -391,6 +399,24 @@ mod tests {
         assert!(!Error::Status(Status::unavailable("HTTP 429")).unreachable());
         assert!(!Error::Status(Status::unauthenticated("Token abgelaufen")).unreachable());
         assert!(!Error::Status(Status::permission_denied("kein Recht")).unreachable());
+    }
+
+    #[test]
+    fn permission_denied_also_as_internal_error() {
+        let msg = "The user with account id 4600 does not have the permission voicemail";
+        assert_eq!(
+            Error::Status(Status::internal(msg)).permission_denied(),
+            Some(msg)
+        );
+        assert!(
+            Error::Status(Status::permission_denied("kein Recht"))
+                .permission_denied()
+                .is_some()
+        );
+        assert_eq!(
+            Error::Status(Status::internal("NullPointerException")).permission_denied(),
+            None
+        );
     }
 
     #[test]

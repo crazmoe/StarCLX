@@ -13,11 +13,14 @@ export type Voicemail = {
   group: boolean;
 };
 
-export const voicemail = $state({ list: [] as Voicemail[], error: "" });
+/** `disabled`: der Benutzer hat kein Voicemail-Recht (keine Box) */
+export const voicemail = $state({ list: [] as Voicemail[], error: "", disabled: false });
 
 export async function loadVoicemails() {
   try {
-    voicemail.list = await invoke<Voicemail[]>("voicemails");
+    const list = await invoke<Voicemail[] | null>("voicemails");
+    voicemail.list = list ?? [];
+    voicemail.disabled = list === null;
     voicemail.error = "";
   } catch (e) {
     voicemail.error = String(e);

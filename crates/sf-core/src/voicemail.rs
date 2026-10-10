@@ -149,7 +149,20 @@ impl Watcher {
             MAX_BACKOFF,
             move || {
                 let (hub, events) = (hub.clone(), events.clone());
-                async move { watch(&hub, &events).await }
+                async move {
+                    match watch(&hub, &events).await {
+                        // Ohne Voicemail-Recht gibt es nichts zu verfolgen;
+                        // nicht ständig neu versuchen.
+                        Err(e) if e.permission_denied().is_some() => {
+                            tracing::info!(
+                                reason = e.permission_denied(),
+                                "Voicemail-Ereignisse: kein Recht"
+                            );
+                            std::future::pending().await
+                        }
+                        r => r,
+                    }
+                }
             },
         )))
     }

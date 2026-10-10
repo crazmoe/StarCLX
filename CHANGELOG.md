@@ -19,6 +19,11 @@
 - Sobald die Anlage wieder antwortet, verbindet StarCLX automatisch neu und lädt alles nach wie
   nach dem Standby (Token, Softphone, Funktionstasten, Voicemail, Umleitungen, Adressbuch)
 
+### Voicemail
+- Hat der Benutzer kein Voicemail-Recht (keine Box), ist der Reiter Voicemail ausgegraut und die
+  Kachel zeigt „Für diesen Benutzer ist keine Voicemail-Box eingerichtet.“ statt einer
+  gRPC-Fehlermeldung. Die Anlage wird dann auch nicht mehr ständig nach Ereignissen gefragt.
+
 ## 1.4.0 – 2026-10-10
 
 ### Tischtelefon steuern
