@@ -565,11 +565,5 @@ const dict: Record<string, string> = {
   "Oder an einer Anlage anmelden:": "Ou se connecter à un autocommutateur :",
   "Keine Verbindung zur Anlage": "Pas de connexion à l'autocommutateur",
   "StarCLX verbindet sich automatisch neu, sobald die Anlage wieder erreichbar ist (z. B. VPN wieder verbunden).": "StarCLX se reconnecte automatiquement dès que l'autocommutateur est de nouveau joignable (p. ex. VPN reconnecté).",
-  "Keine Berechtigung für „{name}“ auf der Anlage.": "Aucune autorisation pour « {name} » sur l'autocommutateur.",
-  "Keine Berechtigung für Umleitungen auf der Anlage.": "Aucune autorisation pour les renvois sur l'autocommutateur.",
-  "Keine Berechtigung, Gruppen umzuleiten.": "Aucune autorisation pour renvoyer les groupes.",
-  "Keine Berechtigung für den Parallelruf auf der Anlage.": "Aucune autorisation pour l'appel parallèle sur l'autocommutateur.",
-  "Ändern ist auf der Anlage nicht freigegeben.": "Les modifications ne sont pas autorisées sur l'autocommutateur.",
-  "Keine Berechtigung für Gesprächsaufnahmen auf der Anlage.": "Aucune autorisation pour l'enregistrement des appels sur l'autocommutateur.",
 };
 export default dict;

@@ -123,7 +123,6 @@ ${tooltip}` : tooltip);
   /* Alle Tasten so hoch wie ein Besetztlampenfeld (Bild 2,5rem + Innenabstand) */
   .tile { width: 100%; min-height: calc(2.5rem + 0.8rem + 2px); box-sizing: border-box; display: flex; align-items: center; gap: 0.6rem; text-align: left; padding: 0.4rem 0.6rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; }
   .tile:hover:not(:disabled) { border-color: var(--accent); }
-  .tile:disabled:not(.blank) { opacity: 0.45; cursor: default; }
   .lamp { width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: none; background: var(--line); }
   .free .lamp { background: var(--green); }
   .busy .lamp, .on .lamp { background: var(--red); }

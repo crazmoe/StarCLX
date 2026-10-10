@@ -190,9 +190,11 @@
             {/each}
           </div>
         {/if}
-        <button class="row" disabled={!can("call_recording")} title={can("call_recording") ? undefined : t("Keine Berechtigung für Gesprächsaufnahmen auf der Anlage.")} onclick={() => action("record", call.id)}>
-          <span class="dot"><Icon name="record" /></span><span>{call.recording ? t("Aufnahme beenden") : t("Aufnahme starten")}</span>
-        </button>
+        {#if can("call_recording")}
+          <button class="row" onclick={() => action("record", call.id)}>
+            <span class="dot"><Icon name="record" /></span><span>{call.recording ? t("Aufnahme beenden") : t("Aufnahme starten")}</span>
+          </button>
+        {/if}
         <button class="row" onclick={() => action("switch_phone", call.id)}>
           <Icon name="call2go" /><span>{t("Rufweitergabe/Call2Go")}</span>
         </button>

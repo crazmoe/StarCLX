@@ -20,11 +20,12 @@
   nach dem Standby (Token, Softphone, Funktionstasten, Voicemail, Umleitungen, Adressbuch)
 
 ### Rechte der Anlage
-- StarCLX richtet sich nach den Rechten des Benutzers auf der Anlage (Benutzer → Rechte) und graut
-  aus, was fehlt, statt mit einer gRPC-Fehlermeldung zu scheitern: Rufliste, Voicemail,
-  Adressbuch, Chat und Konferenzen als Reiter bzw. Kachel, Umleitungen, Gruppenumleitungen,
-  Parallelruf (Anzeigen und Ändern) und Voicemail-Ansage in den Einstellungen, „An Voicemail“
-  bei eingehenden Anrufen, Gesprächsaufnahme und Funktionstasten „Modul aktivieren“.
+- StarCLX richtet sich nach den Rechten des Benutzers auf der Anlage (Benutzer → Rechte) und
+  blendet aus, was fehlt, statt mit einer gRPC-Fehlermeldung zu scheitern: Rufliste, Voicemail,
+  Adressbuch, Chat und Konferenzen als Reiter bzw. Kachel samt ihren Einstellungen, Umleitungen,
+  Gruppenumleitungen, Parallelruf und Voicemail-Ansage in den Einstellungen, „Voicemail“ bei
+  eingehenden Anrufen, Gesprächsaufnahme und Funktionstasten „Modul aktivieren“. Ohne „iFMC →
+  Ändern“ ist der Parallelruf nur lesbar.
 - Änderungen an den Rechten greifen sofort, ohne Neuanmeldung
 - Fehlt ein Recht für einen Ereignisstrom, fragt StarCLX nur noch alle fünf Minuten und ohne
   Warnung im Protokoll nach

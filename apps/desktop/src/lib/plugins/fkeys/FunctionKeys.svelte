@@ -19,7 +19,9 @@
     fkeys.order
       .map((_, i) => keyAt(i))
       .filter((k) => k !== undefined)
-      .filter((k) => typeInfo(k.functionKeyType).group !== "desk" || k.functionKeyType === "SEPARATOR"),
+      .filter((k) => typeInfo(k.functionKeyType).group !== "desk" || k.functionKeyType === "SEPARATOR")
+      // „Modul aktivieren“ nur mit dem Recht Tasten → Modulaktivierung
+      .filter((k) => k.functionKeyType !== "MODULEACTIVATION" || can("fkey_module_key")),
   );
 </script>
 
@@ -28,8 +30,7 @@
   {#if fkeys.notice && connection.online}<p class="error">{fkeys.notice}</p>{/if}
   <div class="grid" style="grid-template-columns: repeat({columns}, minmax(0, 1fr))">
     {#each shown as k (k.id)}
-      <!-- „Modul aktivieren“ braucht das Recht Tasten → Modulaktivierung -->
-      <FkeyTile key={k} disabled={k.functionKeyType === "MODULEACTIVATION" && !can("fkey_module_key")} onclick={() => press(k)} />
+      <FkeyTile key={k} onclick={() => press(k)} />
     {/each}
   </div>
   {#if fkeys.loaded && !fkeys.keys.length}

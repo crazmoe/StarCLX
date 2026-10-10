@@ -245,10 +245,6 @@
   ]);
   /** Türkamera nur mit angelegten Kameras anbieten */
   const hasDoorCams = $derived(!!prefs.value?.door_cams?.some((c) => c.url.trim()));
-  const tabs = $derived(allTabs.filter((x) => x.id !== "doorcam" || hasDoorCams));
-  $effect(() => {
-    if (tab === "doorcam" && !hasDoorCams) tab = "journal";
-  });
   /** Recht, das ein Reiter braucht */
   const tabPermission: Partial<Record<Tab, Permission>> = {
     journal: "calllist",
@@ -257,18 +253,14 @@
     chat: "instant_messaging",
     conference: "conference",
   };
-  /** Ohne Recht bleibt der Reiter sichtbar, aber ausgegraut */
+  /** Ohne Recht wird der Reiter bzw. die Kachel gar nicht angezeigt */
   const tabOff = (id: Tab) => {
     const p = tabPermission[id];
     return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled);
   };
-  const offText = (id: Tab) =>
-    id === "voicemail"
-      ? t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.")
-      : t("Keine Berechtigung für „{name}“ auf der Anlage.", { name: allTabs.find((x) => x.id === id)?.label ?? id });
-  const firstTab = $derived(tabs.find((x) => !tabOff(x.id))?.id ?? "journal");
+  const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && !tabOff(x.id)));
   $effect(() => {
-    if (!free && tabOff(tab) && !tabOff(firstTab)) tab = firstTab;
+    if (!tabs.some((x) => x.id === tab) && tabs.length) tab = tabs[0].id;
   });
 
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
@@ -362,8 +354,7 @@
         <button
           class="tab"
           class:active={free ? tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
-          disabled={!free && tabOff(tb.id)}
-          title={free && editing ? t("Kachel ein- oder ausblenden") : tabOff(tb.id) ? offText(tb.id) : undefined}
+          title={free && editing ? t("Kachel ein- oder ausblenden") : undefined}
           onclick={() => tabClick(tb.id)}
         >
           <Icon name={tb.icon} size={20} /><span>{tb.label}</span>
@@ -394,9 +385,7 @@
       {/if}
       {#if notice}<p class="banner">{notice}</p>{/if}
       {#snippet view(id: string)}
-        {#if tabOff(id as Tab)}
-          <p class="off">{offText(id as Tab)}</p>
-        {:else if id === "journal"}
+        {#if id === "journal"}
           <Journal />
         {:else if id === "fkeys"}
           <FunctionKeys />
@@ -413,7 +402,7 @@
         {/if}
       {/snippet}
       {#if free}
-        <Workspace bind:tiles {editing} {meta} {badge} body={view} />
+        <Workspace bind:tiles {editing} {meta} {badge} body={view} hidden={(id) => tabOff(id as Tab)} />
       {:else}
         {@render view(tab)}
       {/if}
@@ -521,8 +510,6 @@
   .arrange { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; padding: 0; color: var(--muted); }
   .tab.lock.on { color: #111; background: var(--accent); border-radius: 6px 6px 0 0; }
   .tab.active { color: var(--text); border-bottom-color: var(--accent); }
-  .tab:disabled { opacity: 0.4; cursor: default; }
-  .off { color: var(--muted); margin: 0.6rem 0.8rem; }
   .banner { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.4rem; padding: 0.5rem 0.8rem; background: var(--panel); border-left: 3px solid var(--accent); }
   .banner.offline { border-left-color: var(--red); }
   .banner .reg { flex: none; }
