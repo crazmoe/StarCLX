@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Sat, 10 Oct 2026 10:05:26 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ c6361eeaecbfe453fd2a19a03381e352              138 Release
+ b213c3d3f00918e6fd2612d220e97086             2346 main/binary-amd64/Packages
+ 971f489ebca2147c23293ce056a07cd6              950 main/binary-amd64/Packages.gz
+SHA1:
+ 1a760d3f20eebfbdc4629aee2e442bde669858e5              138 Release
+ cdfbb30fb50736a961d9e1386aacdfd66a005d32             2346 main/binary-amd64/Packages
+ 937ef272e57aa5e2cada1e53c2ad761bc6a2957a              950 main/binary-amd64/Packages.gz
+SHA256:
+ 70fb1de12c542544312ed15e65f09095e83e0f47e63aa02d21eb8765fe048cd4              138 Release
+ 92600a01318edc85f72b6a95d58743d2c0589b924706c799c05e0d49431e2137             2346 main/binary-amd64/Packages
+ a54ac1e9eefcf87d1a174ce9f90ff248039fe037590e7406c1387608ecaa0415              950 main/binary-amd64/Packages.gz
+SHA512:
+ 7ba0a42f24cb762f30ef46b8df5e5696edacc4ac72cfdabc21efc21791a22a817f070f14aa6e49e6fec277296b0d841015b6b09f91432ea6e81b32c0f5f827b0              138 Release
+ 3fa87b404aa9e4cfa23d1a73e6d99202533cf7e0cf8901979a857c57df5c60ac96c3cf2b7e0c57b161dac1cd19afa45621d5d4b320fce5506b382ed7654568fa             2346 main/binary-amd64/Packages
+ 2791090bf3b83b993696f360f3e0d35d3e7c7db65a7f7c473c643b40804a3c6f689a7fd44c9a818f73eff6ac841ea2f7039f9f2716351dd10b791ed2d62f6a72              950 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEBVBU+NvGrWfgmNPWP1MLX5W/c0EFAmrKDeYACgkQP1MLX5W/
+c0H3lA/8DlfeReJA9XH7JpHUWYpcKp0SNi0wHo+r3x3WOiw9mWqdjvyZ69/Q0Dcr
+r2K12lm9HafUD4dTIfALwFrVDjsA/iqLUdU1YAO2XY3In9+pIlVgJlvldMdvIj7c
+AI3AQtd5+8gtN46zuTtZBH80/jkzcVoJxI8/Y4NEoavqX3XRYVWicguRRyC1NnoB
+k/lw8vNG1Vyty3guprTd4QUaCsh6dehLsOj2F5XxVq4bWY4V/92Qj3xXf1X/7YJW
+pew1TGDKmE1Pt+3ppxGDQDpv6TsiZ8wI+s0JweADJvEkafmCCGDqnOHbdTTswJcD
+Mb02iza5i0FM0XruW1xt4cBH+DGSM3oiVNiJ2G0MOqI+axrGkl4KECUEoB0lYSSp
+lxAFqWdkKuIibn2nb+iYy9+pAAzU0VRyCfh88UPZUfVM76GI6iVDzPEGP+NGjInE
+Z5MwqZDINaTgp0x+qypMs0+23nklSyAQK1/GmcfPfP/gYu9v7pP7L7+CtTae+bUp
+kwNkCTUH46VnvgR03Ul7XIouD0iPgFN6fHhMVqBUdpLNTYCneol+ItJFuugA09Xy
+vDJ9RCILytcYtXfUO+11l7aq/zCs4tUzZzBwJ+f2iDXEZwsW3ysMTkAE8tlBt+1I
+Q7l90gZ2WkyyMtvIkWl5zPtvyRw6y2+eYy/UXVDmo93QRNhGiY0=
+=I4Q6
+-----END PGP SIGNATURE-----

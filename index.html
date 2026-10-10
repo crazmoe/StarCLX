@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>StarCLX Paketquellen</title>
+<h1>StarCLX Paketquellen</h1>
+<h2>Debian / Ubuntu</h2>
+<pre>curl -fsSL https://crazmoe.github.io/StarCLX/starclx.gpg | sudo tee /usr/share/keyrings/starclx.gpg &gt;/dev/null
+echo "deb [signed-by=/usr/share/keyrings/starclx.gpg] https://crazmoe.github.io/StarCLX/deb stable main" | sudo tee /etc/apt/sources.list.d/starclx.list
+sudo apt update &amp;&amp; sudo apt install starclx</pre>
+<h2>Fedora / openSUSE</h2>
+<pre>sudo curl -fsSL -o /etc/yum.repos.d/starclx.repo https://crazmoe.github.io/StarCLX/starclx.repo
+sudo dnf install starclx</pre>
+<h2>Flatpak</h2>
+<pre>flatpak install --user https://crazmoe.github.io/StarCLX/flatpak/starclx.flatpakref</pre>
