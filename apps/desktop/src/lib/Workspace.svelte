@@ -12,6 +12,8 @@
     { id: "chat", x: 4, y: 8, w: 4, h: 8, visible: true },
     { id: "voicemail", x: 8, y: 8, w: 4, h: 8, visible: true },
     { id: "conference", x: 4, y: 16, w: 4, h: 7, visible: true },
+    // Nur für Agenten einer iQueue, daher anfangs ausgeblendet
+    { id: "queue", x: 8, y: 16, w: 4, h: 7, visible: false },
     // Nur sinnvoll mit angelegten Kameras, daher anfangs ausgeblendet
     { id: "doorcam", x: 0, y: 16, w: 4, h: 7, visible: false },
   ];

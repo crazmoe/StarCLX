@@ -17,6 +17,7 @@ pub mod doorcam;
 pub mod fkeys;
 pub mod headset;
 pub mod journal;
+pub mod queue;
 pub mod reach;
 pub mod voicemail;
 
@@ -43,6 +44,7 @@ pub async fn session_ended(app: &AppHandle) {
     journal::session_ended(app).await;
     reach::session_ended(app).await;
     voicemail::session_ended(app).await;
+    queue::session_ended(app).await;
     conference::session_ended(app).await;
     fkeys::session_ended(app).await;
     chat::session_ended(app).await;
@@ -54,6 +56,7 @@ pub async fn session_started(app: &AppHandle, login: Login) {
     reach::session_started(app, login.hub.clone()).await;
     voicemail::session_started(app, login.hub.clone()).await;
     conference::session_started(app, login.hub.clone()).await;
+    queue::session_started(app, login.hub.clone(), login.user_id.clone()).await;
     chat::session_started(
         app,
         login.hub.clone(),

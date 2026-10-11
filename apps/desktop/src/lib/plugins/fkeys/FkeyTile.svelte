@@ -51,7 +51,7 @@
       default: return key.name ? info.label : "";
     }
   });
-  const stateText: Record<string, string> = $derived({ partial: t("teilaktiv"), on: t("aktiv"), busy: t("im Gespräch"), ringing: t("klingelt"), free: t("frei"), off: t("nicht erreichbar"), dnd: t("Bitte nicht stören"), parked: t("Gespräch geparkt") });
+  const stateText: Record<string, string> = $derived({ partial: t("teilaktiv"), on: t("aktiv"), busy: t("im Gespräch"), ringing: t("klingelt"), wrapup: t("Nachbearbeitung"), free: t("frei"), off: t("nicht erreichbar"), dnd: t("Bitte nicht stören"), parked: t("Gespräch geparkt") });
   // Gruppen-Taste: an = angemeldet
   const groupText: Record<string, string> = $derived({ on: t("angemeldet"), "": t("abgemeldet") });
   // Modul-Taste: an = aktiv, sonst aus
@@ -128,6 +128,7 @@ ${tooltip}` : tooltip);
   .busy .lamp, .on .lamp { background: var(--red); }
   .on .lamp { background: var(--accent); }
   .ringing .lamp { background: var(--red); animation: blink 0.6s steps(2) infinite; }
+  .wrapup .lamp { background: var(--accent); }
   .parked .lamp { background: var(--accent); animation: blink 0.6s steps(2) infinite; }
   .off .lamp { background: transparent; border: 1px solid var(--muted); }
 
@@ -141,6 +142,8 @@ ${tooltip}` : tooltip);
   .free .blf { background: var(--green); }
   .busy .blf, .ringing .blf { background: var(--red); }
   .ringing .blf { animation: blink 0.6s steps(2) infinite; }
+  /* iQueue-Nachbearbeitung: noch nicht wieder frei */
+  .wrapup .blf { background: var(--accent); }
   .pic {
     position: absolute; right: 0.15rem; top: 0.15rem; width: 2.2rem; height: 2.2rem; border-radius: 50%;
     overflow: hidden; display: grid; place-items: center; background: #c9ccd0; color: #555b62;

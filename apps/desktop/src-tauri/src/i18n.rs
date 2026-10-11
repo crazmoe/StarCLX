@@ -639,6 +639,31 @@ const TEXTS: &[(&str, [&str; 3])] = &[
             "Programma non avviato: {e}",
         ],
     ),
+    // Warteschlangen (iQueue)
+    (
+        "Aus der Warteschlange abgemeldet",
+        [
+            "Logged out of the queue",
+            "Déconnecté de la file d’attente",
+            "Disconnesso dalla coda",
+        ],
+    ),
+    (
+        "Die Anlage hat dich aus „{name}“ abgemeldet.",
+        [
+            "The phone system logged you out of “{name}”.",
+            "Le PBX vous a déconnecté de « {name} ».",
+            "Il centralino ti ha disconnesso da «{name}».",
+        ],
+    ),
+    (
+        "Kein Telefon zum Annehmen verfügbar.",
+        [
+            "No phone available to take the call.",
+            "Aucun téléphone disponible pour prendre l’appel.",
+            "Nessun telefono disponibile per rispondere.",
+        ],
+    ),
 ];
 
 /// Sprache setzen ("de", "en", "fr", "it"); Unbekanntes heisst Deutsch.
