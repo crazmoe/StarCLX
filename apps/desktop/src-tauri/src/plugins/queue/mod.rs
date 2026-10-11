@@ -139,7 +139,10 @@ pub async fn queue_grab(
         .ok_or(t("Kein Telefon zum Annehmen verfügbar."))?;
     queue::grab(&hub(&state).await?, &queue, &call, &phone_id)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            tracing::warn!(error = %e, queue, call, phone_id, "Anruf aus der Warteschlange nicht geholt");
+            e.to_string()
+        })
 }
 
 #[cfg(test)]
