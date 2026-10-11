@@ -92,6 +92,30 @@
     subTop = (e.currentTarget as HTMLElement).offsetTop;
     sub = sub === name ? "" : name;
   };
+  // Ragt das Untermenü unten aus dem Fenster, rückt es nach oben; ist es höher
+  // als das Fenster, begrenzt CSS die Höhe und die Liste darin scrollt.
+  let menuEl = $state<HTMLElement>();
+  let subEl = $state<HTMLElement>();
+  let subShift = $state(0);
+  function fitSub() {
+    if (!menuEl || !subEl) return;
+    const margin = 8;
+    const top = menuEl.getBoundingClientRect().top + subTop;
+    const over = top + subEl.offsetHeight - (window.innerHeight - margin);
+    subShift = Math.max(0, Math.min(over, top - margin));
+  }
+  $effect(() => {
+    if (!subEl) return;
+    subTop;
+    fitSub();
+    const ro = new ResizeObserver(fitSub);
+    ro.observe(subEl);
+    window.addEventListener("resize", fitSub);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", fitSub);
+    };
+  });
   const trustSipCert = () =>
     run(() => invoke("phone_trust_sip_certificate", { fingerprint: phone.status.sip_certificate }));
   const setDnd = () => run(() => invoke("fkey_dnd", { enabled: !dnd }));
@@ -108,7 +132,7 @@
   const numberLabel = (n: SignalingNumber) => (n.suppressed ? t("Rufnummer unterdrücken") : n.number);
 </script>
 
-<div class="menu">
+<div class="menu" bind:this={menuEl}>
   <div class="head">
     <span class="big">
       {#if avatar}<img src={avatar} alt="" />{:else}{initials}{/if}
@@ -163,7 +187,7 @@
   <button class="row plain" onclick={onlogout}><span class="ic"><Icon name="logout" size={20} /></span><span class="lbl">{t("Abmelden")}</span></button>
 
   {#if sub}
-    <div class="sub" style="top: {subTop}px">
+    <div class="sub" bind:this={subEl} style="top: {subTop - subShift}px">
       {#if sub === "chat"}
         <OwnStatus userId={session.user_id} />
       {:else if sub === "phone"}
@@ -180,11 +204,13 @@
         {/each}
       {:else if sub === "account"}
         <span class="title">{t("Konto wechseln")}</span>
-        {#each others as a (a.server + a.user_id)}
-          <button class="opt" onclick={() => onswitch(a)}>
-            <span class="rd"><span>{a.display_name || host(a.server)}</span>{#if a.display_name}<small class="muted">{host(a.server)}</small>{/if}</span>
-          </button>
-        {:else}<span class="muted pad">{t("Keine weiteren Konten gespeichert")}</span>{/each}
+        <div class="scroll">
+          {#each others as a (a.server + a.user_id)}
+            <button class="opt" onclick={() => onswitch(a)}>
+              <span class="rd"><span>{a.display_name || host(a.server)}</span>{#if a.display_name}<small class="muted">{host(a.server)}</small>{/if}</span>
+            </button>
+          {:else}<span class="muted pad">{t("Keine weiteren Konten gespeichert")}</span>{/each}
+        </div>
         {#if phone.status.calls.length}<span class="muted pad">{t("Während eines Gesprächs lässt sich das Konto nicht wechseln")}</span>{/if}
         <button class="all" onclick={onadd}>{t("Konto hinzufügen")}</button>
         <span class="muted pad">{t("Das bisherige Konto bleibt gespeichert, ist aber getrennt: Anrufe dafür kommen hier nicht an.")}</span>
@@ -254,7 +280,10 @@
     position: absolute; left: calc(100% + 0.4rem); width: 18rem;
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #000a;
     display: flex; flex-direction: column; padding: 0.5rem;
+    max-height: calc(100vh - 1rem); overflow-y: auto;
   }
+  .sub > * { flex: none; }
+  .sub > .scroll { flex: 0 1 auto; min-height: 3rem; overflow-y: auto; display: flex; flex-direction: column; }
   .title { font-weight: 600; padding: 0.3rem 0.6rem 0.5rem; }
   .opt { display: flex; align-items: center; gap: 0.6rem; background: none; border: none; text-align: left; padding: 0.5rem 0.6rem; border-radius: 4px; }
   .opt:hover:not(:disabled) { background: var(--panel-2); }
