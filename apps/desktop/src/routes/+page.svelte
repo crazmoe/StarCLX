@@ -21,7 +21,7 @@
   import Icon, { type IconName } from "$lib/Icon.svelte";
   import Settings from "$lib/Settings.svelte";
   import MeMenu from "$lib/MeMenu.svelte";
-  import { avatarOf, ownChat, resetFkeys } from "$lib/plugins/fkeys/fkeys.svelte";
+  import { avatarOf, fkeys, ownChat, resetFkeys } from "$lib/plugins/fkeys/fkeys.svelte";
   import ChatBubble from "$lib/ChatBubble.svelte";
   import { canDial, initPhone, phone, run, isRingingIn } from "$lib/plugins/call/phone.svelte";
   import { loadPrefs, prefs, savePrefs, type Tile } from "$lib/prefs.svelte";
@@ -256,7 +256,7 @@
   /** Ohne Recht wird der Reiter bzw. die Kachel gar nicht angezeigt */
   const tabOff = (id: Tab) => {
     const p = tabPermission[id];
-    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled);
+    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "fkeys" && fkeys.forbidden);
   };
   const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && !tabOff(x.id)));
   $effect(() => {

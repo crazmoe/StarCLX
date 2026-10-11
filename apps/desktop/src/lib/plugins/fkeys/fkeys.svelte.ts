@@ -35,7 +35,7 @@ export type Account = { account_id: number; user_ids: string[]; name: string; nu
 export type GroupChoice = { id: number; name: string };
 /** Modul, das „Modul aktivieren“ schalten kann; id wie in activateModuleIds */
 export type ModuleChoice = { id: string; name: string };
-type Keys = { set_id: string; set_name: string; account_id: string; keys: FunctionKey[]; order: string[]; accounts: Account[]; group_choices: GroupChoice[]; module_choices: ModuleChoice[]; me: string };
+type Keys = { set_id: string; set_name: string; account_id: string; keys: FunctionKey[]; order: string[]; accounts: Account[]; group_choices: GroupChoice[]; module_choices: ModuleChoice[]; me: string; forbidden: boolean };
 /** Präsenz eines Users; chat: "available", "away", "dnd", "offline" oder "" (kein Chat) */
 export type UserState = { telephony: string; dnd: boolean; chat: string; chat_message: string; redirect: boolean };
 export type Redirect = {
@@ -101,6 +101,8 @@ export const fkeys = $state({
   error: "",
   notice: "",
   loaded: false,
+  /** Dem Benutzer fehlt das Recht „Tasten“ */
+  forbidden: false,
 });
 
 /** Grundzustand, z. B. beim Kontowechsel: Tasten, Präsenz und Bilder
@@ -182,6 +184,7 @@ export async function loadFkeys() {
     fkeys.groupChoices = k.group_choices;
     fkeys.moduleChoices = k.module_choices;
     fkeys.me = k.me;
+    fkeys.forbidden = k.forbidden;
     fkeys.error = "";
     fkeys.loaded = true;
     fkeys.presence = await invoke<Record<string, UserState>>("fkey_presence");

@@ -26,6 +26,8 @@
   Gruppenumleitungen, Parallelruf und Voicemail-Ansage in den Einstellungen, „Voicemail“ bei
   eingehenden Anrufen, Gesprächsaufnahme und Funktionstasten „Modul aktivieren“. Ohne „iFMC →
   Ändern“ ist der Parallelruf nur lesbar.
+- Ohne Recht „Tasten“ fehlen der Reiter Funktionstasten und die Einstellung dazu, statt dass
+  „403 … no permission for quickdial“ erscheint. Der eigene Status wird weiter verfolgt.
 - Änderungen an den Rechten greifen sofort, ohne Neuanmeldung
 - Fehlt ein Recht für einen Ereignisstrom, fragt StarCLX nur noch alle fünf Minuten und ohne
   Warnung im Protokoll nach

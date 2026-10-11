@@ -66,12 +66,13 @@
       { id: "fmc", icon: "call2go" as IconName, label: t("Parallelruf"), ok: can("ifmc") },
     ].filter((s) => s.ok),
   );
-  const personalSections: { id: string; icon: IconName; label: string }[] = $derived([
+  type Item = { id: string; icon: IconName; label: string };
+  const personalSections: Item[] = $derived(([
     { id: "appearance", icon: "workspace", label: t("Darstellung") },
     { id: "fkeys", icon: "dialpad", label: t("Funktionstasten") },
     { id: "hotkeys", icon: "dialpad", label: t("Hotkeys") },
     { id: "integration", icon: "call", label: t("Desktop-Integration") },
-  ]);
+  ] as Item[]).filter((s) => s.id !== "fkeys" || !fkeys.forbidden));
   const accountSections: { id: string; icon: IconName; label: string }[] = $derived([
     { id: "account", icon: "account", label: t("Konto") },
     { id: "password", icon: "lock", label: t("Passwort") },
@@ -557,6 +558,7 @@
         </div>
       </section>
 
+      {#if !fkeys.forbidden}
       <section id="fkeys">
         <h3>{t("Funktionstasten")}</h3>
         <div class="card">
@@ -564,6 +566,7 @@
           <p class="small muted">{t("Tasten werden sofort auf der Anlage gespeichert; die Spaltenzahl mit „Speichern“.")}</p>
         </div>
       </section>
+      {/if}
 
       <section id="hotkeys">
         <h3>{t("Hotkeys")}</h3>
