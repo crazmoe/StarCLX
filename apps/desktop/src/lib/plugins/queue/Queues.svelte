@@ -3,7 +3,7 @@
   import Icon from "../../Icon.svelte";
   import { connection } from "../../connection.svelte";
   import { t } from "../../i18n.svelte";
-  import { canDial } from "../call/phone.svelte";
+  import { canDial, phone, type Call } from "../call/phone.svelte";
   import { myAgent, queues, type Agent, type Queue, type QueueCall } from "./queue.svelte";
 
   let notice = $state("");
@@ -46,6 +46,23 @@
     const a = q.agents.find((x) => x.user_id === id);
     return a ? shortName(a.name) : "";
   };
+
+  const digits = (s: string) => s.replace(/\D/g, "");
+
+  /** Klingelt der Queue-Anruf bei mir: der passende Anruf im Call Manager */
+  function ringingHere(c: QueueCall): Call | undefined {
+    if (c.state !== "ringing" || !c.agents.includes(queues.me)) return;
+    const ringing = phone.status.calls.filter((x) => x.incoming && x.phase === "ringing");
+    const n = digits(c.caller_number).slice(-8);
+    return (n && ringing.find((x) => digits(x.remote_number).endsWith(n))) || (ringing.length === 1 ? ringing[0] : undefined);
+  }
+
+  /** Klingelt es bei mir, annehmen wie im Call Manager, sonst auf mein Telefon holen */
+  function take(q: Queue, c: QueueCall) {
+    const local = ringingHere(c);
+    if (local) act(c.id, "phone_answer", { callId: local.id });
+    else act(c.id, "queue_grab", { queue: q.id, call: c.id });
+  }
 
   function callState(q: Queue, c: QueueCall) {
     const who = c.agents.map((id) => agentName(q, id)).filter(Boolean).join(", ");
@@ -112,11 +129,12 @@
               {since(c.state === "connected" && c.connected ? c.connected : c.incoming)}
             </span>
             {#if c.state !== "connected"}
+              {@const here = ringingHere(c)}
               <button
                 class="grab"
-                title={t("Anruf auf mein Telefon holen")}
-                disabled={!ready || busy === c.id}
-                onclick={() => act(c.id, "queue_grab", { queue: q.id, call: c.id })}
+                title={here ? t("Annehmen") : t("Anruf auf mein Telefon holen")}
+                disabled={(!here && !ready) || busy === c.id}
+                onclick={() => take(q, c)}
               ><Icon name="call" size={18} /></button>
             {/if}
           </div>
