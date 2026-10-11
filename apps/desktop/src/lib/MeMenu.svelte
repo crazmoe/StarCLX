@@ -120,7 +120,21 @@
     run(() => invoke("phone_trust_sip_certificate", { fingerprint: phone.status.sip_certificate }));
   const setDnd = () => run(() => invoke("fkey_dnd", { enabled: !dnd }));
   const setPrimary = (id: string) => run(async () => { await invoke("set_primary_phone", { id }); await loadPhones(); });
-  const setNumber = (id: string) => run(async () => { await invoke("set_signaling_number", { id }); await loadNumbers(); await loadSignaling(); });
+  // Manche Anlagen (STARFACE 10) signalisieren eine Nummer nur, wenn es für
+  // sie eine Funktionstaste „Rufnummer signalisieren“ gibt; ohne melden sie sie
+  // gesperrt oder setzen sie und unterdrücken sie dann trotzdem.
+  let numberHint = $state("");
+  const lockedNumbers = $derived(numbers.some((n) => n.read_only && !n.suppressed));
+  const setNumber = (id: string) =>
+    run(async () => {
+      const wanted = numbers.find((n) => n.id === id);
+      await invoke("set_signaling_number", { id });
+      await loadNumbers();
+      await loadSignaling();
+      numberHint = wanted && !wanted.suppressed && numbers.find((n) => n.selected)?.suppressed
+        ? t("Die Anlage signalisiert {number} nicht. Lege dafür eine Funktionstaste „Rufnummer signalisieren“ an.", { number: wanted.number })
+        : "";
+    });
   const setRedirect = (r: Redirect) => run(async () => { await invoke("redirect_enable", { id: r.id, enabled: !r.enabled }); await loadRedirects(); });
   const setAll = (enabled: boolean) =>
     run(async () => {
@@ -187,7 +201,7 @@
   <button class="row plain" onclick={onlogout}><span class="ic"><Icon name="logout" size={20} /></span><span class="lbl">{t("Abmelden")}</span></button>
 
   {#if sub}
-    <div class="sub" bind:this={subEl} style="top: {subTop - subShift}px">
+    <div class="sub" class:wide={sub === "number"} bind:this={subEl} style="top: {subTop - subShift}px">
       {#if sub === "chat"}
         <OwnStatus userId={session.user_id} />
       {:else if sub === "phone"}
@@ -199,9 +213,14 @@
       {:else if sub === "number"}
         <span class="title">{t("Rufnummer signalisieren")}</span>
         {#each numbers as n (n.id)}
-          <button class="opt" class:sel={n.selected} disabled={n.read_only} onclick={() => setNumber(n.id)}>
-            {#if n.group}<span class="grp"><Icon name="groups" size={16} /> {n.group}:</span>{/if}{numberLabel(n)}{#if n.selected}<span class="tick"><Icon name="check" size={16} /></span>{/if}</button>
+          <button class="opt" class:sel={n.selected} disabled={n.read_only} title={n.read_only && !n.suppressed ? t("Von der Anlage gesperrt") : undefined} onclick={() => setNumber(n.id)}>
+            {#if n.group}<span class="grp"><Icon name="groups" size={16} /> {n.group}:</span>{/if}<span class="num">{numberLabel(n)}</span>{#if n.selected}<span class="tick"><Icon name="check" size={16} /></span>{/if}</button>
         {/each}
+        {#if numberHint}
+          <span class="hint warn">{numberHint}</span>
+        {:else if lockedNumbers}
+          <span class="hint">{t("Ausgegraute Nummern gibt die Anlage erst frei, wenn es für sie eine Funktionstaste „Rufnummer signalisieren“ gibt.")}</span>
+        {/if}
       {:else if sub === "account"}
         <span class="title">{t("Konto wechseln")}</span>
         <div class="scroll">
@@ -248,8 +267,11 @@
   .bub { position: absolute; right: -0.4rem; top: -0.2rem; width: 1.6rem; height: 1.45rem; }
   .dndb { position: absolute; left: -0.3rem; top: -0.2rem; display: grid; color: var(--red); background: #fff; border-radius: 50%; }
   .rdb { position: absolute; left: -0.2rem; bottom: 0; width: 1.45rem; height: 1.45rem; border-radius: 50%; display: grid; place-items: center; background: #111; color: #fff; border: 2px solid #fff; }
-  .count { min-width: 1.2rem; height: 1.2rem; padding: 0 0.3rem; border-radius: 999px; display: grid; place-items: center; font-size: 0.75rem; font-weight: 700; background: var(--accent); color: #111; }
-  .grp { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600; margin-right: 0.3rem; }
+  .count { min-width: 1.2rem; height: 1.2rem; padding: 0 0.3rem; border-radius: 999px; display: grid; place-items: center; font-size: 0.75rem; font-weight: 700; background: var(--accent); color: var(--on-accent); }
+  .grp { display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 600; margin-right: 0.3rem; white-space: nowrap; }
+  /* Reicht der Platz nicht, rutscht die Nummer als Ganzes in die nächste Zeile */
+  .opt:has(.grp) { flex-wrap: wrap; row-gap: 0.1rem; }
+  .num { white-space: nowrap; }
   .head strong { font-size: 1.05rem; }
   .muted { color: var(--muted); font-size: 0.82rem; }
   .state { display: flex; align-items: center; gap: 0.35rem; }
@@ -272,7 +294,7 @@
   .more { display: grid; transform: rotate(-90deg); color: var(--muted); }
   .pill { font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--red); color: #fff; }
   hr { border: none; border-top: 1px solid var(--line); margin: 0.3rem 0 0; width: 100%; }
-  .notice { color: var(--accent); font-size: 0.85rem; padding: 0 0.3rem; }
+  .notice { color: var(--accent-text); font-size: 0.85rem; padding: 0 0.3rem; }
   .fp { font-size: 0.72rem; word-break: break-all; padding: 0 0.3rem; color: var(--muted); }
   .certok { align-self: center; }
 
@@ -282,13 +304,18 @@
     display: flex; flex-direction: column; padding: 0.5rem;
     max-height: calc(100vh - 1rem); overflow-y: auto;
   }
+  /* Rufnummern: so breit wie nötig (Gruppenname und Nummer in einer Zeile), höchstens bis zum Fensterrand */
+  .sub.wide { width: max-content; min-width: 18rem; max-width: calc(100vw - 21rem); }
   .sub > * { flex: none; }
   .sub > .scroll { flex: 0 1 auto; min-height: 3rem; overflow-y: auto; display: flex; flex-direction: column; }
   .title { font-weight: 600; padding: 0.3rem 0.6rem 0.5rem; }
   .opt { display: flex; align-items: center; gap: 0.6rem; background: none; border: none; text-align: left; padding: 0.5rem 0.6rem; border-radius: 4px; }
   .opt:hover:not(:disabled) { background: var(--panel-2); }
   .opt.sel { font-weight: 600; }
-  .tick { margin-left: auto; color: var(--accent); display: grid; }
+  .opt:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hint { display: block; max-width: 18rem; padding: 0.4rem 0.6rem 0.2rem; font-size: 0.8rem; color: var(--muted); }
+  .hint.warn { color: var(--accent-text); }
+  .tick { margin-left: auto; color: var(--accent-text); display: grid; }
   .pad { padding: 0.4rem 0.6rem; }
   .all { margin: 0 0.4rem 0.5rem; padding: 0.45rem; font-weight: 600; }
   .rd { flex: 1; min-width: 0; display: flex; flex-direction: column; }

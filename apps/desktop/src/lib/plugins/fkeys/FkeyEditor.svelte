@@ -407,7 +407,7 @@
   .type:disabled { opacity: 0.4; cursor: not-allowed; }
   .small { font-size: 0.85rem; }
   .muted { color: var(--muted); margin: 0.2rem 0; }
-  .notice { color: var(--accent); margin: 0.3rem 0; }
+  .notice { color: var(--accent-text); margin: 0.3rem 0; }
   .scrim { position: fixed; inset: 0; background: #0007; z-index: 30; }
   .dialog {
     position: fixed; z-index: 31; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30rem, 92vw);
@@ -419,7 +419,7 @@
   .checks { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
   .actions { display: flex; gap: 0.6rem; margin-top: 0.4rem; }
   .spacer { flex: 1; }
-  .primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+  .primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   .danger { display: flex; align-items: center; gap: 0.3rem; color: var(--red); }
   @media (max-width: 800px) { .editor { grid-template-columns: 1fr; } }
 </style>

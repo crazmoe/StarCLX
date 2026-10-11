@@ -153,19 +153,20 @@
 
 <style>
   .book { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-  .folders { display: flex; gap: 0.3rem; flex-wrap: wrap; padding-bottom: 0.5rem; }
+  .folders { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 2.4rem; margin-bottom: 0.5rem; }
   .folders button { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.9rem; background: var(--panel); }
   .spacer { flex: 1; }
   .folders .add, .edit { display: flex; align-items: center; gap: 0.35rem; }
-  .folders button.active { background: var(--accent); color: #111; border-color: var(--accent); }
+  .folders button.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: min(var(--split, 20rem), calc(100% - 12rem)) 0.5rem minmax(0, 1fr); }
   .divider { cursor: col-resize; touch-action: none; position: relative; }
   .divider::after { content: ""; position: absolute; inset: 0 3px; border-radius: 2px; }
   .divider:hover::after, .divider:global(.dragging)::after { background: var(--accent); }
 
-  .list { overflow: auto; background: var(--panel); border-radius: 4px; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.1rem; }
-  .filter { display: flex; align-items: center; gap: 0.4rem; padding: 0 0.6rem; margin-bottom: 0.3rem; background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; }
-  .filter input { border: none; background: none; flex: 1; outline: none; padding: 0.45rem 0; }
+  .list { overflow: auto; border-radius: 4px; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.1rem; }
+  .filter { flex: none; min-width: 0; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.6rem; margin-bottom: 0.3rem; background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; }
+  /* Ohne min-width: 0 behält das Feld seine Standardbreite und ragt in schmalen Kacheln hinaus */
+  .filter input { min-width: 0; width: 100%; text-overflow: ellipsis; border: none; background: none; flex: 1; outline: none; padding: 0.45rem 0; }
   .row { display: flex; align-items: center; gap: 0.6rem; text-align: left; background: none; border: none; padding: 0.4rem 0.5rem; }
   .row:hover { background: var(--panel-2); }
   .row.active { background: var(--accent-soft); }
@@ -175,7 +176,7 @@
   .av { flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); font-size: 0.8rem; font-weight: 600; }
   .av.big { width: 3.4rem; height: 3.4rem; font-size: 1.1rem; }
   .more { margin-top: 0.4rem; }
-  .detail { overflow: auto; background: var(--panel); border-radius: 4px; padding: 1rem 1.2rem; }
+  .detail { overflow: auto; border-radius: 4px; padding: 1rem 1.2rem; }
   .head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 0.8rem; }
   .head h3 { margin: 0; font-size: 1.15rem; }
   .head p { margin: 0.1rem 0 0; }

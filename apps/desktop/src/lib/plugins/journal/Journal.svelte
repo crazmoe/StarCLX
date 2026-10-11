@@ -21,6 +21,8 @@
     group: string;
     answered_by: string;
     comment: string;
+    comment_author: string;
+    comment_modified: number;
     called_back: boolean;
     voicemail: boolean;
   };
@@ -31,9 +33,10 @@
   let error = $state("");
   /** Ausgewählter Eintrag, dessen Details aufgeklappt sind */
   let selected = $state<string | null>(null);
+  /** Eintrag, dessen Schnelloptionen-Menü offen ist */
+  let menuFor = $state<string | null>(null);
   let commentText = $state("");
   // Löschen braucht einen zweiten Klick
-  let confirmDelete = $state<string | null>(null);
 
   const ready = $derived(canDial());
 
@@ -55,6 +58,9 @@
       return !q || e.name.toLowerCase().includes(q) || e.number.includes(q);
     }),
   );
+
+  // Eigene Spalte für Gruppe, Voicemail und wer angenommen hat
+  const hasExtra = $derived(shown.some((e) => e.group || e.voicemail || e.answered_by));
 
   // Nach Tagen gruppiert
   const days = $derived.by(() => {
@@ -150,6 +156,8 @@
     if (e.incoming) return e.missed ? t("Eingehend, verpasst") : t("Eingehend, angenommen");
     return e.missed ? t("Ausgehend, nicht erreicht") : t("Ausgehend, verbunden");
   }
+  // Wie in der STARFACE-App: 10.10.2026 23:14
+  const stamp = (ms: number) => new Date(ms).toLocaleString(locale(), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const fullDate = (ms: number) =>
     new Date(ms).toLocaleString(locale(), { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -172,51 +180,74 @@
     </label>
   </div>
   {#if error && connection.online}<p class="error">{t("Rufliste: {e}", { e: error })}</p>{/if}
-  <div class="list">
+  <div class="list" class:wide={hasExtra}>
     {#each days as day (day.label)}
       <h3>{day.label}</h3>
       {#each day.items as e (e.id)}
         <div class="row" class:missed={e.missed && e.incoming} class:selected={selected === e.id}>
-          <button class="open" title={t("Details")} aria-expanded={selected === e.id} onclick={() => select(e)}>
           <span class="dir" title={e.missed ? t("Verpasst") : e.incoming ? t("Eingehend") : t("Ausgehend")}>
             <Icon name={e.missed && e.incoming ? "missed" : e.incoming ? "incoming" : "outgoing"} size={20} />
           </span>
+          <!-- Keine <button>, weil Notiz und Zurückgerufen eigene Knöpfe darin sind -->
+          <div class="open" role="button" tabindex="0" aria-expanded={selected === e.id} onclick={() => select(e)} onkeydown={(ev) => (ev.key === "Enter" || ev.key === " ") && (ev.preventDefault(), select(e))}>
+          <!-- Wie in der STARFACE-App: oben der Kontakt (sonst „---“), darunter nur die Nummer -->
           <span class="who">
-            <strong>{e.name || e.number || t("Unbekannt")}</strong>
-            <small>
-              {#if e.name && e.number}{e.number}{/if}
-              {#if e.group} · {t("Gruppe {name}", { name: e.group })}{#if e.answered_by}, {t("angenommen von {name}", { name: e.answered_by })}{/if}{/if}
-              {#if e.voicemail} · Voicemail{/if}
-            </small>
-            {#if e.comment && selected !== e.id}<span class="note">📝 {e.comment}</span>{/if}
+            <strong>{e.name || "---"}</strong>
+            <small>{e.number || t("Unbekannt")}</small>
           </span>
-          <span class="when">{time(e.start)}<small>{dur(e.duration_secs)}</small></span>
-          </button>
-          <div class="acts">
-            {#if e.missed && e.incoming}
-              <button
-                class="icon"
-                class:done={e.called_back}
-                title={e.called_back ? t("Als nicht zurückgerufen markieren") : t("Als zurückgerufen markieren")}
-                onclick={() => act(e.called_back ? "not_called_back" : "called_back", e.id)}
-              >✓</button>
+          <!-- Eigene Spalte wie in der STARFACE-App: Notiz (mit Vorschau) und Zurückgerufen, in jeder Zeile auf gleicher Höhe -->
+          <span class="marks">
+            {#if e.comment}
+              <span class="notewrap">
+                <span class="noteicon" aria-label={t("Kommentar")}>
+                  <svg viewBox="0 0 24 24"><path class="paper" d="M4 4h16v11l-5 5H4z" /><path class="lines" d="M7.5 9h9M7.5 12.5h6" /></svg>
+                </span>
+                <span class="notetip" role="tooltip">
+                  <strong>{t("Kommentar hinzugefügt")}</strong>
+                  <span class="notetext">{e.comment}</span>
+                  {#if e.comment_author || e.comment_modified}
+                    <small>{e.comment_author}{#if e.comment_modified}<br />{stamp(e.comment_modified)}{/if}</small>
+                  {/if}
+                </span>
+              </span>
             {/if}
-            {#if external(e.number) && !e.name && !known[e.number]}
-              <button class="icon" title={t("Ins Adressbuch übernehmen")} onclick={() => newContact({ number: e.number })}><Icon name="person" size={18} /></button>
-            {/if}
-            <button class="icon" title={t("Notiz")} onclick={() => selected !== e.id && select(e)}>✎</button>
-            <button class="icon" title={t("Weitergeben (Chat oder E-Mail)")} onclick={() => (sharing = e)}><Icon name="send" size={18} /></button>
             <button
-              class="icon"
-              class:warn={confirmDelete === e.id}
-              title={confirmDelete === e.id ? t("Nochmals klicken zum Löschen") : t("Löschen")}
-              onclick={() => (confirmDelete === e.id ? act("delete", e.id) : (confirmDelete = e.id))}
-              onblur={() => confirmDelete === e.id && (confirmDelete = null)}
-            ><Icon name="trash" size={18} /></button>
+              class="cb"
+              class:done={e.called_back}
+              title={e.called_back ? t("Als nicht zurückgerufen markieren") : t("Als zurückgerufen markieren")}
+              onclick={(ev) => { ev.stopPropagation(); act(e.called_back ? "not_called_back" : "called_back", e.id); }}
+            >
+              <svg viewBox="0 0 24 24"><path d="M6.6 7.2A7.5 7.5 0 1 1 4.6 13.5" /><path d="M6.8 3.4v4h4" /><path d="M8.6 12.3l2.4 2.4 4.3-4.6" /></svg>
+            </button>
+          </span>
+          {#if hasExtra}
+            <!-- Gruppe als Chip, darunter wer angenommen hat -->
+            <span class="extra">
+              {#if e.group}<span class="tag" title={t("Gruppe {name}", { name: e.group })}>{e.group}</span>{/if}
+              {#if e.voicemail}<span class="tag">Voicemail</span>{/if}
+              {#if e.answered_by}<span class="by" title={t("angenommen von {name}", { name: e.answered_by })}><Icon name="person" size={14} />{e.answered_by}</span>{/if}
+            </span>
+          {/if}
+          <!-- Wie Kontakt und Nummer: oben die Uhrzeit, darunter die Dauer -->
+          <span class="when"><span class="time">{time(e.start)}</span><small class="dur">{dur(e.duration_secs)}</small></span>
+          </div>
+          <!-- Hinter der Uhrzeit: Schnelloptionen (⋯) und Anrufen, erst beim Überfahren -->
+          <span class="callcol" class:open-menu={menuFor === e.id}>
+            <button class="more" title={t("Weitere Optionen")} aria-expanded={menuFor === e.id} onclick={() => (menuFor = menuFor === e.id ? null : e.id)}><Icon name="more" size={18} /></button>
             {#if e.number}
               <button class="call" title={t("Anrufen")} disabled={!ready} onclick={() => run("phone_dial", { number: e.number })}><Icon name="call" size={18} /></button>
             {/if}
-          </div>
+            {#if menuFor === e.id}
+              <button class="scrim" aria-label={t("Menü schliessen")} onclick={() => (menuFor = null)}></button>
+              <span class="quick" role="menu">
+                <button role="menuitem" onclick={() => { menuFor = null; if (selected !== e.id) select(e); }}><span>✎</span>{t("Notiz")}</button>
+                <button role="menuitem" onclick={() => { menuFor = null; sharing = e; }}><Icon name="send" size={16} />{t("Weitergeben (Chat oder E-Mail)")}</button>
+                {#if external(e.number) && !e.name && !known[e.number]}
+                  <button role="menuitem" onclick={() => { menuFor = null; newContact({ number: e.number }); }}><Icon name="person" size={16} />{t("Ins Adressbuch übernehmen")}</button>
+                {/if}
+              </span>
+            {/if}
+          </span>
         </div>
         {#if selected === e.id}
           <dl class="details">
@@ -233,6 +264,13 @@
                 <input type="checkbox" checked={e.called_back} onchange={(ev) => act(ev.currentTarget.checked ? "called_back" : "not_called_back", e.id)} />
                 {e.called_back ? t("Ja") : t("Nein")}
               </label>
+            </dd>
+            <dt>{t("Aktionen")}</dt>
+            <dd class="dacts">
+              {#if external(e.number) && !e.name && !known[e.number]}
+                <button onclick={() => newContact({ number: e.number })}><Icon name="person" size={16} /> {t("Ins Adressbuch übernehmen")}</button>
+              {/if}
+              <button onclick={() => (sharing = e)}><Icon name="send" size={16} /> {t("Weitergeben (Chat oder E-Mail)")}</button>
             </dd>
             <dt>{t("Kommentar")}</dt>
             <dd>
@@ -256,32 +294,76 @@
 
 <style>
   .journal { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.5rem; }
-  .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 2.4rem; }
   .chip { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.9rem; background: var(--panel); }
-  .chip.active { background: var(--accent); color: #111; border-color: var(--accent); }
-  .filter { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.6rem; background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; }
-  .filter input { border: none; background: none; outline: none; padding: 0.4rem 0; width: 12rem; }
-  .list { flex: 1; overflow: auto; background: var(--panel); border-radius: 4px; padding: 0.2rem 0.8rem 0.8rem; }
+  .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .filter { margin-left: auto; min-width: 0; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.6rem; background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; }
+  .filter input { border: none; background: none; outline: none; padding: 0.4rem 0; width: 12rem; min-width: 0; text-overflow: ellipsis; }
+  .list { flex: 1; overflow: auto; border-radius: 4px; padding: 0.2rem 0.8rem 0.8rem; }
   h3 { font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 0.9rem 0 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  .row { display: flex; align-items: center; gap: 0.8rem; padding: 0.45rem 0.3rem; border-top: 1px solid var(--line); }
+  /* Wie in der STARFACE-App: ruhige Zeilen, Aktionen erst beim Überfahren */
+  .row { position: relative; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.5rem; border: 1px solid transparent; border-radius: 6px; }
+  .row + .row { margin-top: 0.15rem; }
+  .row:hover { border-color: var(--accent); }
   .row.selected { background: var(--accent-soft); }
-  .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.8rem; padding: 0; background: none; border: none; color: inherit; text-align: left; cursor: pointer; }
-  .dir { display: grid; color: var(--green); }
+  /* Feste Spalten wie eine Tabelle: Kontakt/Nummer | (Gruppe/Annehmer) | Uhrzeit/Dauer; Richtung und Zurückgerufen davor */
+  .open {
+    flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 3.4rem 4.5rem; align-items: center; gap: 0.8rem;
+    padding: 0; background: none; border: none; color: inherit; text-align: left; cursor: pointer;
+  }
+  .dir { flex: none; width: 1.5rem; display: grid; color: var(--green); }
   .row:not(.missed) .dir { color: var(--muted); }
   .row.missed .dir, .row.missed .who strong { color: #ff6b6b; }
   .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .who strong, .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .who small { color: var(--muted); }
-  .when { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
-  .when small { color: var(--muted); font-size: 0.75rem; }
-  .acts { display: flex; align-items: center; gap: 0.25rem; }
-  .icon { width: 2rem; height: 2rem; padding: 0; display: grid; place-items: center; background: none; border: 1px solid transparent; border-radius: 50%; color: var(--muted); }
-  .icon:hover { border-color: var(--line); color: var(--text); }
-  .icon.warn { color: #fff; background: var(--red); }
-  .icon.done { color: var(--green); border-color: var(--green); }
-  .call { width: 2.1rem; height: 2.1rem; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--green); border: none; color: #fff; }
+  .when { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dur { color: var(--muted); font-size: 0.75rem; }
+  /* Notiz links, Zurückgerufen rechts: beide Plätze fest, auch wenn einer fehlt */
+  .marks { display: grid; grid-template-columns: 1.4rem 1.7rem; align-items: center; justify-items: center; gap: 0.3rem; }
+  .marks .cb { grid-column: 2; }
+  .cb { flex: none; width: 1.7rem; height: 1.7rem; padding: 0; display: grid; place-items: center; background: none; border: none; border-radius: 50%; color: var(--text); opacity: 0; }
+  .cb svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .row:hover .cb, .cb:focus-visible { opacity: 0.4; }
+  .cb:hover { opacity: 1 !important; background: var(--panel-2); }
+  .cb.done { opacity: 1; }
+  /* Notiz: weisses Blatt, Vorschau beim Überfahren */
+  .notewrap { position: relative; flex: none; display: grid; }
+  .noteicon { display: grid; cursor: default; }
+  .noteicon svg { width: 1.25rem; height: 1.25rem; }
+  .noteicon .paper { fill: var(--text); }
+  .noteicon .lines { stroke: var(--tile); stroke-width: 1.8; stroke-linecap: round; }
+  .notetip {
+    display: none; position: absolute; left: 0; top: calc(100% + 0.35rem); z-index: 20; width: max-content; max-width: 18rem;
+    flex-direction: column; gap: 0.35rem; padding: 0.5rem 0.7rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px #0008;
+    font-size: 0.85rem; white-space: normal;
+  }
+  .notewrap:hover .notetip { display: flex; }
+  .notetext { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .notetip small { color: var(--muted); }
+  .callcol { position: relative; flex: none; width: 4.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; }
+  .callcol > .more, .callcol > .call { visibility: hidden; }
+  .row:hover .callcol > *, .row:focus-within .callcol > *, .row.selected .callcol > *, .callcol.open-menu > * { visibility: visible; }
+  .more { width: 2rem; height: 2rem; padding: 0; display: grid; place-items: center; background: none; border: none; border-radius: 50%; color: var(--muted); }
+  .more:hover, .more[aria-expanded="true"] { background: var(--panel-2); color: var(--text); }
+  .scrim { position: fixed; inset: 0; z-index: 19; background: transparent; border: none; padding: 0; cursor: default; }
+  .quick {
+    position: absolute; right: 0; top: calc(100% + 0.2rem); z-index: 20; display: flex; flex-direction: column; min-width: 14rem; padding: 0.3rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px #0008;
+  }
+  .quick button { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.6rem; background: none; border: none; border-radius: 4px; text-align: left; white-space: nowrap; }
+  .quick button:hover { background: var(--panel-2); }
+  .dacts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .dacts button { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; }
+  /* Spalte für Gruppe/Voicemail nur, wenn eine Zeile sie braucht */
+  .list.wide .open { grid-template-columns: minmax(0, 1fr) 3.4rem minmax(0, 9rem) 4.5rem; }
+  .extra { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+  .tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.5rem; border: 1px solid var(--muted); border-radius: 999px; font-size: 0.78rem; }
+  .by { max-width: 100%; display: inline-flex; align-items: center; gap: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; color: var(--muted); }
+  /* Anrufen: zurückhaltend, grün erst direkt unter der Maus */
+  .call { width: 2.1rem; height: 2.1rem; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: none; color: var(--text); }
+  .call:hover:not(:disabled) { background: var(--green); color: #fff; }
   .call:disabled { opacity: 0.4; }
-  .note { padding: 0.1rem 0; color: var(--text); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.35rem 1rem; margin: 0; padding: 0.6rem 0.8rem 0.8rem 2.6rem; background: var(--accent-soft); }
   .details dt { color: var(--muted); font-size: 0.9rem; }
   .details dd { margin: 0; overflow-wrap: anywhere; }
@@ -290,5 +372,5 @@
   .comment textarea { flex: 1; padding: 0.3rem 0.5rem; resize: vertical; font: inherit; }
   .comment button { padding: 0.3rem 0.6rem; }
   .muted { color: var(--muted); }
-  .error { color: var(--accent); margin: 0; }
+  .error { color: var(--accent-text); margin: 0; }
 </style>

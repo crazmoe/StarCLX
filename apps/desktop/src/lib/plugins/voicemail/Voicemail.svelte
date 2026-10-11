@@ -151,12 +151,12 @@
 
 <style>
   .vm { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.5rem; }
-  .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 2.4rem; }
   .chip { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.9rem; background: var(--panel); }
-  .chip.active { background: var(--accent); color: #111; border-color: var(--accent); }
-  .list { flex: 1; overflow: auto; background: var(--panel); border-radius: 4px; padding: 0.2rem 0.8rem 0.8rem; }
+  .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .list { flex: 1; overflow: auto; border-radius: 4px; padding: 0.2rem 0.8rem 0.8rem; }
   .row { display: flex; align-items: center; gap: 0.8rem; padding: 0.45rem 0.3rem; border-top: 1px solid var(--line); }
-  .row.new .who strong { color: var(--accent); }
+  .row.new .who strong { color: var(--accent-text); }
   .playbtn { width: 2.3rem; height: 2.3rem; padding: 0; border-radius: 50%; display: grid; place-items: center; }
   .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .who small { color: var(--muted); }
@@ -170,5 +170,5 @@
   .call { width: 2.1rem; height: 2.1rem; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--green); border: none; color: #fff; }
   .call:disabled { opacity: 0.4; }
   .muted { color: var(--muted); }
-  .error { color: var(--accent); margin: 0; }
+  .error { color: var(--accent-text); margin: 0; }
 </style>
