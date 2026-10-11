@@ -11,13 +11,14 @@
 //! geänderter Stand weitergegeben.
 
 use std::collections::BTreeMap;
+use std::future::Future;
 use std::time::Duration;
 
 use serde::Serialize;
 use sf_onehub::OneHub;
 use sf_onehub::sf_proto::v1;
 use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, JoinSet};
 
 use v1::queue as q;
 
@@ -256,45 +257,115 @@ impl Drop for Queues {
     }
 }
 
+/// Ein Ereignis aus einem der drei Streams; `None` = Stream beendet
+enum Event {
+    Queue(Option<q::QueueEventResponse>),
+    Call(Option<q::QueueCallEventResponse>),
+    Stats(Option<q::QueueStatisticsEventResponse>),
+}
+
+/// Öffnet einen Stream in eigener Aufgabe und reicht seine Ereignisse weiter.
+/// Die Anlage antwortet auf ein Abo erst mit dem ersten Ereignis; die
+/// Anruf-Ereignisse kommen ohne Anrufer in der Queue also nie an. Darum
+/// darf kein Abo auf ein anderes warten.
+fn forward<T, F, Fut>(
+    tasks: &mut JoinSet<()>,
+    tx: &mpsc::UnboundedSender<sf_onehub::Result<Event>>,
+    open: F,
+    wrap: fn(Option<T>) -> Event,
+) where
+    T: Send + 'static,
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<tonic::Response<tonic::Streaming<T>>, tonic::Status>>
+        + Send
+        + 'static,
+{
+    let tx = tx.clone();
+    let open = open();
+    tasks.spawn(async move {
+        let mut stream = match open.await {
+            Ok(r) => r.into_inner(),
+            Err(e) => {
+                let _ = tx.send(Err(e.into()));
+                return;
+            }
+        };
+        loop {
+            match stream.message().await {
+                Ok(ev) => {
+                    let end = ev.is_none();
+                    if tx.send(Ok(wrap(ev))).is_err() || end {
+                        return;
+                    }
+                }
+                Err(e) => {
+                    let _ = tx.send(Err(e.into()));
+                    return;
+                }
+            }
+        }
+    });
+}
+
 async fn watch(hub: &OneHub, updates: &mpsc::UnboundedSender<Vec<Queue>>) -> sf_onehub::Result<()> {
     // Erst abonnieren, dann lesen: so geht keine Änderung dazwischen verloren.
-    let mut svc = hub.queue();
-    let mut queue_events = svc.subscribe_queue_events(()).await?.into_inner();
-    let mut call_events = svc.subscribe_queue_call_events(()).await?.into_inner();
-    let mut stat_events = svc
-        .subscribe_queue_statistics_events(())
-        .await?
-        .into_inner();
+    // Die Aufgaben enden mit `tasks`, also auch beim Neuverbinden.
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let mut tasks = JoinSet::new();
+    let svc = hub.queue();
+    let mut s = svc.clone();
+    forward(
+        &mut tasks,
+        &tx,
+        move || async move { s.subscribe_queue_events(()).await },
+        Event::Queue,
+    );
+    let mut s = svc.clone();
+    forward(
+        &mut tasks,
+        &tx,
+        move || async move { s.subscribe_queue_call_events(()).await },
+        Event::Call,
+    );
+    let mut s = svc;
+    forward(
+        &mut tasks,
+        &tx,
+        move || async move { s.subscribe_queue_statistics_events(()).await },
+        Event::Stats,
+    );
+    drop(tx);
+
     let mut list = list(hub).await?;
     let mut sent = list.clone();
     let _ = updates.send(sent.clone());
-    loop {
-        tokio::select! {
-            ev = queue_events.message() => {
-                let Some(ev) = ev? else { return Ok(()) };
+    while let Some(ev) = rx.recv().await {
+        match ev? {
+            Event::Queue(Some(ev)) => {
                 for id in apply_queue(&mut list, ev) {
                     if let Some(queue) = list.iter_mut().find(|x| x.id == id) {
                         fill(hub, queue).await?;
                     }
                 }
             }
-            ev = call_events.message() => {
-                let Some(ev) = ev? else { return Ok(()) };
-                apply_call(&mut list, ev);
-            }
-            ev = stat_events.message() => {
-                let Some(ev) = ev? else { return Ok(()) };
+            Event::Call(Some(ev)) => apply_call(&mut list, ev),
+            Event::Stats(Some(ev)) => {
                 let id = id_of(ev.queue_id);
-                if let (Some(queue), Some(s)) = (list.iter_mut().find(|x| x.id == id), ev.queue_statistics) {
+                if let (Some(queue), Some(s)) =
+                    (list.iter_mut().find(|x| x.id == id), ev.queue_statistics)
+                {
                     queue.stats = stats_view(s);
                 }
             }
+            // Ein Stream ist zu Ende: alle neu öffnen
+            Event::Queue(None) | Event::Call(None) | Event::Stats(None) => return Ok(()),
         }
         if list != sent {
             sent.clone_from(&list);
             let _ = updates.send(sent.clone());
         }
     }
+    Ok(())
 }
 
 /// Wendet ein Queue-Ereignis an; gibt neu hinzugekommene Queues zurück,
