@@ -569,7 +569,7 @@ pub async fn group_ids(
 /// Umleitung, wie die Anlage sie meldet.
 #[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
 pub struct UserState {
-    /// "available", "ringing", "active", "unavailable" oder ""
+    /// "available", "ringing", "active", "queue_pause", "unavailable" oder ""
     pub telephony: &'static str,
     pub dnd: bool,
     /// Chat: "available", "away", "dnd", "offline" oder "" (kein Chat)
@@ -587,6 +587,8 @@ fn telephony(t: i32) -> &'static str {
         Ok(T::Ringing) => "ringing",
         Ok(T::Active) => "active",
         Ok(T::Unavailable) => "unavailable",
+        // iQueue-Nachbearbeitung nach einem Gespräch
+        Ok(T::QueuePause) => "queue_pause",
         _ => "",
     }
 }

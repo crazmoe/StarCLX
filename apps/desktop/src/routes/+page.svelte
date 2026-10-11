@@ -14,6 +14,8 @@
   import FunctionKeys from "$lib/plugins/fkeys/FunctionKeys.svelte";
   import DoorCams from "$lib/plugins/doorcam/DoorCams.svelte";
   import Conferences from "$lib/plugins/conference/Conferences.svelte";
+  import Queues from "$lib/plugins/queue/Queues.svelte";
+  import { initQueues, queues, waitingCalls } from "$lib/plugins/queue/queue.svelte";
   import ConferenceForm from "$lib/plugins/conference/ConferenceForm.svelte";
   import { activeConferences, conferenceEdit, conferences, initConferences, loadConferences } from "$lib/plugins/conference/conference.svelte";
   import { initVoicemail, loadVoicemails, unheard, voicemail } from "$lib/plugins/voicemail/voicemail.svelte";
@@ -126,6 +128,7 @@
     initVoicemail();
     initPermissions();
     initConferences();
+    initQueues();
     loadPrefs().catch(() => {});
     restore();
     return () => offs.forEach((p) => p.then((off) => off()));
@@ -232,7 +235,7 @@
 
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
-  type Tab = "journal" | "voicemail" | "contacts" | "chat" | "fkeys" | "conference" | "doorcam";
+  type Tab = "journal" | "voicemail" | "contacts" | "chat" | "fkeys" | "conference" | "queue" | "doorcam";
   let tab = $state<Tab>("journal");
   const allTabs: { id: Tab; icon: IconName; label: string }[] = $derived([
     { id: "journal", icon: "history", label: t("Rufliste") },
@@ -241,6 +244,7 @@
     { id: "chat", icon: "chat", label: "Chat" },
     { id: "fkeys", icon: "dialpad", label: t("Funktionstasten") },
     { id: "conference", icon: "meetings", label: t("Konferenzen") },
+    { id: "queue", icon: "groups", label: t("Warteschlangen") },
     { id: "doorcam", icon: "videocam", label: t("Türkamera") },
   ]);
   /** Türkamera nur mit angelegten Kameras anbieten */
@@ -258,7 +262,9 @@
     const p = tabPermission[id];
     return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "fkeys" && fkeys.forbidden);
   };
-  const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && !tabOff(x.id)));
+  /** Warteschlangen nur für Agenten einer iQueue */
+  const hasQueues = $derived(queues.queues.length > 0);
+  const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && (x.id !== "queue" || hasQueues) && !tabOff(x.id)));
   $effect(() => {
     if (!tabs.some((x) => x.id === tab) && tabs.length) tab = tabs[0].id;
   });
@@ -267,7 +273,7 @@
   const free = $derived(prefs.value?.workspace === "free");
   let tiles = $state<Tile[]>([]);
   /** Zähler, die sonst am Reiter stehen, für die Kachel-Titelleiste */
-  const badge = (id: string) => (id === "chat" ? unreadTotal() : id === "voicemail" ? unheard() : id === "conference" ? activeConferences() : 0);
+  const badge = (id: string) => (id === "chat" ? unreadTotal() : id === "voicemail" ? unheard() : id === "conference" ? activeConferences() : id === "queue" ? waitingCalls() : 0);
 
   /** Anordnung entsperrt; beim Start immer fixiert */
   let editing = $state(false);
@@ -361,6 +367,7 @@
           {#if tb.id === "chat" && unreadTotal()}<span class="unread">{unreadTotal()}</span>{/if}
           {#if tb.id === "voicemail" && unheard()}<span class="unread">{unheard()}</span>{/if}
           {#if tb.id === "conference" && activeConferences()}<span class="unread">{activeConferences()}</span>{/if}
+          {#if tb.id === "queue" && waitingCalls()}<span class="unread">{waitingCalls()}</span>{/if}
         </button>
       {/each}
       {#if free}
@@ -397,6 +404,8 @@
           <DoorCams />
         {:else if id === "conference"}
           <Conferences />
+        {:else if id === "queue"}
+          <Queues />
         {:else}
           <Chat />
         {/if}

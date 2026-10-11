@@ -739,6 +739,7 @@ pub fn run() {
         .manage(bus::Bus::default())
         .manage(plugins::call::CallState::default())
         .manage(plugins::conference::ConferenceState::default())
+        .manage(plugins::queue::QueueState::default())
         .manage(plugins::doorcam::DoorCamState::default())
         .manage(plugins::journal::JournalState::default())
         .manage(busylight::BusylightState::default())
@@ -944,6 +945,9 @@ pub fn run() {
             voicemail::voicemail_move,
             voicemail::voicemail_delete,
             voicemail::voicemail_via_phone,
+            plugins::queue::queues,
+            plugins::queue::queue_login,
+            plugins::queue::queue_grab,
             plugins::conference::conferences,
             plugins::conference::conference_save,
             plugins::conference::conference_delete,

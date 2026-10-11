@@ -352,7 +352,7 @@ function activeFor(k: FunctionKey, r: Redirect): boolean {
   return r.enabled && (k.functionKeyType !== "FORWARDTOTARGET" || sameTarget(k, r));
 }
 
-/** Zustand für die Farbe: "on", "partial", "busy", "ringing", "dnd", "free", "off", "none" oder "" */
+/** Zustand für die Farbe: "on", "partial", "busy", "ringing", "wrapup", "dnd", "free", "off", "none" oder "" */
 export function keyState(k: FunctionKey): string {
   switch (k.functionKeyType) {
     case "BUSYLAMPFIELD": {
@@ -361,6 +361,7 @@ export function keyState(k: FunctionKey): string {
       // Gespräch geht vor Ruhe, damit man sieht, dass telefoniert wird
       if (s.telephony === "ringing") return "ringing";
       if (s.telephony === "active") return "busy";
+      if (s.telephony === "queue_pause") return "wrapup";
       if (s.dnd) return "dnd";
       return s.telephony === "unavailable" ? "off" : "free";
     }

@@ -93,6 +93,12 @@ impl Error {
         }
     }
 
+    /// Die Anlage kennt den Dienst nicht (gRPC `Unimplemented`), etwa weil
+    /// ein Modul fehlt.
+    pub fn unimplemented(&self) -> bool {
+        matches!(self, Error::Status(s) if s.code() == tonic::Code::Unimplemented)
+    }
+
     /// Die Anlage war nicht zu erreichen (Netz weg, VPN getrennt, Zeitüberschreitung),
     /// im Gegensatz zu einer Antwort der Anlage selbst.
     pub fn unreachable(&self) -> bool {
@@ -269,6 +275,7 @@ impl OneHub {
         v1::sfpbx::group::group_service_client::GroupServiceClient
     );
     service!(user, v1::user::user_service_client::UserServiceClient);
+    service!(queue, v1::queue::queue_service_client::QueueServiceClient);
     service!(
         call_back_on_busy,
         v1::ccbs::call_back_on_busy_service_client::CallBackOnBusyServiceClient

@@ -4891,6 +4891,7 @@ dependencies = [
  "sf-tls",
  "thiserror 2.0.21",
  "tokio",
+ "tonic",
  "tracing",
  "url",
 ]
