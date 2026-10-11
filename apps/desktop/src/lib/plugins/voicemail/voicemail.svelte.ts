@@ -13,11 +13,14 @@ export type Voicemail = {
   group: boolean;
 };
 
-export const voicemail = $state({ list: [] as Voicemail[], error: "" });
+/** `disabled`: der Benutzer hat kein Voicemail-Recht (keine Box) */
+export const voicemail = $state({ list: [] as Voicemail[], error: "", disabled: false });
 
 export async function loadVoicemails() {
   try {
-    voicemail.list = await invoke<Voicemail[]>("voicemails");
+    const list = await invoke<Voicemail[] | null>("voicemails");
+    voicemail.list = list ?? [];
+    voicemail.disabled = list === null;
     voicemail.error = "";
   } catch (e) {
     voicemail.error = String(e);
@@ -31,6 +34,8 @@ export function initVoicemail() {
   if (started) return;
   started = true;
   listen("voicemail-changed", () => loadVoicemails());
+  // Recht erteilt oder entzogen
+  listen("me-permission", () => loadVoicemails());
 }
 
 export const unheard = () => voicemail.list.filter((v) => v.folder === "inbox").length;

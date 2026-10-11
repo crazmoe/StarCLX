@@ -9,6 +9,7 @@
   import Icon from "../../Icon.svelte";
   import Toggle from "../../Toggle.svelte";
   import { t } from "../../i18n.svelte";
+  import { can, permissions } from "../../permissions.svelte";
 
   let { server }: { server: string } = $props();
 
@@ -36,8 +37,13 @@
   let busy = $state(false);
   let editing = $state<Fmc | null>(null);
 
-  onMount(() => {
+  // Lädt auch neu, wenn sich die Rechte ändern
+  $effect(() => {
+    void permissions.list;
     load();
+  });
+
+  onMount(() => {
     const off = listen("reach-changed", () => load());
     return () => off.then((f) => f());
   });
@@ -52,10 +58,11 @@
 
   async function load() {
     try {
+      // Nur abfragen, wofür der Benutzer das Recht hat
       const [r, f, m] = await Promise.all([
-        invoke<Redirect[]>("redirects"),
-        invoke<Fmc[]>("fmc_phones"),
-        invoke<Mailbox[]>("mailboxes"),
+        can("redirection") ? invoke<Redirect[]>("redirects") : [],
+        can("ifmc") ? invoke<Fmc[]>("fmc_phones") : [],
+        can("voicemail") ? invoke<Mailbox[]>("mailboxes") : [],
       ]);
       redirects = r;
       edits = Object.fromEntries(r.map((x) => [x.id, editOf(x)]));
@@ -117,9 +124,15 @@
     s.days = s.days.includes(d) ? s.days.filter((x) => x !== d) : [...s.days, d].sort();
   }
 
+  /** Gruppenumleitungen nur mit eigenem Recht */
+  const shownGroups = $derived(can("group_redirection") ? groups : groups.filter(([, list]) => !list.some((r) => r.group)));
+  const fmcEdit = $derived(can("ifmc_edit"));
+
   const webApp = () => openUrl(server.replace(/\/+$/, ""));
 </script>
 
+<!-- Abschnitte ohne Recht auf der Anlage fehlen ganz -->
+{#if can("voicemail")}
 <section id="voicemail">
   <h3>Voicemail</h3>
   <div class="card">
@@ -138,14 +151,16 @@
     <button class="link" onclick={webApp}>{t("Weitere Einstellungen: zur Web-App wechseln")}</button>
   </div>
 </section>
+{/if}
 
+{#if can("redirection")}
 <section id="redirects">
   <h3>{t("Umleitungen")}</h3>
   <div class="card">
     {#if !redirects.length}
       <p class="muted">{error ? "" : t("Keine Umleitungen verfügbar.")}</p>
     {/if}
-    {#each groups as [title, list]}
+    {#each shownGroups as [title, list]}
       <h4>{title}</h4>
       {#each list as r (r.id)}
         {@const e = edits[r.id]}
@@ -173,16 +188,22 @@
   </div>
 </section>
 
+{/if}
+
+{#if can("ifmc")}
 <section id="fmc">
   <h3>{t("Parallelruf (iFMC)")}</h3>
   <div class="card">
     <p class="small muted">{t("Weitere Geräte, z. B. das Handy, klingeln bei Anrufen mit. Call2Go braucht ein aktives Gerät.")}</p>
+
     {#each fmc as p (p.id)}
       <div class="fmc">
-        <Toggle checked={p.enabled} disabled={busy} label={p.number} onchange={(v: boolean) => act("fmc_enable", { id: p.id, enabled: v })} />
+        <Toggle checked={p.enabled} disabled={busy || !fmcEdit} label={p.number} onchange={(v: boolean) => act("fmc_enable", { id: p.id, enabled: v })} />
         <span class="muted small">{[p.delay ? t("nach {n} s", { n: p.delay }) : t("sofort"), p.confirm && t("mit Tastendruck"), p.schedules.length && t("zeitgesteuert")].filter(Boolean).join(" · ")}</span>
-        <button class="x" title={t("Bearbeiten")} onclick={() => (editing = structuredClone($state.snapshot(p)))}><Icon name="settings" size={18} /></button>
-        <button class="x" title={t("Löschen")} disabled={busy} onclick={() => confirm(t("{number} entfernen?", { number: p.number })) && act("fmc_delete", { id: p.id })}><Icon name="trash" size={18} /></button>
+        {#if fmcEdit}
+          <button class="x" title={t("Bearbeiten")} onclick={() => (editing = structuredClone($state.snapshot(p)))}><Icon name="settings" size={18} /></button>
+          <button class="x" title={t("Löschen")} disabled={busy} onclick={() => confirm(t("{number} entfernen?", { number: p.number })) && act("fmc_delete", { id: p.id })}><Icon name="trash" size={18} /></button>
+        {/if}
       </div>
     {/each}
     {#if editing}
@@ -208,11 +229,12 @@
           <button onclick={() => (editing = null)}>{t("Abbrechen")}</button>
         </div>
       </div>
-    {:else}
+    {:else if fmcEdit}
       <button class="add" onclick={newFmc}>{t("Gerät hinzufügen")}</button>
     {/if}
   </div>
 </section>
+{/if}
 {#if error && connection.online}<p class="notice">{error}</p>{/if}
 {#if info}<p class="ok">{info}</p>{/if}
 

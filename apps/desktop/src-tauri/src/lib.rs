@@ -303,6 +303,19 @@ async fn signaling_numbers(
         .map_err(|e| e.to_string())
 }
 
+/// Rechte des Benutzers auf der Anlage; `None`, wenn unbekannt (dann
+/// bietet die Oberfläche alles an und verlässt sich auf die Fehlermeldungen).
+#[tauri::command]
+async fn permissions(state: State<'_, AppState>) -> Result<Option<Vec<String>>, String> {
+    match sf_core::account::permissions(&hub(&state).await?).await {
+        Ok(list) => Ok(list),
+        Err(e) => {
+            tracing::warn!(error = %e, "Rechte nicht abgefragt");
+            Ok(None)
+        }
+    }
+}
+
 /// Eigene Telefone mit dem primären
 #[tauri::command]
 async fn phones(state: State<'_, AppState>) -> Result<Vec<sf_core::account::PhoneView>, String> {
@@ -863,6 +876,7 @@ pub fn run() {
             save_prefs,
             signaling_numbers,
             set_signaling_number,
+            permissions,
             phones,
             set_primary_phone,
             plugins::contacts::contacts_search,

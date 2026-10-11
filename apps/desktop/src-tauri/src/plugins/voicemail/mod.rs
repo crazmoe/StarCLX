@@ -57,11 +57,14 @@ fn notify(app: &AppHandle, v: &Voicemail) {
     }
 }
 
+/// `None`, wenn der Benutzer kein Voicemail-Recht (keine Box) hat.
 #[tauri::command]
-pub async fn voicemails(state: State<'_, AppState>) -> Result<Vec<Voicemail>, String> {
-    voicemail::list(&hub(&state).await?)
-        .await
-        .map_err(|e| e.to_string())
+pub async fn voicemails(state: State<'_, AppState>) -> Result<Option<Vec<Voicemail>>, String> {
+    match voicemail::list(&hub(&state).await?).await {
+        Ok(list) => Ok(Some(list)),
+        Err(e) if e.permission_denied().is_some() => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 /// Die Aufnahme als WAV-Bytes (kommt im Frontend als ArrayBuffer an).

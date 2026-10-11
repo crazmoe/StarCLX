@@ -107,6 +107,26 @@ pub struct Keys {
     pub module_choices: Vec<ModuleChoice>,
     /// Eigene OneHub-User-ID (für den Ruhe-Zustand); setzt der Aufrufer
     pub me: String,
+    /// Dem Benutzer fehlt das Recht „Tasten“; die Liste ist dann leer
+    pub forbidden: bool,
+}
+
+impl Keys {
+    /// Keine Tasten, weil dem Benutzer das Recht fehlt
+    pub fn forbidden() -> Self {
+        Self {
+            set_id: String::new(),
+            set_name: String::new(),
+            account_id: String::new(),
+            keys: Vec::new(),
+            order: Vec::new(),
+            accounts: Vec::new(),
+            group_choices: Vec::new(),
+            module_choices: Vec::new(),
+            me: String::new(),
+            forbidden: true,
+        }
+    }
 }
 
 /// Zugang zur REST-API mit dem aktuellen Token der Sitzung.
@@ -208,6 +228,7 @@ impl Rest {
             group_choices: group_choices(&defaults),
             module_choices: module_choices(&defaults),
             me: String::new(),
+            forbidden: false,
         })
     }
 
@@ -298,6 +319,17 @@ impl Rest {
     }
 }
 
+/// Die Anlage verweigert die Anfrage mit 403, weil dem Benutzer ein Recht
+/// fehlt (z. B. „User with id 4600 has no permission for quickdial“).
+#[derive(Debug, thiserror::Error)]
+#[error("Anlage antwortet 403 Forbidden: {0}")]
+pub struct Forbidden(pub String);
+
+/// Fehlt dem Benutzer das Recht für die Anfrage?
+pub fn forbidden(e: &BoxError) -> bool {
+    e.downcast_ref::<Forbidden>().is_some()
+}
+
 /// Fehlertext der Anlage mitgeben, statt nur den Statuscode
 pub(crate) async fn check(resp: reqwest::Response) -> Result<reqwest::Response, BoxError> {
     let status = resp.status();
@@ -306,6 +338,9 @@ pub(crate) async fn check(resp: reqwest::Response) -> Result<reqwest::Response, 
     }
     let body = resp.text().await.unwrap_or_default();
     let detail: String = body.chars().take(300).collect();
+    if status == reqwest::StatusCode::FORBIDDEN {
+        return Err(Forbidden(detail).into());
+    }
     Err(format!("Anlage antwortet {status}: {detail}").into())
 }
 

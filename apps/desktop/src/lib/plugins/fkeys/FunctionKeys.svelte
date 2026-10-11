@@ -7,6 +7,7 @@
   import { portal } from "../../portal";
   import { prefs } from "../../prefs.svelte";
   import { t } from "../../i18n.svelte";
+  import { can } from "../../permissions.svelte";
 
   onMount(() => { loadFkeys(); });
   const columns = $derived(prefs.value?.fkey_columns ?? 3);
@@ -18,7 +19,9 @@
     fkeys.order
       .map((_, i) => keyAt(i))
       .filter((k) => k !== undefined)
-      .filter((k) => typeInfo(k.functionKeyType).group !== "desk" || k.functionKeyType === "SEPARATOR"),
+      .filter((k) => typeInfo(k.functionKeyType).group !== "desk" || k.functionKeyType === "SEPARATOR")
+      // „Modul aktivieren“ nur mit dem Recht Tasten → Modulaktivierung
+      .filter((k) => k.functionKeyType !== "MODULEACTIVATION" || can("fkey_module_key")),
   );
 </script>
 

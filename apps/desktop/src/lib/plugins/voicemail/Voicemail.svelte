@@ -96,6 +96,9 @@
 </script>
 
 <div class="vm">
+  {#if voicemail.disabled}
+  <p class="muted">{t("Für diesen Benutzer ist keine Voicemail-Box eingerichtet.")}</p>
+  {:else}
   <div class="bar">
     {#each folders as f}
       <button class="chip" class:active={folder === f.id} onclick={() => (folder = f.id)}>
@@ -143,6 +146,7 @@
       <p class="muted">{t("Keine Nachrichten in „{ordner}“.", { ordner: folders.find((f) => f.id === folder)?.label ?? "" })}</p>
     {/each}
   </div>
+  {/if}
 </div>
 
 <style>

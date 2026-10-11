@@ -42,6 +42,7 @@
     badge,
     body,
     onchange,
+    hidden,
   }: {
     tiles: Tile[];
     editing?: boolean;
@@ -49,6 +50,8 @@
     badge?: (id: string) => number;
     body: Snippet<[string]>;
     onchange?: () => void;
+    /** Kacheln, die gerade nicht verfügbar sind (z. B. ohne Recht); ihre Lage bleibt gespeichert */
+    hidden?: (id: string) => boolean;
   } = $props();
 
   let width = $state(0);
@@ -116,7 +119,7 @@
 <svelte:window onpointermove={onmove} onpointerup={onup} onpointercancel={onup} />
 
 <div class="area" class:editing bind:clientWidth={width} style="height: {height}px">
-  {#each tiles.filter((x) => x.visible) as tile (tile.id)}
+  {#each tiles.filter((x) => x.visible && !hidden?.(x.id)) as tile (tile.id)}
     <section
       class="tile"
       data-tile={tile.id}

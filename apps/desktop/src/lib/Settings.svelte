@@ -16,6 +16,7 @@
   import { type Hotkeys, loadPrefs, locked, prefs, savePrefs, type Prefs } from "./prefs.svelte";
   import { setLanguage, t } from "./i18n.svelte";
   import { avatarOf, fkeys } from "./plugins/fkeys/fkeys.svelte";
+  import { can } from "./permissions.svelte";
 
   type SignalingNumber = { id: string; number: string; suppressed: boolean; read_only: boolean; selected: boolean };
 
@@ -57,17 +58,21 @@
     { id: "chat-status", icon: "person", label: t("Status") },
   ]);
   let defaultDownloads = $state("");
-  const reachSections: { id: string; icon: IconName; label: string }[] = $derived([
-    { id: "voicemail", icon: "voicemail", label: "Voicemail" },
-    { id: "redirects", icon: "forward", label: t("Umleitungen") },
-    { id: "fmc", icon: "call2go", label: t("Parallelruf") },
-  ]);
-  const personalSections: { id: string; icon: IconName; label: string }[] = $derived([
+  // Ohne Recht auf der Anlage fehlt der Abschnitt ganz (siehe Reach.svelte)
+  const reachSections: { id: string; icon: IconName; label: string }[] = $derived(
+    [
+      { id: "voicemail", icon: "voicemail" as IconName, label: "Voicemail", ok: can("voicemail") },
+      { id: "redirects", icon: "forward" as IconName, label: t("Umleitungen"), ok: can("redirection") },
+      { id: "fmc", icon: "call2go" as IconName, label: t("Parallelruf"), ok: can("ifmc") },
+    ].filter((s) => s.ok),
+  );
+  type Item = { id: string; icon: IconName; label: string };
+  const personalSections: Item[] = $derived(([
     { id: "appearance", icon: "workspace", label: t("Darstellung") },
     { id: "fkeys", icon: "dialpad", label: t("Funktionstasten") },
     { id: "hotkeys", icon: "dialpad", label: t("Hotkeys") },
     { id: "integration", icon: "call", label: t("Desktop-Integration") },
-  ]);
+  ] as Item[]).filter((s) => s.id !== "fkeys" || !fkeys.forbidden));
   const accountSections: { id: string; icon: IconName; label: string }[] = $derived([
     { id: "account", icon: "account", label: t("Konto") },
     { id: "password", icon: "lock", label: t("Passwort") },
@@ -75,13 +80,17 @@
   ]);
   type Tab = "phone" | "reach" | "chat" | "personal" | "account";
   /** Ein Reiter pro Bereich; die Unterpunkte springen innerhalb des Reiters */
-  const tabs: { id: Tab; icon: IconName; label: string; items: { id: string; icon: IconName; label: string }[] }[] = $derived([
+  type Group = { id: Tab; icon: IconName; label: string; items: { id: string; icon: IconName; label: string }[] };
+  const tabs: Group[] = $derived(([
     { id: "phone", icon: "call", label: t("Telefonie"), items: sections },
     { id: "reach", icon: "forward", label: t("Erreichbarkeit"), items: reachSections },
     { id: "chat", icon: "chat", label: "Chat", items: chatSections },
     { id: "personal", icon: "workspace", label: t("Personalisierung"), items: personalSections },
     { id: "account", icon: "account", label: t("Konto"), items: accountSections },
-  ]);
+  ] as Group[]).filter((g) => (g.id !== "reach" || reachSections.length) && (g.id !== "chat" || can("instant_messaging"))));
+  $effect(() => {
+    if (!tabs.some((g) => g.id === tab)) tab = "phone";
+  });
   let tab = $state<Tab>("phone");
   const hotkeyRows: { key: Exclude<keyof Hotkeys, "enabled">; label: string }[] = $derived([
     { key: "dial_selection", label: t("Markierte Rufnummer wählen") },
@@ -549,6 +558,7 @@
         </div>
       </section>
 
+      {#if !fkeys.forbidden}
       <section id="fkeys">
         <h3>{t("Funktionstasten")}</h3>
         <div class="card">
@@ -556,6 +566,7 @@
           <p class="small muted">{t("Tasten werden sofort auf der Anlage gespeichert; die Spaltenzahl mit „Speichern“.")}</p>
         </div>
       </section>
+      {/if}
 
       <section id="hotkeys">
         <h3>{t("Hotkeys")}</h3>

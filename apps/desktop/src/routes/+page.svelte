@@ -23,13 +23,14 @@
   import Icon, { type IconName } from "$lib/Icon.svelte";
   import Settings from "$lib/Settings.svelte";
   import MeMenu from "$lib/MeMenu.svelte";
-  import { avatarOf, ownChat, resetFkeys } from "$lib/plugins/fkeys/fkeys.svelte";
+  import { avatarOf, fkeys, ownChat, resetFkeys } from "$lib/plugins/fkeys/fkeys.svelte";
   import ChatBubble from "$lib/ChatBubble.svelte";
   import { canDial, initPhone, phone, run, isRingingIn } from "$lib/plugins/call/phone.svelte";
   import { loadPrefs, prefs, savePrefs, type Tile } from "$lib/prefs.svelte";
   import Workspace, { tilesOf } from "$lib/Workspace.svelte";
   import { t } from "$lib/i18n.svelte";
   import { connection, initConnection } from "$lib/connection.svelte";
+  import { can, initPermissions, loadPermissions, permissions, type Permission } from "$lib/permissions.svelte";
 
   type SessionInfo = { server: string; server_version: string; display_name: string; user_id: string };
   type UntrustedCert = { host: string; port: number; fingerprint: string; reason: string };
@@ -50,6 +51,8 @@
   function clearSessionData() {
     session = null;
     voicemail.list = [];
+    voicemail.disabled = false;
+    permissions.list = null;
     conferences.list = [];
     conferenceEdit.id = null;
     resetFkeys();
@@ -105,7 +108,7 @@
 
   onMount(() => {
     const offs = [
-      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadVoicemails(); loadConferences(); }),
+      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); }),
       listen<string>("login-error", (e) => { notice = e.payload; phase = "login"; }),
       listen<string>("logged-out", (e) => showLogin(e.payload)),
       // Kontowechsel: erst trennen, dann das andere Konto verbinden
@@ -116,13 +119,14 @@
       listen("dial-request", takeDialRequest),
       // Nach dem Standby: Voicemails neu holen (Funktionstasten und
       // Umleitungen hören selbst auf "resumed" bzw. "reach-changed")
-      listen("resumed", () => { if (session) { loadVoicemails(); loadConferences(); } }),
+      listen("resumed", () => { if (session) { loadPermissions(); loadVoicemails(); loadConferences(); } }),
     ];
     initPhone();
     initConnection();
     takeDialRequest();
     initChat();
     initVoicemail();
+    initPermissions();
     initConferences();
     initQueues();
     loadPrefs().catch(() => {});
@@ -189,7 +193,7 @@
     serverLocked = (await invoke<string[]>("locked_prefs").catch((): string[] => [])).includes("server");
     try {
       const info = await invoke<SessionInfo | null>("restore_session");
-      if (info) { session = info; phase = "session"; loadVoicemails(); loadConferences(); return; }
+      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); return; }
     } catch (e) {
       notice = t("Automatische Anmeldung fehlgeschlagen: {e}", { e: String(e) });
     }
@@ -245,11 +249,24 @@
   ]);
   /** Türkamera nur mit angelegten Kameras anbieten */
   const hasDoorCams = $derived(!!prefs.value?.door_cams?.some((c) => c.url.trim()));
+  /** Recht, das ein Reiter braucht */
+  const tabPermission: Partial<Record<Tab, Permission>> = {
+    journal: "calllist",
+    voicemail: "voicemail",
+    contacts: "addressbook",
+    chat: "instant_messaging",
+    conference: "conference",
+  };
+  /** Ohne Recht wird der Reiter bzw. die Kachel gar nicht angezeigt */
+  const tabOff = (id: Tab) => {
+    const p = tabPermission[id];
+    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "fkeys" && fkeys.forbidden);
+  };
   /** Warteschlangen nur für Agenten einer iQueue */
   const hasQueues = $derived(queues.queues.length > 0);
-  const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && (x.id !== "queue" || hasQueues)));
+  const tabs = $derived(allTabs.filter((x) => (x.id !== "doorcam" || hasDoorCams) && (x.id !== "queue" || hasQueues) && !tabOff(x.id)));
   $effect(() => {
-    if ((tab === "doorcam" && !hasDoorCams) || (tab === "queue" && !hasQueues)) tab = "journal";
+    if (!tabs.some((x) => x.id === tab) && tabs.length) tab = tabs[0].id;
   });
 
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
@@ -394,7 +411,7 @@
         {/if}
       {/snippet}
       {#if free}
-        <Workspace bind:tiles {editing} {meta} {badge} body={view} />
+        <Workspace bind:tiles {editing} {meta} {badge} body={view} hidden={(id) => tabOff(id as Tab)} />
       {:else}
         {@render view(tab)}
       {/if}

@@ -30,6 +30,21 @@
 - Sobald die Anlage wieder antwortet, verbindet StarCLX automatisch neu und lädt alles nach wie
   nach dem Standby (Token, Softphone, Funktionstasten, Voicemail, Umleitungen, Adressbuch)
 
+### Rechte der Anlage
+- StarCLX richtet sich nach den Rechten des Benutzers auf der Anlage (Benutzer → Rechte) und
+  blendet aus, was fehlt, statt mit einer gRPC-Fehlermeldung zu scheitern: Rufliste, Voicemail,
+  Adressbuch, Chat und Konferenzen als Reiter bzw. Kachel samt ihren Einstellungen, Umleitungen,
+  Gruppenumleitungen, Parallelruf und Voicemail-Ansage in den Einstellungen, „Voicemail“ bei
+  eingehenden Anrufen, Gesprächsaufnahme und Funktionstasten „Modul aktivieren“. Ohne „iFMC →
+  Ändern“ ist der Parallelruf nur lesbar.
+- Ohne Recht „Tasten“ fehlen der Reiter Funktionstasten und die Einstellung dazu, statt dass
+  „403 … no permission for quickdial“ erscheint. Der eigene Status wird weiter verfolgt.
+- Änderungen an den Rechten greifen sofort, ohne Neuanmeldung
+- Fehlt ein Recht für einen Ereignisstrom, fragt StarCLX nur noch alle fünf Minuten und ohne
+  Warnung im Protokoll nach
+- Meldet die Anlage ein fehlendes Recht als „Internal error“ (z. B. Voicemail), wird das ebenfalls
+  als fehlendes Recht erkannt
+
 ## 1.4.0 – 2026-10-10
 
 ### Tischtelefon steuern

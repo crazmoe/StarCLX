@@ -67,7 +67,16 @@ pub async fn fkeys_load(
     fk: State<'_, FkeyState>,
 ) -> Result<Keys, String> {
     let (rest, hub, me) = rest(&state).await?;
-    let mut keys = rest.load().await.map_err(|e| e.to_string())?;
+    // Ohne Recht „Tasten“ weiter mit leerer Liste: Der eigene Zustand
+    // (Präsenz, Rechte) wird trotzdem verfolgt.
+    let mut keys = match rest.load().await {
+        Ok(keys) => keys,
+        Err(e) if sf_core::fkeys::forbidden(&e) => {
+            tracing::info!(error = %e, "Funktionstasten: kein Recht");
+            sf_core::fkeys::Keys::forbidden()
+        }
+        Err(e) => return Err(e.to_string()),
+    };
     for k in keys
         .keys
         .iter()
