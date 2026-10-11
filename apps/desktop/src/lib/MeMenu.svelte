@@ -201,7 +201,7 @@
   <button class="row plain" onclick={onlogout}><span class="ic"><Icon name="logout" size={20} /></span><span class="lbl">{t("Abmelden")}</span></button>
 
   {#if sub}
-    <div class="sub" bind:this={subEl} style="top: {subTop - subShift}px">
+    <div class="sub" class:wide={sub === "number"} bind:this={subEl} style="top: {subTop - subShift}px">
       {#if sub === "chat"}
         <OwnStatus userId={session.user_id} />
       {:else if sub === "phone"}
@@ -299,12 +299,13 @@
   .certok { align-self: center; }
 
   .sub {
-    /* So breit wie nötig (Gruppenname und Nummer in einer Zeile), höchstens bis zum Fensterrand */
-    position: absolute; left: calc(100% + 0.4rem); width: max-content; min-width: 18rem; max-width: calc(100vw - 21rem);
+    position: absolute; left: calc(100% + 0.4rem); width: 18rem;
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #000a;
     display: flex; flex-direction: column; padding: 0.5rem;
     max-height: calc(100vh - 1rem); overflow-y: auto;
   }
+  /* Rufnummern: so breit wie nötig (Gruppenname und Nummer in einer Zeile), höchstens bis zum Fensterrand */
+  .sub.wide { width: max-content; min-width: 18rem; max-width: calc(100vw - 21rem); }
   .sub > * { flex: none; }
   .sub > .scroll { flex: 0 1 auto; min-height: 3rem; overflow-y: auto; display: flex; flex-direction: column; }
   .title { font-weight: 600; padding: 0.3rem 0.6rem 0.5rem; }
