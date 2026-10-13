@@ -451,8 +451,8 @@
             <p class="muted">{t("Die Anlage bietet keine Auswahl an.")}</p>
           {:else}
             {#each numbers as n (n.id)}
-              <label class="radio" class:disabled={n.read_only}>
-                <input type="radio" name="signaling" value={n.id} bind:group={signaling} disabled={n.read_only} />
+              <label class="radio">
+                <input type="radio" name="signaling" value={n.id} bind:group={signaling} />
                 <span>{n.suppressed ? t("Nummer unterdrücken") : n.number}</span>
               </label>
             {/each}
@@ -726,7 +726,6 @@
   .x { background: none; border: none; padding: 0.2rem; color: var(--muted); display: grid; }
   .add { align-self: flex-start; margin-top: 0.7rem; }
   .radio { display: flex; align-items: center; gap: 0.7rem; padding: 0.35rem 0; cursor: pointer; }
-  .radio.disabled { opacity: 0.5; }
   .radio input { accent-color: var(--accent); width: 1.1rem; height: 1.1rem; margin: 0; }
   .muted { color: var(--muted); margin: 0.3rem 0; }
   .notice { color: var(--accent-text); margin: 0; flex: 1; }

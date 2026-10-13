@@ -56,20 +56,16 @@ pub async fn signaling_numbers(hub: &OneHub) -> sf_onehub::Result<Vec<SignalingN
     tracing::debug!(?list, "Signalisierte Rufnummern");
     let config = me.get_phone_numbers_config(()).await?.into_inner();
     tracing::debug!(?config, "Rufnummern-Einstellung");
-    // Unterdrückt: keine signalisierte Nummer, eine unsichtbare oder die 0
-    let suppressed_now = config.signaling_phone_number.as_ref().is_none_or(|s| {
-        !s.visible
-            || s.phone_number
-                .as_ref()
-                .and_then(|n| n.phone_number_id.as_ref())
-                .is_none_or(|i| i.id == SUPPRESSED_ID)
-    });
+    // Wie die STARFACE-App: Gewählt ist die Nummer mit der ID aus der
+    // Einstellung, ohne oder mit der 0 ist die Nummer unterdrückt. `visible`
+    // und `read_only` der Einstellung sagen darüber nichts; manche Anlagen
+    // melden dort `visible = false`, obwohl sie die Nummer signalisieren.
     let current = config
         .signaling_phone_number
         .and_then(|s| s.phone_number)
         .and_then(|n| n.phone_number_id)
         .map(|id| id.id)
-        .filter(|_| !suppressed_now);
+        .filter(|id| id != SUPPRESSED_ID);
     // Gruppennamen wie in der STARFACE-App („Zentrale: +49 …“)
     let mut groups = std::collections::HashMap::new();
     let mut svc = hub.group();
@@ -95,7 +91,7 @@ pub async fn signaling_numbers(hub: &OneHub) -> sf_onehub::Result<Vec<SignalingN
             let id = n.phone_number_id.as_ref()?.id.clone();
             let number = format_number(&n);
             Some(SignalingNumber {
-                selected: current.as_deref() == Some(id.as_str()),
+                selected: !number.is_empty() && current.as_deref() == Some(id.as_str()),
                 suppressed: number.is_empty(),
                 id,
                 number,
@@ -117,9 +113,16 @@ pub async fn signaling_numbers(hub: &OneHub) -> sf_onehub::Result<Vec<SignalingN
             number: String::new(),
             suppressed: true,
             read_only: false,
-            selected: suppressed_now,
+            selected: false,
             group: String::new(),
         });
+    }
+    // Wie die STARFACE-App: Steht die gewählte Nummer nicht in der Liste,
+    // gilt sie als unterdrückt.
+    if !out.iter().any(|n| n.selected)
+        && let Some(n) = out.iter_mut().find(|n| n.suppressed)
+    {
+        n.selected = true;
     }
     Ok(out)
 }
