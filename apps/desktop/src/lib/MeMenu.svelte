@@ -121,10 +121,10 @@
   const setDnd = () => run(() => invoke("fkey_dnd", { enabled: !dnd }));
   const setPrimary = (id: string) => run(async () => { await invoke("set_primary_phone", { id }); await loadPhones(); });
   // Manche Anlagen (STARFACE 10) signalisieren eine Nummer nur, wenn es für
-  // sie eine Funktionstaste „Rufnummer signalisieren“ gibt; ohne melden sie sie
-  // gesperrt oder setzen sie und unterdrücken sie dann trotzdem.
+  // sie eine Funktionstaste „Rufnummer signalisieren“ gibt, und setzen sonst
+  // wieder „unterdrücken“. `read_only` der Anlage sperrt dagegen nichts: Die
+  // STARFACE-App wertet es nicht aus und lässt jede Nummer wählen.
   let numberHint = $state("");
-  const lockedNumbers = $derived(numbers.some((n) => n.read_only && !n.suppressed));
   const setNumber = (id: string) =>
     run(async () => {
       const wanted = numbers.find((n) => n.id === id);
@@ -213,13 +213,11 @@
       {:else if sub === "number"}
         <span class="title">{t("Rufnummer signalisieren")}</span>
         {#each numbers as n (n.id)}
-          <button class="opt" class:sel={n.selected} disabled={n.read_only} title={n.read_only && !n.suppressed ? t("Von der Anlage gesperrt") : undefined} onclick={() => setNumber(n.id)}>
+          <button class="opt" class:sel={n.selected} onclick={() => setNumber(n.id)}>
             {#if n.group}<span class="grp"><Icon name="groups" size={16} /> {n.group}:</span>{/if}<span class="num">{numberLabel(n)}</span>{#if n.selected}<span class="tick"><Icon name="check" size={16} /></span>{/if}</button>
         {/each}
         {#if numberHint}
           <span class="hint warn">{numberHint}</span>
-        {:else if lockedNumbers}
-          <span class="hint">{t("Ausgegraute Nummern gibt die Anlage erst frei, wenn es für sie eine Funktionstaste „Rufnummer signalisieren“ gibt.")}</span>
         {/if}
       {:else if sub === "account"}
         <span class="title">{t("Konto wechseln")}</span>
