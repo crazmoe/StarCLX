@@ -171,7 +171,8 @@ for everyone at login, `mimeapps.list` opens `tel:` links with StarCLX for every
 ### Door cameras with RTSP
 
 StarCLX decodes door cameras with an RTSP stream (URL starts with `rtsp://`, H.264 video) with
-`ffmpeg`. The packages do not pull it in automatically; install it once:
+`ffmpeg`. The packages recommend it, so apt and dnf install it along by default if available.
+On Fedora, ffmpeg comes from RPM Fusion; otherwise install it once:
 
 ```sh
 sudo apt install ffmpeg      # Debian, Ubuntu
