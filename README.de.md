@@ -170,7 +170,8 @@ für alle beim Anmelden, `mimeapps.list` öffnet `tel:`-Links für alle mit Star
 ### Türkameras mit RTSP
 
 Türkameras mit RTSP-Strom (URL beginnt mit `rtsp://`, Video in H.264) entpackt StarCLX mit
-`ffmpeg`. Die Pakete ziehen es nicht automatisch mit, einmalig installieren:
+`ffmpeg`. Das Debian-Paket empfiehlt es, apt installiert es also normalerweise mit. Sonst
+(RPM, oder apt mit `--no-install-recommends`) einmalig installieren:
 
 ```sh
 sudo apt install ffmpeg      # Debian, Ubuntu
