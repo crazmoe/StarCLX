@@ -3,7 +3,9 @@
 //! Das Licht erwartet 64-Byte-Pakete aus bis zu sieben Schritten zu je acht
 //! Bytes (Farbe, Ein-/Auszeit, Ton) und einer Prüfsumme. Ohne Nachricht
 //! schaltet es sich nach etwa 30 Sekunden ab; [`Busylight`] schickt deshalb
-//! regelmässig ein Keep-Alive und sucht neu angesteckte Geräte.
+//! regelmässig den aktuellen Zustand erneut und sucht neu angesteckte Geräte.
+//! Ein eigenes Keep-Alive-Paket (Befehl 0x8_) ersetzt das laufende Programm
+//! im Gerät und liess das Licht bei jedem Senden kurz ausgehen.
 //!
 //! Zugriff auf hidraw braucht eine udev-Regel (liegt dem .deb bei).
 
@@ -135,12 +137,6 @@ fn packet(light: &Light) -> [u8; 64] {
     finish(p)
 }
 
-fn keepalive() -> [u8; 64] {
-    let mut p = [0u8; 64];
-    p[0] = 0x80 | 0x0F; // Keep-Alive, Zeitlimit 15 s
-    finish(p)
-}
-
 fn finish(mut p: [u8; 64]) -> [u8; 64] {
     p[59..62].fill(0xFF);
     let sum: u16 = p[..62].iter().map(|b| u16::from(*b)).sum();
@@ -238,9 +234,12 @@ impl Worker {
         }
     }
 
+    /// Frischt den Zustand auf allen beschriebenen Geräten auf. Dasselbe
+    /// Programm noch einmal zu senden ändert am Licht nichts.
     fn keepalive(&self) {
+        let packet = packet(&self.light);
         for dev in &self.done {
-            let _ = write(dev, &keepalive());
+            let _ = write(dev, &packet);
         }
     }
 }
@@ -330,13 +329,6 @@ mod tests {
         assert_eq!(silent[7], 0x80);
         assert_eq!(volume_code(0), 0);
         assert_eq!(volume_code(50), 4);
-    }
-
-    #[test]
-    fn keepalive_packet() {
-        let p = keepalive();
-        assert_eq!(p[0], 0x8F);
-        assert_eq!(u16::from_be_bytes([p[62], p[63]]), 0x8F + 3 * 0xFF);
     }
 
     #[test]

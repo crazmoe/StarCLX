@@ -48,6 +48,10 @@
 - Meldet die Anlage ein fehlendes Recht als „Internal error“ (z. B. Voicemail), wird das ebenfalls
   als fehlendes Recht erkannt
 
+### Behoben
+- Kuando Busylight: Das Licht ging im Leerlauf alle paar Sekunden kurz aus und wieder auf
+  Grün. Statt eines eigenen Keep-Alive-Pakets wird jetzt der aktuelle Zustand erneut gesendet.
+
 ## 1.4.0 – 2026-10-10
 
 ### Tischtelefon steuern
