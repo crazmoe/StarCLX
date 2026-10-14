@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 sf-auth.workspace = true
 sf-onehub.workspace = true
+sf-core.workspace = true
 sf-sip = { path = "../../crates/sf-sip" }
 sf-chat = { path = "../../crates/sf-chat" }
 anyhow.workspace = true

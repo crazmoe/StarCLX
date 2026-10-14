@@ -19,6 +19,7 @@ pub mod headset;
 pub mod journal;
 pub mod queue;
 pub mod reach;
+pub mod recordings;
 pub mod voicemail;
 
 /// Angaben zur neuen Sitzung
@@ -44,6 +45,7 @@ pub async fn session_ended(app: &AppHandle) {
     journal::session_ended(app).await;
     reach::session_ended(app).await;
     voicemail::session_ended(app).await;
+    recordings::session_ended(app).await;
     queue::session_ended(app).await;
     conference::session_ended(app).await;
     fkeys::session_ended(app).await;
@@ -55,6 +57,7 @@ pub async fn session_started(app: &AppHandle, login: Login) {
     journal::session_started(app, login.hub.clone()).await;
     reach::session_started(app, login.hub.clone()).await;
     voicemail::session_started(app, login.hub.clone()).await;
+    recordings::session_started(app, login.hub.clone()).await;
     conference::session_started(app, login.hub.clone()).await;
     queue::session_started(app, login.hub.clone(), login.user_id.clone()).await;
     chat::session_started(

@@ -2,6 +2,13 @@
 
 ## Unveröffentlicht
 
+### Aufzeichnungen
+- Neuer Reiter bzw. neue Kachel „Aufzeichnungen“: Gesprächsaufnahmen, die auf der Anlage
+  gespeichert sind, mit Anrufer, Angerufenem, Beginn und Dauer. Anhören, als Datei speichern,
+  löschen und zurückrufen; Suche nach Name oder Nummer. Neue und gelöschte Aufnahmen erscheinen
+  sofort. Nur mit dem Aufzeichnungsrecht auf der Anlage; die Kachel ist anfangs ausgeblendet.
+- `sfctl recordings list|download|delete` für dieselben Aufnahmen auf der Kommandozeile
+
 ### Mehrere Konten
 - Konten an verschiedenen Anlagen (oder mehrere Benutzer derselben Anlage) bleiben gespeichert.
   Gewechselt wird im Profilmenü oder im Tray unter „Konto wechseln“, ohne Anlage und

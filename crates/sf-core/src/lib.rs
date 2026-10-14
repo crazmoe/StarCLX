@@ -20,6 +20,7 @@ pub mod phone;
 pub mod profile;
 pub mod queue;
 pub mod reconnect;
+pub mod recording;
 pub mod redirect;
 pub mod voicemail;
 

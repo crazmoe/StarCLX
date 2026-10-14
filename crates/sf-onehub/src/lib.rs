@@ -243,6 +243,10 @@ impl OneHub {
         v1::voicemail::voice_mail_service_client::VoiceMailServiceClient
     );
     service!(
+        audio_record,
+        v1::audiorecord::audio_record_service_client::AudioRecordServiceClient
+    );
+    service!(
         contact,
         v1::contact::contact_service_client::ContactServiceClient
     );

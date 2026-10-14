@@ -31,6 +31,9 @@ Für Skripte empfiehlt sich ein eigener Benutzer, z. B. „Monitoring“.
 | `chat contacts` | Chat-Kontakte mit Status |
 | `chat send <an> <text>` | Chat-Nachricht senden |
 | `status` | eigenen Status anzeigen oder setzen |
+| `recordings list` | die neuesten Gesprächsaufzeichnungen (ID, Start als Unix-Zeit, Dauer, Nummer, Anrufer → Angerufener) |
+| `recordings download <id>` | Aufzeichnung als Datei speichern (`-o datei`, `-o -` für die Standardausgabe) |
+| `recordings delete <id>…` | Aufzeichnungen löschen |
 | `say <nummer> <text>` | anrufen und eine Ansage abspielen |
 | `softphone` | App-Telefon anmelden (Test) |
 

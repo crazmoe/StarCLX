@@ -11,6 +11,7 @@
   import Journal from "$lib/plugins/journal/Journal.svelte";
   import Chat from "$lib/plugins/chat/Chat.svelte";
   import Voicemail from "$lib/plugins/voicemail/Voicemail.svelte";
+  import Recordings from "$lib/plugins/recordings/Recordings.svelte";
   import FunctionKeys from "$lib/plugins/fkeys/FunctionKeys.svelte";
   import DoorCams from "$lib/plugins/doorcam/DoorCams.svelte";
   import Conferences from "$lib/plugins/conference/Conferences.svelte";
@@ -19,6 +20,7 @@
   import ConferenceForm from "$lib/plugins/conference/ConferenceForm.svelte";
   import { activeConferences, conferenceEdit, conferences, initConferences, loadConferences } from "$lib/plugins/conference/conference.svelte";
   import { initVoicemail, loadVoicemails, unheard, voicemail } from "$lib/plugins/voicemail/voicemail.svelte";
+  import { initRecordings, loadRecordings, recordings } from "$lib/plugins/recordings/recordings.svelte";
   import { initChat, unreadTotal } from "$lib/plugins/chat/chat.svelte";
   import Icon, { type IconName } from "$lib/Icon.svelte";
   import Settings from "$lib/Settings.svelte";
@@ -52,6 +54,9 @@
     session = null;
     voicemail.list = [];
     voicemail.disabled = false;
+    recordings.list = [];
+    recordings.total = 0;
+    recordings.disabled = false;
     permissions.list = null;
     conferences.list = [];
     conferenceEdit.id = null;
@@ -108,7 +113,7 @@
 
   onMount(() => {
     const offs = [
-      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); }),
+      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); }),
       listen<string>("login-error", (e) => { notice = e.payload; phase = "login"; }),
       listen<string>("logged-out", (e) => showLogin(e.payload)),
       // Kontowechsel: erst trennen, dann das andere Konto verbinden
@@ -119,13 +124,14 @@
       listen("dial-request", takeDialRequest),
       // Nach dem Standby: Voicemails neu holen (Funktionstasten und
       // Umleitungen hören selbst auf "resumed" bzw. "reach-changed")
-      listen("resumed", () => { if (session) { loadPermissions(); loadVoicemails(); loadConferences(); } }),
+      listen("resumed", () => { if (session) { loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); } }),
     ];
     initPhone();
     initConnection();
     takeDialRequest();
     initChat();
     initVoicemail();
+    initRecordings();
     initPermissions();
     initConferences();
     initQueues();
@@ -193,7 +199,7 @@
     serverLocked = (await invoke<string[]>("locked_prefs").catch((): string[] => [])).includes("server");
     try {
       const info = await invoke<SessionInfo | null>("restore_session");
-      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadConferences(); return; }
+      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); return; }
     } catch (e) {
       notice = t("Automatische Anmeldung fehlgeschlagen: {e}", { e: String(e) });
     }
@@ -235,11 +241,12 @@
 
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
-  type Tab = "journal" | "voicemail" | "contacts" | "chat" | "fkeys" | "conference" | "queue" | "doorcam";
+  type Tab = "journal" | "voicemail" | "recordings" | "contacts" | "chat" | "fkeys" | "conference" | "queue" | "doorcam";
   let tab = $state<Tab>("journal");
   const allTabs: { id: Tab; icon: IconName; label: string }[] = $derived([
     { id: "journal", icon: "history", label: t("Rufliste") },
     { id: "voicemail", icon: "voicemail", label: "Voicemail" },
+    { id: "recordings", icon: "record", label: t("Aufzeichnungen") },
     { id: "contacts", icon: "contacts", label: t("Adressbuch") },
     { id: "chat", icon: "chat", label: "Chat" },
     { id: "fkeys", icon: "dialpad", label: t("Funktionstasten") },
@@ -253,6 +260,7 @@
   const tabPermission: Partial<Record<Tab, Permission>> = {
     journal: "calllist",
     voicemail: "voicemail",
+    recordings: "call_recording",
     contacts: "addressbook",
     chat: "instant_messaging",
     conference: "conference",
@@ -260,7 +268,7 @@
   /** Ohne Recht wird der Reiter bzw. die Kachel gar nicht angezeigt */
   const tabOff = (id: Tab) => {
     const p = tabPermission[id];
-    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "fkeys" && fkeys.forbidden);
+    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "recordings" && recordings.disabled) || (id === "fkeys" && fkeys.forbidden);
   };
   /** Warteschlangen nur für Agenten einer iQueue */
   const hasQueues = $derived(queues.queues.length > 0);
@@ -403,6 +411,8 @@
           <FunctionKeys />
         {:else if id === "voicemail"}
           <Voicemail />
+        {:else if id === "recordings"}
+          <Recordings />
         {:else if id === "contacts"}
           <Contacts />
         {:else if id === "doorcam"}

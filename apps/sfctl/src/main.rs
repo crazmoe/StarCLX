@@ -115,6 +115,9 @@ enum Command {
     /// Chat-Nachricht senden oder Kontakte auflisten
     #[command(subcommand)]
     Chat(ChatCommand),
+    /// Gesprächsaufzeichnungen auf der Anlage
+    #[command(subcommand)]
+    Recordings(RecordingCommand),
     /// Eigenen Status anzeigen; mit Optionen setzen
     Status {
         /// Nicht stören ein- oder ausschalten
@@ -138,6 +141,27 @@ enum ChatCommand {
     },
     /// Chat-Kontakte mit Status auflisten
     Contacts,
+}
+
+#[derive(Subcommand)]
+enum RecordingCommand {
+    /// Die neuesten Aufzeichnungen auflisten
+    List,
+    /// Aufzeichnung herunterladen
+    Download {
+        /// ID aus `sfctl recordings list`
+        id: String,
+        /// Zieldatei; sonst `<id>.<endung>` im aktuellen Ordner, `-` für
+        /// die Standardausgabe
+        #[arg(long, short)]
+        out: Option<PathBuf>,
+    },
+    /// Aufzeichnungen löschen
+    Delete {
+        /// IDs aus `sfctl recordings list`
+        #[arg(required = true)]
+        ids: Vec<String>,
+    },
 }
 
 const DEFAULT_TTS: &str = r#"espeak-ng -v de -s 150 -w "$WAV" "$TEXT""#;
@@ -231,6 +255,7 @@ async fn main() -> Result<ExitCode> {
             softphone(&hub, &host, opts).await?
         }
         Command::Chat(cmd) => chat(&hub, &host, cmd).await?,
+        Command::Recordings(cmd) => recordings(&hub, cmd).await?,
         Command::Status { dnd, text } => status(&hub, dnd, text).await?,
         Command::Say {
             number,
@@ -372,6 +397,50 @@ fn find_contact(contacts: &[sf_chat::Contact], to: &str) -> Result<String> {
         return Ok(to.trim().to_owned());
     }
     bail!("Kontakt „{to}“ nicht gefunden (siehe `sfctl chat contacts`)")
+}
+
+async fn recordings(hub: &OneHub, cmd: RecordingCommand) -> Result<()> {
+    use sf_core::recording;
+    match cmd {
+        RecordingCommand::List => {
+            let res = recording::list(hub).await?;
+            for r in &res.list {
+                let start = r.start / 1000;
+                let d = r.duration_secs;
+                println!(
+                    "{:<12} {start:>10}  {:>3}:{:02}  {:<16} {} → {}",
+                    r.id,
+                    d / 60,
+                    d % 60,
+                    r.number,
+                    r.caller,
+                    r.callee
+                );
+            }
+            if res.total > i32::try_from(res.list.len()).unwrap_or(i32::MAX) {
+                eprintln!("{} von {} angezeigt", res.list.len(), res.total);
+            }
+        }
+        RecordingCommand::Download { id, out } => {
+            let data = recording::download(hub, &id).await?;
+            match out {
+                Some(p) if p.as_os_str() == "-" => {
+                    use std::io::Write;
+                    std::io::stdout().write_all(&data)?;
+                }
+                out => {
+                    let path = out.unwrap_or_else(|| {
+                        PathBuf::from(format!("{id}.{}", recording::file_type(&data).0))
+                    });
+                    std::fs::write(&path, &data)
+                        .with_context(|| format!("{} schreiben", path.display()))?;
+                    eprintln!("{} ({} Bytes)", path.display(), data.len());
+                }
+            }
+        }
+        RecordingCommand::Delete { ids } => recording::delete_many(hub, &ids).await?,
+    }
+    Ok(())
 }
 
 async fn status(hub: &OneHub, dnd: Option<bool>, text: Option<String>) -> Result<()> {

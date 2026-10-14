@@ -23,6 +23,7 @@ Nicht mit der STARFACE GmbH verbunden. „STARFACE“ wird nur beschreibend verw
 - **Chat** mit Kollegen (Präsenz, Verlauf, Dateien, Abwesenheit bei Inaktivität), Gruppenchats
   der Anlagen-Gruppen und spontane Gruppenchats wie in der STARFACE-App
 - **Voicemail** abhören und verwalten
+- **Aufzeichnungen**: auf der Anlage gespeicherte Gesprächsaufnahmen anhören, speichern, löschen
 - **Geplante Konferenzen** anlegen, ändern, löschen und starten (Termin, Wiederholung, Teilnehmer)
 - **Türsprechstellen**: Kamerabild im Call Manager, sobald die Tür anruft, mit „Tür öffnen“;
   weitere Kameras als Kachel (RTSP, Motion JPEG, Einzelbild)
@@ -231,7 +232,7 @@ Tag `v<Version>` von Hand bewirkt dasselbe.
 | `crates/sf-auth` | OAuth2-Login (Authorization Code + PKCE, Refresh), Schlüsselbund |
 | `crates/sf-onehub` | Verbindung zur OneHub-API (Port 9092) mit Bearer-Token |
 | `crates/sf-tls` | TLS-Konfiguration inkl. bestätigter Zertifikate |
-| `crates/sf-core` | Sitzung, Adressbuch, Rufliste, Funktionstasten, Erreichbarkeit, Voicemail |
+| `crates/sf-core` | Sitzung, Adressbuch, Rufliste, Funktionstasten, Erreichbarkeit, Voicemail, Aufzeichnungen |
 | `crates/sf-sip` | Softphone auf Basis von libbaresip |
 | `crates/sf-audio` | Audiogeräte, Klingeltöne, Testton (PulseAudio/PipeWire) |
 | `crates/sf-chat` | XMPP-Chat |
