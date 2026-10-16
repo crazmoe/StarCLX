@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.5.0 – 2026-10-16
 
 ### Aufzeichnungen
 - Neuer Reiter bzw. neue Kachel „Aufzeichnungen“: Gesprächsaufnahmen, die auf der Anlage
@@ -54,6 +54,31 @@
   Warnung im Protokoll nach
 - Meldet die Anlage ein fehlendes Recht als „Internal error“ (z. B. Voicemail), wird das ebenfalls
   als fehlendes Recht erkannt
+
+### Rufliste
+- Aufbau wie in der STARFACE-App: Kontakt oder „---“, darunter die Nummer; Gruppe und Annehmer
+  in eigener Spalte, feste Spalten für Uhrzeit und Dauer
+- Notiz und „zurückgerufen“ in eigener Spalte; die Notiz zeigt beim Überfahren Text, Autor und
+  Zeitpunkt
+- Aktionen erscheinen erst beim Überfahren; Notiz, Weitergeben und „Ins Adressbuch“ stehen im
+  ⋯-Menü neben „Anrufen“
+- Einträge lassen sich nicht mehr löschen, damit die Rufliste in Firmen vollständig bleibt;
+  Löschungen von anderswo werden weiter übernommen
+
+### Oberfläche
+- Personalisierung: eigene Akzentfarbe statt Orange, mit Zurücksetzen; Text auf Akzentflächen
+  bleibt lesbar
+- Arbeitsbereich: Kacheln ohne Rahmen mit eigenem Hintergrund; Suchfelder passen in schmale
+  Kacheln, Filterleisten sind in allen Reitern gleich hoch
+- Funktionstasten zeigen den Gesprächspartner im Tooltip, Klingeln ist gelb
+- Ruhe wird am eigenen Profilbild in der Kopfzeile angezeigt
+- Profilmenü: „Rufnummer signalisieren“ verhält sich wie in der STARFACE-App, jede Nummer ist
+  wählbar; gesperrte Einträge sind sichtbar ausgegraut
+- Konto wechseln: lange Kontenlisten lassen sich scrollen
+
+### Pakete
+- Debian- und RPM-Paket ergänzen fehlende Laufzeit-Abhängigkeiten (zlib, libdbus) und empfehlen
+  Audio-Server, Secret Service und ffmpeg für RTSP-Türkameras
 
 ### Behoben
 - Kuando Busylight: Das Licht ging im Leerlauf alle paar Sekunden kurz aus und wieder auf
