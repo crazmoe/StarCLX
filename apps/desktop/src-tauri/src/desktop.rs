@@ -426,6 +426,18 @@ fn merged_list(current: &[String], hotkeys: &Hotkeys) -> Vec<String> {
     list
 }
 
+/// Neuer Hauptclient nach einem Ausfall: Kürzel über das Portal hängen an
+/// der Verbindung des alten und müssen neu angemeldet werden. GNOME-Kürzel
+/// starten `starclx --action …` und landen ohnehin beim Hauptclient.
+pub fn take_over_hotkeys(app: &AppHandle, hotkeys: &Hotkeys) {
+    if hotkeys.enabled
+        && backend() == Backend::Portal
+        && let Err(e) = crate::shortcuts::apply(app, hotkeys)
+    {
+        tracing::warn!(error = %e, "Tastenkürzel nicht übernommen");
+    }
+}
+
 /// Trägt die Tastenkürzel beim Desktop ein bzw. entfernt sie wieder.
 pub fn apply_hotkeys(app: &AppHandle, hotkeys: &Hotkeys) -> Result<(), String> {
     match backend() {

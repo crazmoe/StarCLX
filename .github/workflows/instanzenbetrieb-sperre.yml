@@ -1,0 +1,23 @@
+# Der Branch Instanzenbetrieb läuft dauerhaft neben main und wird nie nach
+# main gemergt. Ein Pull Request von dort nach main schlägt hier fehl; als
+# Pflichtprüfung für main eingetragen, lässt er sich gar nicht mergen.
+name: Instanzenbetrieb-Sperre
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  sperre:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kein Merge von Instanzenbetrieb nach main
+        env:
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD" = Instanzenbetrieb ]; then
+            echo "::error::Instanzenbetrieb bleibt ein eigener Branch und wird nie nach main gemergt."
+            exit 1
+          fi

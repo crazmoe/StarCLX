@@ -1,15 +1,17 @@
 //! Plugin Headset: Gesprächs- und Stummtaste von USB-Headsets (Jabra, Poly,
 //! EPOS) nehmen an, legen auf und schalten stumm. Bei einem Anruf klingelt
-//! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone.
+//! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone. Laufen
+//! mehrere StarCLX, bedient der Hauptclient das Headset für alle.
 
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-use serde::Serialize;
-use sf_core::phone::{CallPhase, CallView};
+use serde::{Deserialize, Serialize};
 use sf_headset::{Button, Headset, State};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::bus::{self, Event};
+use crate::instances::{self, DeviceLine};
 use crate::plugins::call;
 use crate::settings;
 
@@ -21,102 +23,109 @@ pub struct HeadsetState {
 #[derive(Default)]
 struct Inner {
     headset: Option<Headset>,
-    lines: Vec<Line>,
-    muted: bool,
     /// Test aus den Einstellungen läuft; Anrufzustand wird danach gesetzt
     testing: bool,
 }
 
-/// Was das Headset von einem Anruf wissen muss
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Line {
-    id: String,
-    /// Klingelt bei uns
-    ringing: bool,
-    held: bool,
+/// Gespräch, auf das sich Stumm- und Auflegetaste beziehen: das laufende,
+/// sonst irgendeins, das nicht klingelt (z. B. gehalten)
+fn talking(lines: &[DeviceLine]) -> Option<&DeviceLine> {
+    lines
+        .iter()
+        .find(|l| !l.ringing && !l.held)
+        .or_else(|| lines.iter().find(|l| !l.ringing))
 }
 
-impl From<&CallView> for Line {
-    fn from(c: &CallView) -> Self {
-        Self {
-            id: c.id.clone(),
-            ringing: c.incoming && c.phase == CallPhase::Ringing,
-            held: c.phase == CallPhase::Held,
-        }
-    }
+fn muted_of(line: Option<&DeviceLine>, muted: &BTreeMap<String, bool>) -> bool {
+    line.is_some_and(|l| muted.get(&l.profile).copied().unwrap_or(false))
 }
 
-fn state_of(lines: &[Line], muted: bool) -> State {
+/// Anrufe aller Instanzen auf einem Headset: Es klingelt, wenn es irgendwo
+/// klingelt; Stumm zeigt die Instanz mit dem laufenden Gespräch.
+fn state_of(lines: &[DeviceLine], muted: &BTreeMap<String, bool>) -> State {
     State {
         ringing: lines.iter().any(|l| l.ringing),
         off_hook: lines.iter().any(|l| !l.ringing),
-        muted,
+        muted: muted_of(talking(lines), muted),
         held: !lines.is_empty() && lines.iter().all(|l| l.held),
     }
 }
 
-/// Was ein Tastendruck bei diesen Anrufen bewirkt
-#[derive(Debug, PartialEq, Eq)]
-enum Action {
-    Answer(String),
-    Hangup(String),
-    Mute(bool),
+/// Was ein Tastendruck bewirkt, und in welcher Instanz (Profil)
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Action {
+    Answer { profile: String, call: String },
+    Hangup { profile: String, call: String },
+    Mute { profile: String, muted: bool },
     Nothing,
 }
 
-fn action_for(button: Button, lines: &[Line], muted: bool) -> Action {
+impl Action {
+    fn profile(&self) -> Option<&str> {
+        match self {
+            Action::Answer { profile, .. }
+            | Action::Hangup { profile, .. }
+            | Action::Mute { profile, .. } => Some(profile),
+            Action::Nothing => None,
+        }
+    }
+}
+
+/// Abheben nimmt den Anruf an, der zuerst klingelte (`lines` führt
+/// klingelnde in dieser Reihenfolge).
+fn action_for(button: Button, lines: &[DeviceLine], muted: &BTreeMap<String, bool>) -> Action {
     let off_hook = lines.iter().any(|l| !l.ringing);
     // Laufendes Gespräch (oder Wählen); gehaltene bleiben stehen
     let active = lines.iter().find(|l| !l.ringing && !l.held);
     let ringing = lines.iter().find(|l| l.ringing);
     match button {
         Button::HookOff | Button::HookToggle if !off_hook => match ringing {
-            Some(l) => Action::Answer(l.id.clone()),
+            Some(l) => Action::Answer {
+                profile: l.profile.clone(),
+                call: l.id.clone(),
+            },
             None => Action::Nothing,
         },
         Button::HookOn | Button::HookToggle => match active {
-            Some(l) => Action::Hangup(l.id.clone()),
+            Some(l) => Action::Hangup {
+                profile: l.profile.clone(),
+                call: l.id.clone(),
+            },
             None => Action::Nothing,
         },
-        Button::Mute if off_hook => Action::Mute(!muted),
+        Button::Mute if off_hook => match talking(lines) {
+            Some(l) => Action::Mute {
+                profile: l.profile.clone(),
+                muted: !muted_of(Some(l), muted),
+            },
+            None => Action::Nothing,
+        },
         _ => Action::Nothing,
     }
 }
 
 pub fn start(app: &AppHandle) {
-    bus::listen(app, "headset", |app, event| {
-        match event {
-            Event::PhoneStopped => {
-                let state = app.state::<HeadsetState>();
-                let mut inner = state.inner.lock().unwrap();
-                inner.lines.clear();
-                inner.muted = false;
-            }
-            Event::Calls { calls, muted } => {
-                let state = app.state::<HeadsetState>();
-                let mut inner = state.inner.lock().unwrap();
-                inner.lines = calls.iter().map(Line::from).collect();
-                inner.muted = muted;
-            }
-            Event::PhoneReady | Event::PrefsSaved => {}
-        }
-        refresh(app);
+    bus::listen(app, "headset", |app, event| match event {
+        Event::Devices | Event::Role | Event::PrefsSaved => refresh(app),
+        _ => {}
     });
     refresh(app);
 }
 
-/// Headset ein- bzw. ausschalten und den Anrufzustand übertragen
+/// Headset ein- bzw. ausschalten und den Anrufzustand übertragen. Nur der
+/// Hauptclient öffnet es, für alle Instanzen.
 fn refresh(app: &AppHandle) {
     let state = app.state::<HeadsetState>();
     let mut inner = state.inner.lock().unwrap();
-    if !settings::load(app).prefs.headset {
+    if !instances::is_main() || !settings::load(app).prefs.headset {
         inner.headset.take(); // schaltet Klingeln und LEDs aus
         return;
     }
     if inner.testing {
         return;
     }
-    let s = state_of(&inner.lines, inner.muted);
+    let devices = instances::devices();
+    let s = state_of(&devices.lines, &devices.muted);
     inner.headset.get_or_insert_with(|| open(app)).set(s);
 }
 
@@ -129,23 +138,28 @@ fn open(app: &AppHandle) -> Headset {
 }
 
 async fn pressed(app: &AppHandle, button: Button) {
-    let action = {
-        let state = app.state::<HeadsetState>();
-        let inner = state.inner.lock().unwrap();
-        action_for(button, &inner.lines, inner.muted)
-    };
+    let devices = instances::devices();
+    let action = action_for(button, &devices.lines, &devices.muted);
     tracing::debug!(?button, ?action, "Headset-Taste");
+    match action.profile() {
+        Some(p) if p != instances::profile() => instances::send_headset_action(p, &action),
+        _ => perform(app, action).await,
+    }
+    // Ohne Wirkung meint das Headset sonst, es sei im Gespräch
+    refresh(app);
+}
+
+/// Tastendruck in dieser Instanz ausführen
+pub async fn perform(app: &AppHandle, action: Action) {
     let result = match action {
-        Action::Answer(id) => call::answer(app, &id).await,
-        Action::Hangup(id) => call::hangup(app, &id).await,
-        Action::Mute(m) => call::set_mute(app, m).await,
+        Action::Answer { call: id, .. } => call::answer(app, &id).await,
+        Action::Hangup { call: id, .. } => call::hangup(app, &id).await,
+        Action::Mute { muted, .. } => call::set_mute(app, muted).await,
         Action::Nothing => Ok(()),
     };
     if let Err(e) = result {
         let _ = app.emit("phone-error", e);
     }
-    // Ohne Wirkung meint das Headset sonst, es sei im Gespräch
-    refresh(app);
 }
 
 #[derive(Serialize)]
@@ -168,6 +182,11 @@ pub async fn headset_info() -> HeadsetInfo {
 /// Lässt das Headset drei Sekunden klingeln.
 #[tauri::command]
 pub async fn headset_test(app: AppHandle) {
+    // Das Headset hat der Hauptclient
+    if !instances::is_main() {
+        instances::send_headset_test();
+        return;
+    }
     {
         let state = app.state::<HeadsetState>();
         let mut inner = state.inner.lock().unwrap();
@@ -186,67 +205,107 @@ pub async fn headset_test(app: AppHandle) {
 mod tests {
     use super::*;
 
-    fn line(id: &str, ringing: bool, held: bool) -> Line {
-        Line {
+    fn line(profile: &str, id: &str, ringing: bool, held: bool) -> DeviceLine {
+        DeviceLine {
+            profile: profile.into(),
             id: id.into(),
             ringing,
             held,
         }
     }
 
+    fn answer(profile: &str, id: &str) -> Action {
+        Action::Answer {
+            profile: profile.into(),
+            call: id.into(),
+        }
+    }
+
+    fn hangup(profile: &str, id: &str) -> Action {
+        Action::Hangup {
+            profile: profile.into(),
+            call: id.into(),
+        }
+    }
+
     #[test]
     fn answer_ringing_call() {
-        let lines = [line("a", true, false)];
+        let none = BTreeMap::new();
+        let lines = [line("", "a", true, false)];
+        assert_eq!(action_for(Button::HookOff, &lines, &none), answer("", "a"));
         assert_eq!(
-            action_for(Button::HookOff, &lines, false),
-            Action::Answer("a".into())
-        );
-        assert_eq!(
-            action_for(Button::HookToggle, &lines, false),
-            Action::Answer("a".into())
+            action_for(Button::HookToggle, &lines, &none),
+            answer("", "a")
         );
         // Stumm ohne Gespräch und Auflegen beim Klingeln tun nichts
-        assert_eq!(action_for(Button::Mute, &lines, false), Action::Nothing);
-        assert_eq!(action_for(Button::HookOn, &lines, false), Action::Nothing);
-        let s = state_of(&lines, false);
+        assert_eq!(action_for(Button::Mute, &lines, &none), Action::Nothing);
+        assert_eq!(action_for(Button::HookOn, &lines, &none), Action::Nothing);
+        let s = state_of(&lines, &none);
         assert!(s.ringing && !s.off_hook);
     }
 
     #[test]
     fn hang_up_active_not_held_or_waiting() {
+        let muted = BTreeMap::from([("".to_owned(), true)]);
         let lines = [
-            line("held", false, true),
-            line("talk", false, false),
-            line("wait", true, false),
+            line("", "held", false, true),
+            line("", "talk", false, false),
+            line("", "wait", true, false),
         ];
         assert_eq!(
-            action_for(Button::HookOn, &lines, false),
-            Action::Hangup("talk".into())
+            action_for(Button::HookOn, &lines, &muted),
+            hangup("", "talk")
         );
         assert_eq!(
-            action_for(Button::HookToggle, &lines, false),
-            Action::Hangup("talk".into())
+            action_for(Button::HookToggle, &lines, &muted),
+            hangup("", "talk")
         );
         // Abheben im Gespräch nimmt den Anklopfer nicht an
-        assert_eq!(action_for(Button::HookOff, &lines, false), Action::Nothing);
-        assert_eq!(action_for(Button::Mute, &lines, true), Action::Mute(false));
-        let only_held = [line("held", false, true)];
+        assert_eq!(action_for(Button::HookOff, &lines, &muted), Action::Nothing);
         assert_eq!(
-            action_for(Button::HookOn, &only_held, false),
+            action_for(Button::Mute, &lines, &muted),
+            Action::Mute {
+                profile: "".into(),
+                muted: false
+            }
+        );
+        let only_held = [line("", "held", false, true)];
+        assert_eq!(
+            action_for(Button::HookOn, &only_held, &muted),
             Action::Nothing
         );
-        assert!(state_of(&only_held, false).held);
+        assert!(state_of(&only_held, &muted).held);
+    }
+
+    #[test]
+    fn several_instances() {
+        // Profil 2 klingelte zuerst: Abheben nimmt dort an
+        let lines = [line("2", "b", true, false), line("", "a", true, false)];
+        let none = BTreeMap::new();
+        assert_eq!(action_for(Button::HookOff, &lines, &none), answer("2", "b"));
+        // Gespräch im Standardprofil, Profil 2 stumm: LED und Taste folgen
+        // dem Gespräch
+        let lines = [line("", "talk", false, false), line("2", "b", true, false)];
+        let muted = BTreeMap::from([("".to_owned(), false), ("2".to_owned(), true)]);
+        assert!(!state_of(&lines, &muted).muted);
+        assert!(state_of(&lines, &muted).ringing);
+        assert_eq!(
+            action_for(Button::Mute, &lines, &muted),
+            Action::Mute {
+                profile: "".into(),
+                muted: true
+            }
+        );
+        assert_eq!(
+            action_for(Button::HookOn, &lines, &muted),
+            hangup("", "talk")
+        );
     }
 
     #[test]
     fn idle() {
-        assert_eq!(action_for(Button::HookOff, &[], false), Action::Nothing);
-        assert_eq!(
-            state_of(&[], true),
-            State {
-                muted: true,
-                ..State::default()
-            }
-        );
+        let muted = BTreeMap::from([("".to_owned(), true)]);
+        assert_eq!(action_for(Button::HookOff, &[], &muted), Action::Nothing);
+        assert_eq!(state_of(&[], &muted), State::default());
     }
 }

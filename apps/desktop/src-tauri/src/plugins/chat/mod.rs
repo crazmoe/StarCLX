@@ -58,11 +58,9 @@ pub fn session_started(
                 return set_status(&app, |s| s.detail = detail);
             }
         };
-        let file = app
-            .path()
-            .app_data_dir()
-            .ok()
-            .map(|d| d.join(format!("chat-{}.json", jid.replace(['/', '\\'], "_"))));
+        let file = app.path().app_data_dir().ok().map(|d| {
+            crate::instances::dir(d).join(format!("chat-{}.json", jid.replace(['/', '\\'], "_")))
+        });
         let token = hub.token().clone();
         let (tx, mut rx) = mpsc::unbounded_channel();
         let chat = match Chat::start(&jid, &host, move || token.get(), file, tx) {

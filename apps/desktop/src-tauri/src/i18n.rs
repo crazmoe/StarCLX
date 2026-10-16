@@ -76,6 +76,36 @@ const TEXTS: &[(&str, [&str; 3])] = &[
     ),
     ("Abmelden", ["Sign out", "Se déconnecter", "Disconnetti"]),
     ("Beenden", ["Quit", "Quitter", "Esci"]),
+    // Mehrere Instanzen
+    (
+        "Weitere Anlage öffnen",
+        [
+            "Open another phone system",
+            "Ouvrir un autre système téléphonique",
+            "Apri un altro centralino",
+        ],
+    ),
+    (
+        "nicht angemeldet",
+        ["not signed in", "non connecté", "non connesso"],
+    ),
+    (
+        "StarCLX beenden",
+        ["Quit StarCLX", "Quitter StarCLX", "Esci da StarCLX"],
+    ),
+    (
+        "Es laufen noch {n} weitere StarCLX für andere Anlagen. Sie werden mit beendet.",
+        [
+            "{n} more StarCLX for other phone systems are running. They will be quit as well.",
+            "{n} autres StarCLX pour d’autres systèmes téléphoniques sont ouverts. Ils seront également fermés.",
+            "Sono aperti altri {n} StarCLX per altri centralini. Verranno chiusi anche loro.",
+        ],
+    ),
+    (
+        "Alle beenden",
+        ["Quit all", "Tout quitter", "Esci da tutti"],
+    ),
+    ("Abbrechen", ["Cancel", "Annuler", "Annulla"]),
     // Konten
     (
         "Konto wechseln",

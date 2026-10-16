@@ -9,6 +9,7 @@ mod connection;
 mod desktop;
 mod flatpak;
 mod i18n;
+mod instances;
 mod log;
 mod login;
 mod plugins;
@@ -91,14 +92,51 @@ pub(crate) fn show_quick_window(app: &AppHandle) {
         let _ = w.set_focus();
         return;
     }
-    let built =
+    let builder =
         tauri::WebviewWindowBuilder::new(app, "quick", tauri::WebviewUrl::App("quick".into()))
             .title(t("StarCLX Schnellwahl"))
             .inner_size(340.0, 480.0)
-            .min_inner_size(260.0, 240.0)
-            .build();
-    if let Err(e) = built {
+            .min_inner_size(260.0, 240.0);
+    if let Err(e) = instances::webview(app, builder).build() {
         tracing::warn!(error = %e, "Schnellwahl-Fenster nicht geöffnet");
+    }
+    instances::apply_titles(app);
+}
+
+/// Hauptfenster aus tauri.conf.json, mit dem Webview-Speicher des Profils
+fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
+    let Some(config) = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|w| w.label == "main")
+        .cloned()
+    else {
+        return Ok(());
+    };
+    let builder = tauri::WebviewWindowBuilder::from_config(app, &config)?;
+    instances::webview(app, builder).build()?;
+    Ok(())
+}
+
+/// Weiterer Start mit dieser Kommandozeile: Tastenkürzel, Links oder nur
+/// das Fenster zeigen
+pub(crate) fn activate(app: &AppHandle, argv: &[String]) {
+    if let Some(action) = desktop::action_from_args(argv) {
+        desktop::run_action(app, action);
+        return;
+    }
+    let urls: Vec<String> = argv
+        .iter()
+        .skip(1)
+        .filter(|a| a.contains(':') && url::Url::parse(a).is_ok())
+        .cloned()
+        .collect();
+    if urls.is_empty() {
+        show_main_window(app);
+    } else {
+        handle_urls(app, urls);
     }
 }
 
@@ -110,14 +148,17 @@ fn quick_hide(app: AppHandle) {
     }
 }
 
-/// Tooltip des Tray-Symbols: angemeldeter Benutzer oder „abgemeldet“
+/// Tooltip des Tray-Symbols (angemeldeter Benutzer oder „abgemeldet“) und,
+/// wenn mehrere StarCLX laufen, die Anlage im Fenstertitel
 fn set_tray_tooltip(app: &AppHandle, session: Option<&Session>) {
-    let tooltip = session.map_or(t("StarCLX: abgemeldet").to_owned(), |s| {
-        format!("StarCLX: {}", SessionInfo::from(s.info()).display_name)
+    let label = session.map(|s| {
+        let host = url::Url::parse(&s.info().server)
+            .ok()
+            .and_then(|u| u.host_str().map(str::to_owned))
+            .unwrap_or_else(|| s.info().server.clone());
+        (host, SessionInfo::from(s.info()).display_name)
     });
-    if let Some(tray) = app.tray_by_id("main") {
-        let _ = tray.set_tooltip(Some(tooltip));
-    }
+    instances::set_label(app, label);
 }
 
 async fn set_session(app: &AppHandle, session: Option<Session>) {
@@ -260,6 +301,10 @@ async fn save_prefs(
     log::set_verbose(prefs.verbose_log);
     bus::publish(&app, Event::PrefsSaved);
     desktop::apply_window(&app, &prefs);
+    // Links, Autostart und Tastenkürzel gehören dem Hauptclient
+    if !instances::is_main() {
+        return plugins::call::apply_prefs(&app, &old, &prefs).await;
+    }
     if old.handle_tel_links != prefs.handle_tel_links {
         desktop::register_schemes(&app, prefs.handle_tel_links);
     }
@@ -572,6 +617,14 @@ pub(crate) fn handle_urls(app: &AppHandle, urls: Vec<String>) {
         }
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
+            // Rücksprung aus dem Systembrowser kommt beim Hauptclient an,
+            // gehört aber vielleicht zur Anmeldung einer anderen Instanz.
+            if !owns_login(&app, &url).await && instances::others() > 0 {
+                if instances::is_main() {
+                    instances::forward_link(&url);
+                }
+                return;
+            }
             show_main_window(&app);
             let _ = match finish_login(&app, &url).await {
                 Ok(info) => app.emit("session", info),
@@ -581,6 +634,21 @@ pub(crate) fn handle_urls(app: &AppHandle, urls: Vec<String>) {
     }
 }
 
+/// Gehört der Rücksprung zur ausstehenden Anmeldung dieser Instanz?
+async fn owns_login(app: &AppHandle, redirect: &str) -> bool {
+    app.state::<AppState>()
+        .pending
+        .lock()
+        .await
+        .as_ref()
+        .is_some_and(|p| {
+            !matches!(
+                sf_auth::code_from_redirect(redirect, &p.state),
+                Err(sf_auth::RedirectError::StateMismatch)
+            )
+        })
+}
+
 /// Menü des Tray-Symbols in der eingestellten Sprache. Mit mehreren
 /// gespeicherten Konten gibt es „Konto wechseln“; das angemeldete ist
 /// ausgegraut.
@@ -588,6 +656,13 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
     let open = MenuItem::with_id(app, "open", t("Öffnen"), true, None::<&str>)?;
     let quick = MenuItem::with_id(app, "quick", t("Schnellwahl"), true, None::<&str>)?;
     let logout_item = MenuItem::with_id(app, "logout", t("Abmelden"), true, None::<&str>)?;
+    let another = MenuItem::with_id(
+        app,
+        "instance-new",
+        t("Weitere Anlage öffnen"),
+        true,
+        None::<&str>,
+    )?;
     let quit = MenuItem::with_id(app, "quit", t("Beenden"), true, None::<&str>)?;
     let accounts: Vec<_> = settings::load(app)
         .accounts
@@ -596,7 +671,7 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .filter(|(_, a)| server_allowed(&a.server))
         .collect();
     if accounts.len() < 2 {
-        return Menu::with_items(app, &[&open, &quick, &logout_item, &quit]);
+        return Menu::with_items(app, &[&open, &quick, &another, &logout_item, &quit]);
     }
     let items = accounts
         .iter()
@@ -617,7 +692,10 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .map(|i| i as &dyn tauri::menu::IsMenuItem<tauri::Wry>)
         .collect();
     let switch = Submenu::with_items(app, t("Konto wechseln"), true, &refs)?;
-    Menu::with_items(app, &[&open, &quick, &switch, &logout_item, &quit])
+    Menu::with_items(
+        app,
+        &[&open, &quick, &another, &switch, &logout_item, &quit],
+    )
 }
 
 /// „Name (anlage.example.com)“
@@ -648,9 +726,6 @@ fn rebuild_tray_menu(app: &AppHandle, session: Option<&Session>) {
 fn relabel(app: &AppHandle, session: Option<&Session>) {
     rebuild_tray_menu(app, session);
     set_tray_tooltip(app, session);
-    if let Some(w) = app.get_webview_window("quick") {
-        let _ = w.set_title(t("StarCLX Schnellwahl"));
-    }
 }
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
@@ -672,7 +747,8 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                     show_main_window(&app);
                 });
             }
-            "quit" => app.exit(0),
+            "instance-new" => instances::open_new(app),
+            "quit" => instances::quit(app),
             id => {
                 let Some(account) = id
                     .strip_prefix("account:")
@@ -704,28 +780,16 @@ pub fn run() {
         tracing::error!(error = %e, "Schlüsselbund nicht verfügbar; Anmeldung wird nicht gespeichert");
     }
 
+    // Unter Linux startet der Browser für starface-app:// einen zweiten
+    // Prozess; der reicht die URL an den Hauptclient weiter und endet.
+    // Tastenkürzel kommen als `--action …` über denselben Weg.
+    if !instances::init() {
+        return;
+    }
+
     let (events_tx, mut events_rx) = mpsc::unbounded_channel();
 
     tauri::Builder::default()
-        // Unter Linux startet der Browser für starface-app:// einen zweiten
-        // Prozess; single-instance reicht die URL an die laufende App weiter.
-        // Tastenkürzel kommen als `--action …` über denselben Weg.
-        // Als Flatpak darf die App nur D-Bus-Namen unter ihrer eigenen ID
-        // belegen.
-        .plugin({
-            let builder =
-                tauri_plugin_single_instance::Builder::new().callback(|app, argv, _cwd| {
-                    match desktop::action_from_args(&argv) {
-                        Some(action) => desktop::run_action(app, action),
-                        None => show_main_window(app),
-                    }
-                });
-            match flatpak::app_id() {
-                Some(id) => builder.dbus_id(id),
-                None => builder,
-            }
-            .build()
-        })
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -754,6 +818,8 @@ pub fn run() {
         })
         .setup(move |app| {
             log::open(app.handle());
+            settings::seed_profile(app.handle());
+            create_main_window(app.handle())?;
             plugins::start(app.handle());
             certs::init(app.handle());
             presence::start(app.handle());
@@ -764,18 +830,22 @@ pub fn run() {
             i18n::set_language(&prefs.language);
             desktop::apply_window(app.handle(), &prefs);
             desktop::show_on_start(app.handle(), &prefs);
-            // Tastenkürzel neu eintragen, damit sie nach einem Update oder
-            // der Umbenennung auf das aktuelle Programm zeigen.
-            if prefs.hotkeys.enabled
-                && let Err(e) = desktop::apply_hotkeys(app.handle(), &prefs.hotkeys)
-            {
-                tracing::warn!(error = %e, "Tastenkürzel nicht eingetragen");
+            // Desktop-Anbindung nur im Hauptclient; weitere Instanzen
+            // startet er selbst wieder.
+            if instances::is_main() {
+                // Tastenkürzel neu eintragen, damit sie nach einem Update
+                // oder der Umbenennung auf das aktuelle Programm zeigen.
+                if prefs.hotkeys.enabled
+                    && let Err(e) = desktop::apply_hotkeys(app.handle(), &prefs.hotkeys)
+                {
+                    tracing::warn!(error = %e, "Tastenkürzel nicht eingetragen");
+                }
+                if let Err(e) = desktop::apply_autostart(prefs.autostart, false) {
+                    tracing::warn!(error = %e, "Autostart nicht eingerichtet");
+                }
+                // starface-app:// und ggf. tel:/callto:/sip: für das laufende Binary
+                desktop::register_schemes(app.handle(), prefs.handle_tel_links);
             }
-            if let Err(e) = desktop::apply_autostart(prefs.autostart, false) {
-                tracing::warn!(error = %e, "Autostart nicht eingerichtet");
-            }
-            // starface-app:// und ggf. tel:/callto:/sip: für das laufende Binary
-            desktop::register_schemes(app.handle(), prefs.handle_tel_links);
             // Kaltstart über einen tel:-Link; ein Login-Rücksprung kann jetzt
             // keinen ausstehenden Login mehr haben.
             if let Ok(Some(urls)) = app.deep_link().get_current() {
@@ -795,6 +865,7 @@ pub fn run() {
                 );
             });
             build_tray(app.handle())?;
+            instances::ready(app.handle());
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
