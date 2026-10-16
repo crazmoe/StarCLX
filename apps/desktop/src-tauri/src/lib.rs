@@ -742,6 +742,7 @@ pub fn run() {
         .manage(plugins::queue::QueueState::default())
         .manage(plugins::doorcam::DoorCamState::default())
         .manage(plugins::journal::JournalState::default())
+        .manage(plugins::recordings::RecordingsState::default())
         .manage(busylight::BusylightState::default())
         .manage(plugins::headset::HeadsetState::default())
         .manage(AppState {
@@ -946,6 +947,10 @@ pub fn run() {
             voicemail::voicemail_move,
             voicemail::voicemail_delete,
             voicemail::voicemail_via_phone,
+            plugins::recordings::recordings,
+            plugins::recordings::recording_audio,
+            plugins::recordings::recording_save,
+            plugins::recordings::recording_delete,
             plugins::queue::queues,
             plugins::queue::queue_login,
             plugins::queue::queue_grab,

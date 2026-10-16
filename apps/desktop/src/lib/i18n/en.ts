@@ -593,5 +593,14 @@ const dict: Record<string, string> = {
   "Niemand in der Warteschlange.": "Nobody in the queue.",
   "Du bist in keiner Warteschlange als Agent eingetragen.": "You are not an agent in any queue.",
   "Warteschlangen": "Queues",
+  // Aufzeichnungen
+  "Aufzeichnungen": "Recordings",
+  "Aufzeichnung": "Recording",
+  "Für diesen Benutzer sind keine Aufzeichnungen verfügbar.": "No recordings are available for this user.",
+  "Neueste {n} von {total}": "Latest {n} of {total}",
+  "{n} Aufzeichnungen": "{n} recordings",
+  "an {who}": "to {who}",
+  "Keine Treffer.": "No matches.",
+  "Keine Aufzeichnungen vorhanden.": "No recordings.",
 };
 export default dict;

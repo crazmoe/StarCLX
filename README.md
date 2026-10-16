@@ -23,6 +23,7 @@ Not affiliated with STARFACE GmbH. "STARFACE" is used for descriptive purposes o
 - **Chat** with colleagues (presence, history, files, away on inactivity), group chats
   for the system's groups and ad-hoc group chats like in the STARFACE app
 - **Voicemail**: listen to and manage messages
+- **Recordings**: listen to, save and delete call recordings stored on the PBX
 - **Scheduled conferences**: create, edit, delete and start them (date, recurrence, participants)
 - **Door intercoms**: camera image in the Call Manager as soon as the door calls, with "Open door";
   additional cameras as tiles (RTSP, Motion JPEG, still image)
@@ -232,7 +233,7 @@ tag `v<version>` by hand does the same.
 | `crates/sf-auth` | OAuth2 login (authorization code + PKCE, refresh), keyring |
 | `crates/sf-onehub` | Connection to the OneHub API (port 9092) with bearer token |
 | `crates/sf-tls` | TLS configuration including confirmed certificates |
-| `crates/sf-core` | Session, address book, call list, function keys, reachability, voicemail |
+| `crates/sf-core` | Session, address book, call list, function keys, reachability, voicemail, recordings |
 | `crates/sf-sip` | Softphone based on libbaresip |
 | `crates/sf-audio` | Audio devices, ringtones, test tone (PulseAudio/PipeWire) |
 | `crates/sf-chat` | XMPP chat |

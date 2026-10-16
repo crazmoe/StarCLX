@@ -593,5 +593,14 @@ const dict: Record<string, string> = {
   "Niemand in der Warteschlange.": "Nessuno in coda.",
   "Du bist in keiner Warteschlange als Agent eingetragen.": "Non sei agente in nessuna coda.",
   "Warteschlangen": "Code",
+  // Aufzeichnungen
+  "Aufzeichnungen": "Registrazioni",
+  "Aufzeichnung": "Registrazione",
+  "Für diesen Benutzer sind keine Aufzeichnungen verfügbar.": "Nessuna registrazione disponibile per questo utente.",
+  "Neueste {n} von {total}": "Ultime {n} di {total}",
+  "{n} Aufzeichnungen": "{n} registrazioni",
+  "an {who}": "a {who}",
+  "Keine Treffer.": "Nessun risultato.",
+  "Keine Aufzeichnungen vorhanden.": "Nessuna registrazione.",
 };
 export default dict;

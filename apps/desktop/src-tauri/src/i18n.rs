@@ -190,6 +190,14 @@ const TEXTS: &[(&str, [&str; 3])] = &[
             "Salva messaggio vocale",
         ],
     ),
+    (
+        "Aufzeichnung speichern",
+        [
+            "Save recording",
+            "Enregistrer l’enregistrement",
+            "Salva registrazione",
+        ],
+    ),
     // Tastenkürzel (Namen in GNOME bzw. im Portal)
     (
         "Markierte Rufnummer wählen",

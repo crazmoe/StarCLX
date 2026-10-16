@@ -4973,6 +4973,7 @@ dependencies = [
  "clap",
  "sf-auth",
  "sf-chat",
+ "sf-core",
  "sf-onehub",
  "sf-sip",
  "tokio",

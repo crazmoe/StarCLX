@@ -16,6 +16,8 @@
     { id: "queue", x: 8, y: 16, w: 4, h: 7, visible: false },
     // Nur sinnvoll mit angelegten Kameras, daher anfangs ausgeblendet
     { id: "doorcam", x: 0, y: 16, w: 4, h: 7, visible: false },
+    // Nur mit Aufnahmen auf der Anlage sinnvoll, daher anfangs ausgeblendet
+    { id: "recordings", x: 0, y: 23, w: 6, h: 7, visible: false },
   ];
 
   /** Gespeicherte Kacheln, ergänzt um neue und ohne unbekannte */
