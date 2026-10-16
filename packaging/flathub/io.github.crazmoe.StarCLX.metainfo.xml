@@ -85,6 +85,18 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.5.0" date="2026-10-16">
+      <description>
+        <ul>
+          <li>New Recordings view for call recordings stored on the PBX</li>
+          <li>Switch between several saved accounts without signing in again</li>
+          <li>Live iQueue view: waiting callers, sign in and out, pick up a waiting call</li>
+          <li>A single notice instead of errors in every module when the PBX is unreachable</li>
+          <li>Features the user has no PBX permission for are hidden instead of failing</li>
+          <li>Reworked call list, custom accent colour and borderless workspace tiles</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-10-10">
       <description>
         <ul>
