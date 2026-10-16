@@ -1,0 +1,23 @@
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Fri, 16 Oct 2026 01:28:33 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ a3bf2842df5fe939e274494426923242              138 Release
+ 8f1c07262e62a20e7d0f6f443965a957             2456 main/binary-amd64/Packages
+ bf5b3a0851cb8e5e4f1c081202f6b75b             1017 main/binary-amd64/Packages.gz
+SHA1:
+ 1228364ac813afd65d94a08deb352a6a93080306              138 Release
+ 896e44e6e15d90a93a17fba8864f4633f7458257             2456 main/binary-amd64/Packages
+ 6211ce9e8da0232d490724ca53161835636213b8             1017 main/binary-amd64/Packages.gz
+SHA256:
+ adf12dfa0c7a279f28781684fb65379bf26281d4a405a1746ca6052c8db4129b              138 Release
+ af40b62bd650f85b120d7be3f1448bfa06c1b6e753fe40463d3f8aca408bbf6e             2456 main/binary-amd64/Packages
+ c9344398e3b9d95e1c1819f5e2c4bbf6dc309c69e60440f1e26d176d8952a3d7             1017 main/binary-amd64/Packages.gz
+SHA512:
+ 5620acae807db1c740f9054fb94436e4a8bad2623ab72a3b20efed5152b11ea03e01d47a1cb402404c4461ebb80b3994bcc8812aaa4037e1273cad2cc0e763f4              138 Release
+ 1be21a46567420974cad3783528e8bc459ff36320354523687c7ac70b7903168dcdba7dc001568c67e1724a1c88096732473fefd2433e2f0bff877b75bd70ed6             2456 main/binary-amd64/Packages
+ 9a72b2eaf27dc49a0ca29132ef989920606db3ea5d4d781e44783c0946c1d13aa586016abca4e4d0f450dd0b0c7a77ea2c609eae68215af64a35eb11140b62fa             1017 main/binary-amd64/Packages.gz
