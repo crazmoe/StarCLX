@@ -1,0 +1,28 @@
+# Wöchentliche Updates, je Bereich ein Sammel-PR für Minor- und Patch-Versionen;
+# Major-Versionen kommen einzeln, weil sie eher Anpassungen brauchen.
+# Die Submodule unter crates/sf-sip/vendor bleiben bewusst aussen vor.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      cargo:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /apps/desktop
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
