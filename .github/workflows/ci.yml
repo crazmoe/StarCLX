@@ -189,12 +189,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: starclx-${{ needs.build.outputs.version }}-linux-x86_64
           path: dl
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: packaging/flatpak/.flatpak-builder
           key: flatpak-builder-${{ hashFiles('packaging/flatpak/ch.crazmoe.StarCLX.yml') }}
@@ -232,11 +232,11 @@ jobs:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: starclx-${{ needs.build.outputs.version }}-linux-x86_64
           path: dl
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: starclx-${{ needs.build.outputs.version }}-flatpak
           path: dl
@@ -317,7 +317,7 @@ jobs:
           done
           ls -R site/deb/pool site/rpm
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: steps.key.outputs.ok == '1'
         with:
           name: starclx-${{ needs.build.outputs.version }}-flatpak
