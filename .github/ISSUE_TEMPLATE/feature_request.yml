@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a new feature or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Issues may be written in English or German.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation in which you miss this feature.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should StarCLX behave?
+    validations:
+      required: true
+  - type: textarea
+    id: starface-app
+    attributes:
+      label: Behaviour in the official STARFACE app
+      description: If the STARFACE app for Windows, macOS or mobile already offers this, how does it work there?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, STARFACE version, operating system or anything else that helps.

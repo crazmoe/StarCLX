@@ -1,0 +1,94 @@
+name: Bug report
+description: Something in StarCLX does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Issues may be written in English or German.
+        Please do not post passwords, tokens, server addresses or phone numbers you do not want to make public.
+        Security vulnerabilities do not belong here; see the link "Report a security vulnerability" on the previous page.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A short description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: StarCLX version
+      description: Shown at the bottom of the Settings.
+      placeholder: "1.5.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation method
+      options:
+        - Package repository (apt / dnf)
+        - Flatpak
+        - .deb / .rpm from Releases
+        - AppImage
+        - macOS (.dmg)
+        - Windows installer
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and desktop
+      placeholder: "Ubuntu 24.04, GNOME 46 (Wayland)"
+    validations:
+      required: true
+  - type: input
+    id: starface
+    attributes:
+      label: STARFACE version
+      description: Version of the phone system, and whether it is cloud or on-premises.
+      placeholder: "10.0.2.7, on-premises"
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      multiple: true
+      options:
+        - Sign-in
+        - Softphone / audio
+        - Desk phone control (CTI)
+        - Call list
+        - Chat
+        - Address book / search
+        - Voicemail / recordings
+        - Conferences
+        - Door intercom / cameras
+        - Function keys
+        - Headset / Busylight
+        - Desktop integration (tray, shortcuts, links)
+        - Installation / updates
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Relevant log output or screenshots. Please remove personal data first.
+      render: text
