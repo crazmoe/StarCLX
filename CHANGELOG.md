@@ -1,5 +1,12 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Sicherheit
+- Die Anmeldung schickt Passwort und Tokens nur noch verschlüsselt (HTTPS) an die Anlage, auch
+  nach einer Weiterleitung. Eine `http://`-Adresse wird abgelehnt; unverschlüsseltes HTTP ist
+  nur noch zum eigenen Rechner (localhost) möglich.
+
 ## 1.5.0 – 2026-10-16
 
 ### Aufzeichnungen
