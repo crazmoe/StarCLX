@@ -4861,7 +4861,7 @@ dependencies = [
 name = "sf-chat"
 version = "1.5.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "futures",
  "sasl",
@@ -5175,7 +5175,7 @@ name = "starclx"
 version = "1.5.0"
 dependencies = [
  "arboard",
- "base64 0.22.1",
+ "base64 0.23.1",
  "enumflags2",
  "gtk",
  "serde",

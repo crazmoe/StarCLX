@@ -2,9 +2,11 @@
 //! (selbstsigniert, auf einen anderen Namen): ohne Bestätigung kein Anruf,
 //! mit bestätigtem Fingerabdruck schon.
 
+mod common;
+
 use std::time::Duration;
 
-use sf_sip::{Config, SipEvent, Softphone};
+use sf_sip::{Config, SipEvent};
 use tokio::sync::mpsc::UnboundedReceiver;
 
 /// Wartet auf einen eingehenden Anruf; `false` nach Fehler oder Zeitablauf.
@@ -22,24 +24,18 @@ async fn incoming(rx: &mut UnboundedReceiver<SipEvent>) -> bool {
 }
 
 async fn call_over_tls(ip: std::net::IpAddr, cert: &std::path::Path, pins: Vec<String>) -> bool {
-    let port = std::net::UdpSocket::bind((ip, 0))
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port();
-    let config = Config {
+    let (phone, mut rx, port) = common::start_on_free_port(ip, |port| Config {
         audio_player: "aubridge,loop".into(),
         audio_source: "ausine,440".into(),
         sip_listen: Some(format!("{ip}:{port}")),
         verify_server: true,
         ca_file: None,
-        trusted_fingerprints: pins,
+        trusted_fingerprints: pins.clone(),
         extra: format!(
             "sip_certificate {}\nausrc_srate 16000\nausrc_channels 1\n",
             cert.display()
         ),
-    };
-    let (phone, mut rx) = Softphone::start(&config, "sf-sip-test").unwrap();
+    });
     let alice = format!("sip:alice@{ip}");
     phone
         .add_aor(&format!(
@@ -62,9 +58,7 @@ async fn call_over_tls(ip: std::net::IpAddr, cert: &std::path::Path, pins: Vec<S
 
 #[tokio::test]
 async fn untrusted_certificate_only_with_confirmed_fingerprint() {
-    let probe = std::net::UdpSocket::bind("0.0.0.0:0").unwrap();
-    probe.connect("192.0.2.1:9").unwrap();
-    let ip = probe.local_addr().unwrap().ip();
+    let ip = common::own_ip();
 
     let cert = rcgen::generate_simple_self_signed(vec!["pbx.invalid".into()]).unwrap();
     let fingerprint = sf_tls::fingerprint(cert.cert.der());

@@ -3,6 +3,10 @@
   "version": "1.5.0",
   "description": "Desktop-Oberfl\u00e4che",
   "type": "module",
+  "imports": {
+    "#lib": "./src/lib",
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -19,13 +23,13 @@
     "@tauri-apps/plugin-opener": "^2"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.65.1",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "svelte": "^5.56.3",
+    "svelte": "^5.57.2",
     "svelte-check": "^4.6.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.16",
+    "vite": "^8.3.4",
     "@tauri-apps/cli": "^2"
   }
 }

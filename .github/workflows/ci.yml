@@ -10,26 +10,28 @@ on:
 permissions:
   contents: read
 
+# Ein neuer Push auf einen PR bricht dessen laufenden Build ab. Builds auf
+# main und bei Tags bekommen je eine eigene Gruppe und laufen immer zu Ende,
+# damit kein Release ausfällt.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   # Debug-Builds ohne volle Debuginfo, sonst wird der Platz auf dem Runner knapp
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  build:
-    # 22.04 statt 24.04: glibc 2.35, damit die Pakete auch unter Debian 12
-    # und Ubuntu 22.04 starten (mit 24.04 gebaut verlangen sie glibc 2.38)
+  # Formatierung, Clippy, Tests und Oberfläche; läuft parallel zum Paketbau
+  checks:
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      release: ${{ steps.version.outputs.release }}
     steps:
+      # Im Hintergrund: dauert sonst 1,5 bis 3 Minuten und ist lange vor dem
+      # Bauen fertig
       - name: Platz schaffen
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
+          nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL >/dev/null 2>&1 &
 
       - uses: actions/checkout@v7
         with:
@@ -53,6 +55,9 @@ jobs:
           # (aws-lc-sys) verweisen auf glibc-2.38-Symbole und linken auf
           # 22.04 nicht.
           key: ubuntu-22.04
+          # Nur main speichert; PRs nutzen dessen Cache, statt ihn mit
+          # eigenen zu verdrängen (10 GB je Repo)
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: actions/setup-node@v7
         with:
@@ -79,6 +84,47 @@ jobs:
           npm ci
           npm run check
           npm run i18n:check
+
+  build:
+    # 22.04 statt 24.04: glibc 2.35, damit die Pakete auch unter Debian 12
+    # und Ubuntu 22.04 starten (mit 24.04 gebaut verlangen sie glibc 2.38)
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - name: Platz schaffen
+        run: |
+          nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL >/dev/null 2>&1 &
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Systempakete
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev \
+            gnome-keyring dbus-daemon \
+            cmake libssl-dev zlib1g-dev libspandsp-dev libpipewire-0.3-dev \
+            libpulse-dev libasound2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ubuntu-22.04
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Abhängigkeiten der Oberfläche
+        working-directory: apps/desktop
+        run: npm ci
 
       # Release: der erste Build auf main mit einer neuen Version in Cargo.toml
       # (oder ein Tag v1.2.3 mit genau dieser Version). Alle anderen Builds
@@ -130,22 +176,6 @@ jobs:
             target/release/bundle/appimage/*.AppImage
             target/release/sfctl
 
-      - name: Release veröffentlichen
-        if: env.RELEASE == '1'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cp target/release/sfctl "sfctl-${VERSION}-linux-x86_64"
-          # Abschnitt dieser Version aus CHANGELOG.md als Release-Text
-          awk -v v="## $VERSION" '$0 ~ "^## " {p = index($0, v) == 1} p' CHANGELOG.md > notes.md
-          # Erst als Entwurf: veröffentlichte Releases sind unveränderlich,
-          # das Flatpak kommt aber erst danach dazu (flatpak-release)
-          gh release create "v$VERSION" --draft --target "$GITHUB_SHA" --title "StarCLX $VERSION" --notes-file notes.md \
-            target/release/bundle/deb/*.deb \
-            target/release/bundle/rpm/*.rpm \
-            target/release/bundle/appimage/*.AppImage \
-            "sfctl-${VERSION}-linux-x86_64"
-
   # Flatpak aus dem eben gebauten .deb (packaging/flatpak), bei einem
   # Release auch als Datei im Release
   flatpak:
@@ -160,12 +190,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: starclx-${{ needs.build.outputs.version }}-linux-x86_64
           path: dl
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: packaging/flatpak/.flatpak-builder
           key: flatpak-builder-${{ hashFiles('packaging/flatpak/ch.crazmoe.StarCLX.yml') }}
@@ -191,10 +221,10 @@ jobs:
           name: starclx-${{ needs.build.outputs.version }}-flatpak
           path: starclx_*.flatpak
 
-  # Im Container fehlt gh, deshalb ein eigener Schritt für das Release.
-  # Hängt das Flatpak an den Entwurf und veröffentlicht ihn dann.
+  # Release erst, wenn auch die Prüfungen durch sind; mit allen Paketen
+  # einschließlich Flatpak (im Flatpak-Container fehlt gh)
   flatpak-release:
-    needs: [build, flatpak]
+    needs: [checks, build, flatpak]
     if: needs.build.outputs.release == '1'
     runs-on: ubuntu-24.04
     permissions:
@@ -202,15 +232,28 @@ jobs:
     env:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: starclx-${{ needs.build.outputs.version }}-linux-x86_64
+          path: dl
+      - uses: actions/download-artifact@v8
         with:
           name: starclx-${{ needs.build.outputs.version }}-flatpak
-      - name: Release ergänzen
+          path: dl
+      - name: Release veröffentlichen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "v$VERSION" "starclx_${VERSION}_x86_64.flatpak" --clobber --repo "$GITHUB_REPOSITORY"
-          gh release edit "v$VERSION" --draft=false --latest --repo "$GITHUB_REPOSITORY"
+          cp dl/sfctl "sfctl-${VERSION}-linux-x86_64"
+          # Abschnitt dieser Version aus CHANGELOG.md als Release-Text
+          awk -v v="## $VERSION" '$0 ~ "^## " {p = index($0, v) == 1} p' CHANGELOG.md > notes.md
+          gh release create "v$VERSION" --latest --target "$GITHUB_SHA" --title "StarCLX $VERSION" --notes-file notes.md \
+            dl/bundle/deb/*.deb \
+            dl/bundle/rpm/*.rpm \
+            dl/bundle/appimage/*.AppImage \
+            "sfctl-${VERSION}-linux-x86_64" \
+            "dl/starclx_${VERSION}_x86_64.flatpak"
 
   # Paketquellen für apt, dnf und Flatpak auf GitHub Pages (Branch gh-pages).
   # Signiert mit dem Schlüssel aus dem Secret REPO_GPG_KEY; ohne Secret wird
@@ -275,7 +318,7 @@ jobs:
           done
           ls -R site/deb/pool site/rpm
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         if: steps.key.outputs.ok == '1'
         with:
           name: starclx-${{ needs.build.outputs.version }}-flatpak

@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { connection, initConnection } from "$lib/connection.svelte";
+  import { connection, initConnection } from "#lib/connection.svelte.ts";
   // Schnellwahl aus dem Tray: Rufnummernfeld mit Adressbuchsuche und nur die
   // Besetztlampenfelder. Klick ruft an bzw. holt einen klingelnden Anruf heran.
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
-  import DialSearch from "$lib/DialSearch.svelte";
-  import FkeyTile from "$lib/plugins/fkeys/FkeyTile.svelte";
-  import { fkeys, loadFkeys, press, resetFkeys } from "$lib/plugins/fkeys/fkeys.svelte";
-  import { initPhone, phone } from "$lib/plugins/call/phone.svelte";
-  import { loadPrefs } from "$lib/prefs.svelte";
-  import { t } from "$lib/i18n.svelte";
+  import DialSearch from "#lib/DialSearch.svelte";
+  import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
+  import { fkeys, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
+  import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
+  import { loadPrefs } from "#lib/prefs.svelte.ts";
+  import { t } from "#lib/i18n.svelte.ts";
 
   const blfs = $derived(fkeys.keys.filter((k) => k.functionKeyType === "BUSYLAMPFIELD"));
 
