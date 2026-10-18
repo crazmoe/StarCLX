@@ -1,6 +1,8 @@
 //! Zwei Konten im selben baresip rufen sich über die eigene IP an, mit SRTP
 //! als Pflicht, Sinuston als Quelle und ohne echtes Audiogerät.
 
+mod common;
+
 use std::time::Duration;
 
 use sf_sip::{Config, SipEvent, Softphone};
@@ -27,15 +29,8 @@ async fn next(
 #[tokio::test]
 async fn call_between_two_local_accounts_with_srtp() {
     // baresip nutzt keine Loopback-Adressen; daher die eigene Netzadresse.
-    let probe = std::net::UdpSocket::bind("0.0.0.0:0").unwrap();
-    probe.connect("192.0.2.1:9").unwrap();
-    let ip = probe.local_addr().unwrap().ip();
-    let port = std::net::UdpSocket::bind((ip, 0))
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port();
-    let config = Config {
+    let ip = common::own_ip();
+    let config = |port: u16| Config {
         audio_player: "aubridge,loop".into(),
         audio_source: "ausine,440".into(),
         sip_listen: Some(format!("{ip}:{port}")),
@@ -44,7 +39,7 @@ async fn call_between_two_local_accounts_with_srtp() {
         trusted_fingerprints: Vec::new(),
         extra: "ausrc_srate 16000\nausrc_channels 1\n".into(),
     };
-    let (phone, mut rx) = Softphone::start(&config, "sf-sip-test").unwrap();
+    let (phone, mut rx, port) = common::start_on_free_port(ip, config);
 
     let alice = format!("sip:alice@{ip}");
     phone
@@ -124,7 +119,7 @@ async fn call_between_two_local_accounts_with_srtp() {
 
     drop(phone);
     // Nach dem Beenden lässt sich baresip erneut starten.
-    let (again, _rx) = Softphone::start(&config, "sf-sip-test").unwrap();
+    let (again, _rx) = Softphone::start(&config(port), "sf-sip-test").unwrap();
     drop(again);
 }
 
