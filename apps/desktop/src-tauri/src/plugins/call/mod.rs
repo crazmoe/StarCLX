@@ -10,6 +10,7 @@ use tokio::sync::{Mutex, mpsc};
 
 use crate::bus::{self, Event};
 use crate::i18n::t;
+use crate::instances;
 use crate::settings::{self, Prefs};
 use crate::{AppState, audio, certs, show_main_window};
 
@@ -420,7 +421,9 @@ pub async fn phone_dial(
     }
     // Die Anlage ruft zuerst das primäre Telefon an.
     let via = dial_phone_id(&app).await;
-    with_phone(&state, async |p| p.dial(&number, via.as_deref()).await).await
+    with_phone(&state, async |p| p.dial(&number, via.as_deref()).await).await?;
+    instances::hold_others();
+    Ok(())
 }
 
 #[tauri::command]
@@ -433,6 +436,7 @@ pub async fn answer(app: &AppHandle, call_id: &str) -> Result<(), String> {
     let primary = settings::load(app).prefs.primary_on_answer;
     with_phone(&app.state::<CallState>(), async |p| {
         p.answer(call_id)?;
+        instances::hold_others();
         if primary
             && let Some(id) = p.phone_id()
             && let Ok(hub) = crate::hub(&app.state::<AppState>()).await
@@ -466,6 +470,17 @@ pub async fn phone_hold(
     hold: bool,
 ) -> Result<(), String> {
     with_phone(&state, async |p| p.hold(&call_id, hold).await).await
+}
+
+/// Gespräche halten, weil in einer anderen Instanz eins beginnt (sonst hört
+/// man beide zugleich), bzw. danach zurückholen
+pub async fn set_held(app: &AppHandle, ids: Vec<String>, hold: bool) {
+    for id in ids {
+        let result = with_phone(&app.state::<CallState>(), async |p| p.hold(&id, hold).await).await;
+        if let Err(e) = result {
+            tracing::warn!(error = %e, "Gespräch nicht gehalten");
+        }
+    }
 }
 
 /// Rückruf bei Besetzt aktivieren bzw. abbrechen
