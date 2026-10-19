@@ -43,6 +43,9 @@ pub enum Error {
     Secret(#[from] keyring_core::Error),
     #[error("Zufallsgenerator nicht verfügbar: {0}")]
     Random(String),
+    /// Zugangsdaten gehen nur verschlüsselt an die Anlage.
+    #[error("unverschlüsselte Adresse abgelehnt: {0}")]
+    Insecure(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -154,6 +157,29 @@ pub struct LoginConfig {
     pub grpc_url: Option<String>,
 }
 
+/// Erlaubt nur HTTPS; unverschlüsseltes HTTP allein zum eigenen Rechner
+/// (Loopback), etwa für Tests oder einen lokalen Proxy.
+fn secure_url(url: &Url) -> Result<()> {
+    let loopback = match url.host() {
+        Some(url::Host::Domain(d)) => d.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+        None => false,
+    };
+    match url.scheme() {
+        "https" => Ok(()),
+        "http" if loopback => Ok(()),
+        _ => Err(Error::Insecure(url.as_str().to_owned())),
+    }
+}
+
+/// Wie [`secure_url`] für eine Adresse aus der Discovery.
+fn secure(url: &str) -> Result<Url> {
+    let url = Url::parse(url)?;
+    secure_url(&url)?;
+    Ok(url)
+}
+
 /// OAuth-Client für eine Anlage, z. B. `https://pbx.example.com`.
 pub struct Client {
     http: reqwest::Client,
@@ -166,8 +192,19 @@ impl Client {
         let http = reqwest::Client::builder()
             .user_agent(concat!("starclx/", env!("CARGO_PKG_VERSION")))
             .tls_backend_preconfigured(sf_tls::client_config())
+            // Auch eine Weiterleitung darf nicht auf HTTP zurückfallen.
+            .redirect(reqwest::redirect::Policy::custom(|attempt| {
+                if secure_url(attempt.url()).is_err() {
+                    let url = attempt.url().to_string();
+                    attempt.error(format!("Weiterleitung auf unverschlüsselte Adresse {url}"))
+                } else if attempt.previous().len() >= 10 {
+                    attempt.stop()
+                } else {
+                    attempt.follow()
+                }
+            }))
             .build()?;
-        let base = Url::parse(server)?;
+        let base = secure(server)?;
         // Ältere Anlagen kennen den Endpunkt nicht; dann gelten die Vorgaben.
         let login_config: LoginConfig = match http
             .get(base.join("/rpc/oauth/login-config")?)
@@ -179,7 +216,7 @@ impl Client {
             Err(_) => LoginConfig::default(),
         };
         let url = match &login_config.oauth_config_url {
-            Some(u) => Url::parse(u)?,
+            Some(u) => secure(u)?,
             None => base.join("/.well-known/openid-configuration")?,
         };
         // Die Anlage leitet auf /auth/realms/pbx/… bzw. den zentralen
@@ -191,6 +228,11 @@ impl Client {
             .error_for_status()?
             .json()
             .await?;
+        secure(&discovery.authorization_endpoint)?;
+        secure(&discovery.token_endpoint)?;
+        if let Some(endpoint) = &discovery.revocation_endpoint {
+            secure(endpoint)?;
+        }
         if discovery.edge_node_id.is_none() {
             discovery
                 .edge_node_id
@@ -225,7 +267,7 @@ impl Client {
     /// Browser zu übernehmen. Nötig, um ein weiteres Konto derselben Anlage
     /// hinzuzufügen.
     pub fn authorize_url_with(&self, pkce: &Pkce, state: &str, fresh: bool) -> Result<Url> {
-        let mut url = Url::parse(&self.discovery.authorization_endpoint)?;
+        let mut url = secure(&self.discovery.authorization_endpoint)?;
         url.query_pairs_mut()
             .append_pair("response_type", "code")
             .append_pair("client_id", CLIENT_ID)
@@ -289,7 +331,7 @@ impl Client {
             ("token_type_hint", "refresh_token"),
         ];
         self.http
-            .post(endpoint)
+            .post(secure(endpoint)?)
             .form(&form)
             .send()
             .await?
@@ -325,7 +367,7 @@ impl Client {
         }
         let resp = self
             .http
-            .post(&self.discovery.token_endpoint)
+            .post(secure(&self.discovery.token_endpoint)?)
             .form(&form)
             .send()
             .await?;
@@ -477,6 +519,25 @@ mod tests {
             redacted_redirect("starface-app://login?state=s&code=c&iss=x"),
             "starface-app://login?state=%E2%80%A6&code=%E2%80%A6&iss=x"
         );
+    }
+
+    #[test]
+    fn only_https_except_loopback() {
+        assert!(secure("https://pbx.example.com/auth/token").is_ok());
+        assert!(secure("http://127.0.0.1:8080/token").is_ok());
+        assert!(secure("http://[::1]/token").is_ok());
+        assert!(secure("http://localhost/token").is_ok());
+        for url in [
+            "http://pbx.example.com/token",
+            "http://10.0.2.6/token",
+            "http://127.0.0.1.example.com/token",
+            "ftp://pbx.example.com/token",
+        ] {
+            assert!(
+                matches!(secure(url), Err(Error::Insecure(_))),
+                "{url} angenommen"
+            );
+        }
     }
 
     #[test]
