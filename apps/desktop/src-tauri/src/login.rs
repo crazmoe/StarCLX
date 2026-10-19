@@ -38,6 +38,7 @@ pub fn open(app: &AppHandle, url: &url::Url) -> tauri::Result<()> {
             false
         })
         .build()?;
+    crate::instances::set_icon(app, &window);
     #[cfg(target_os = "linux")]
     window.with_webview(allow_confirmed_certificates)?;
     window.navigate(url.clone())

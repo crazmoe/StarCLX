@@ -174,6 +174,85 @@ pub fn webview<'a, R: tauri::Runtime, M: Manager<R>>(
     }
 }
 
+/// Farbton-Drehung des Symbols je Profil: Das Standardprofil behält seine
+/// Farben, weitere Profile bekommen gut unterscheidbare.
+const HUES: [f32; 12] = [
+    0.0, 120.0, 240.0, 60.0, 180.0, 300.0, 30.0, 150.0, 270.0, 90.0, 210.0, 330.0,
+];
+
+fn hue_for(profile: &str) -> f32 {
+    let n = match profile {
+        "" => 0,
+        p => p
+            .parse::<usize>()
+            .map(|n| n.saturating_sub(1))
+            .unwrap_or_else(|_| p.bytes().map(usize::from).sum()),
+    };
+    HUES[n % HUES.len()]
+}
+
+/// Dreht den Farbton aller Pixel (RGBA) um `degrees`; Helligkeit,
+/// Sättigung und Transparenz bleiben.
+fn rotate_hue(rgba: &[u8], degrees: f32) -> Vec<u8> {
+    let mut out = rgba.to_vec();
+    if degrees == 0.0 {
+        return out;
+    }
+    for px in out.chunks_exact_mut(4) {
+        let [r, g, b] = [px[0], px[1], px[2]].map(|c| f32::from(c) / 255.0);
+        let max = r.max(g).max(b);
+        let min = r.min(g).min(b);
+        let d = max - min;
+        if d == 0.0 {
+            continue; // Grau bleibt grau
+        }
+        let h = if max == r {
+            60.0 * ((g - b) / d).rem_euclid(6.0)
+        } else if max == g {
+            60.0 * ((b - r) / d + 2.0)
+        } else {
+            60.0 * ((r - g) / d + 4.0)
+        };
+        let h = (h + degrees).rem_euclid(360.0) / 60.0;
+        let x = d * (1.0 - (h.rem_euclid(2.0) - 1.0).abs());
+        let (r, g, b) = match h as u32 {
+            0 => (d, x, 0.0),
+            1 => (x, d, 0.0),
+            2 => (0.0, d, x),
+            3 => (0.0, x, d),
+            4 => (x, 0.0, d),
+            _ => (d, 0.0, x),
+        };
+        for (c, v) in px.iter_mut().zip([r, g, b]) {
+            *c = ((v + min) * 255.0).round().clamp(0.0, 255.0) as u8;
+        }
+    }
+    out
+}
+
+/// Symbol dieser Instanz für Tray und Fenster (Taskleiste)
+pub fn icon(app: &AppHandle) -> Option<tauri::image::Image<'static>> {
+    static ICON: OnceLock<Option<tauri::image::Image<'static>>> = OnceLock::new();
+    ICON.get_or_init(|| {
+        let base = app.default_window_icon()?;
+        Some(tauri::image::Image::new_owned(
+            rotate_hue(base.rgba(), hue_for(profile())),
+            base.width(),
+            base.height(),
+        ))
+    })
+    .clone()
+}
+
+/// Fenster bekommt das Symbol dieses Profils
+pub fn set_icon(app: &AppHandle, window: &tauri::WebviewWindow) {
+    if !profile().is_empty()
+        && let Some(icon) = icon(app)
+    {
+        let _ = window.set_icon(icon);
+    }
+}
+
 /// Vor dem Start von Tauri: Profil bestimmen, Namen auf dem Bus belegen.
 /// `false` heisst: Eine andere Instanz hat übernommen, dieser Prozess endet.
 pub fn init() -> bool {
@@ -688,9 +767,11 @@ pub fn apply_titles(app: &AppHandle) {
     let titles = Titles::new(label.as_ref(), others() > 0);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.set_title(&titles.main);
+        set_icon(app, &w);
     }
     if let Some(w) = app.get_webview_window("quick") {
         let _ = w.set_title(&titles.quick);
+        set_icon(app, &w);
     }
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(titles.tooltip));
@@ -966,6 +1047,28 @@ mod tests {
         let d = r.devices();
         assert_eq!(d.lines.len(), 2);
         assert!(d.ready);
+    }
+
+    #[test]
+    fn icon_colors() {
+        // Cyan und Gelb des Symbols, ein grauer und ein durchsichtiger Pixel
+        let px = [
+            36, 200, 219, 255, 255, 193, 49, 255, 90, 90, 90, 255, 0, 0, 0, 0,
+        ];
+        assert_eq!(rotate_hue(&px, hue_for("")), px);
+        let p2 = rotate_hue(&px, hue_for("2"));
+        assert_ne!(p2[..3], px[..3]);
+        assert_eq!(p2[3], 255);
+        assert_eq!(p2[8..], px[8..]);
+        // Volle Drehung landet wieder beim Original
+        assert_eq!(rotate_hue(&px, 360.0), px);
+        assert_eq!(rotate_hue(&rotate_hue(&px, 120.0), 240.0), px);
+        // Die ersten Profile bekommen verschiedene Farben
+        let hues: BTreeSet<u32> = ["", "2", "3", "4", "5", "6"]
+            .iter()
+            .map(|p| hue_for(p) as u32)
+            .collect();
+        assert_eq!(hues.len(), 6);
     }
 
     #[test]

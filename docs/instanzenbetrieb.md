@@ -13,6 +13,11 @@ wird nie dorthin gemergt (siehe `.github/workflows/instanzenbetrieb-sperre.yml`)
   Einstellungen (Geräte, Sprache …) des Standardprofils, aber keine Konten.
 - Laufen zwei oder mehr, zeigen Fenstertitel, Schnellwahl und Tray-Tooltip
   die Anlage, z. B. „StarCLX – pbx.example.ch“.
+- Jedes weitere Profil hat ein Symbol in eigener Farbe (Farbton gedreht),
+  im Tray und an den Fenstern; das Standardprofil behält die Originalfarben.
+  Unter Wayland nehmen GNOME und KDE das Symbol der Taskleiste aus der
+  .desktop-Datei, dort bleibt es dann einheitlich.
+- Oben im Tray-Menü steht die Anlage der Instanz.
 - Der **Hauptclient** (zuerst gestartete Instanz) bekommt `tel:`-, `callto:`-
   und `sip:`-Links, Tastenkürzel und Login-Rücksprünge aus dem Browser, trägt
   Autostart und Link-Zuordnung ein und bedient Headset und Busylight für alle.

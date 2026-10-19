@@ -26,7 +26,7 @@ use plugins::{busylight, chat, fkeys, reach, voicemail};
 use serde::Serialize;
 use settings::Prefs;
 use sf_core::{Session, SessionEvent};
-use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -152,11 +152,10 @@ fn quick_hide(app: AppHandle) {
 /// wenn mehrere StarCLX laufen, die Anlage im Fenstertitel
 fn set_tray_tooltip(app: &AppHandle, session: Option<&Session>) {
     let label = session.map(|s| {
-        let host = url::Url::parse(&s.info().server)
-            .ok()
-            .and_then(|u| u.host_str().map(str::to_owned))
-            .unwrap_or_else(|| s.info().server.clone());
-        (host, SessionInfo::from(s.info()).display_name)
+        (
+            host_of(&s.info().server),
+            SessionInfo::from(s.info()).display_name,
+        )
     });
     instances::set_label(app, label);
 }
@@ -664,6 +663,13 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, "quit", t("Beenden"), true, None::<&str>)?;
+    // Oben die Anlage dieser Instanz, damit man mehrere auseinanderhält
+    let system = session.map_or_else(
+        || t("nicht angemeldet").to_owned(),
+        |s| host_of(&s.info().server),
+    );
+    let header = MenuItem::with_id(app, "system", system, false, None::<&str>)?;
+    let separator = PredefinedMenuItem::separator(app)?;
     let accounts: Vec<_> = settings::load(app)
         .accounts
         .into_iter()
@@ -671,7 +677,18 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .filter(|(_, a)| server_allowed(&a.server))
         .collect();
     if accounts.len() < 2 {
-        return Menu::with_items(app, &[&open, &quick, &another, &logout_item, &quit]);
+        return Menu::with_items(
+            app,
+            &[
+                &header,
+                &separator,
+                &open,
+                &quick,
+                &another,
+                &logout_item,
+                &quit,
+            ],
+        );
     }
     let items = accounts
         .iter()
@@ -694,8 +711,25 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
     let switch = Submenu::with_items(app, t("Konto wechseln"), true, &refs)?;
     Menu::with_items(
         app,
-        &[&open, &quick, &another, &switch, &logout_item, &quit],
+        &[
+            &header,
+            &separator,
+            &open,
+            &quick,
+            &another,
+            &switch,
+            &logout_item,
+            &quit,
+        ],
     )
+}
+
+/// Rechnername der Anlage, sonst die Adresse, wie sie ist
+fn host_of(server: &str) -> String {
+    url::Url::parse(server)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .unwrap_or_else(|| server.to_owned())
 }
 
 /// „Name (anlage.example.com)“
@@ -766,8 +800,8 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 });
             }
         });
-    if let Some(icon) = app.default_window_icon() {
-        tray = tray.icon(icon.clone());
+    if let Some(icon) = instances::icon(app) {
+        tray = tray.icon(icon);
     }
     tray.build(app)?;
     Ok(())
