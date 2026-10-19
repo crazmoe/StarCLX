@@ -1,7 +1,10 @@
 //! Plugin Headset: Gesprächs- und Stummtaste von USB-Headsets (Jabra, Poly,
 //! EPOS) nehmen an, legen auf und schalten stumm. Bei einem Anruf klingelt
-//! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone. Laufen
-//! mehrere StarCLX, bedient der Hauptclient das Headset für alle.
+//! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone. Die Taste von
+//! Bluetooth-Kopfhörern und -Headsets kommt über den Medienspieler (`mpris`).
+//! Laufen mehrere StarCLX, bedient der Hauptclient die Headsets für alle.
+
+mod mpris;
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -119,12 +122,14 @@ fn refresh(app: &AppHandle) {
     let mut inner = state.inner.lock().unwrap();
     if !instances::is_main() || !settings::load(app).prefs.headset {
         inner.headset.take(); // schaltet Klingeln und LEDs aus
+        mpris::set(app, false);
         return;
     }
     if inner.testing {
         return;
     }
     let devices = instances::devices();
+    mpris::set(app, !devices.lines.is_empty());
     let s = state_of(&devices.lines, &devices.muted);
     inner.headset.get_or_insert_with(|| open(app)).set(s);
 }

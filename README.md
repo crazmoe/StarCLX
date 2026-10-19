@@ -31,7 +31,8 @@ Not affiliated with STARFACE GmbH. "STARFACE" is used for descriptive purposes o
 - **Reachability**: redirects, iFMC, displayed caller number
 - **Workspace** as tabs or freely arranged tiles
 - **Headset buttons** on Jabra, Poly and EPOS (USB HID telephony): answer, hang up,
-  mute; the headset rings and shows call and mute state
+  mute; the headset rings and shows call and mute state. Bluetooth headphones and
+  headsets: the play/pause button answers and hangs up during a call
 - **Settings**: audio devices, ringtones, Busylight (Kuando), appearance,
   language (Deutsch, English, Français, Italiano)
 - **Desktop integration**: tray icon, autostart, quick dial window,

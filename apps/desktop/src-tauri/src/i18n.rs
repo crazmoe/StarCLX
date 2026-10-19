@@ -106,6 +106,8 @@ const TEXTS: &[(&str, [&str; 3])] = &[
         ["Quit all", "Tout quitter", "Esci da tutti"],
     ),
     ("Abbrechen", ["Cancel", "Annuler", "Annulla"]),
+    // Bluetooth-Taste (Medienspieler)
+    ("Anruf", ["Call", "Appel", "Chiamata"]),
     // Konten
     (
         "Konto wechseln",
