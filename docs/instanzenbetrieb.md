@@ -1,7 +1,6 @@
 # Instanzenbetrieb
 
-Nur auf dem Branch `Instanzenbetrieb`. Er läuft dauerhaft neben `main` und
-wird nie dorthin gemergt (siehe `.github/workflows/instanzenbetrieb-sperre.yml`).
+Mehrere StarCLX auf demselben Rechner, je eins pro Anlage.
 
 ## Was er kann
 

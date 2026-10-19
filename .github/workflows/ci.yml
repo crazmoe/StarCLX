@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    # Instanzenbetrieb: eigene Pakete als Artefakte, nie ein Release
-    branches: [main, Instanzenbetrieb]
+    branches: [main]
     tags: ["v*"]
   pull_request:
 
