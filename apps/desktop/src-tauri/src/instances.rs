@@ -245,6 +245,16 @@ pub fn icon(app: &AppHandle) -> Option<tauri::image::Image<'static>> {
 }
 
 /// Fenster bekommt das Symbol dieses Profils
+/// Kennung des Tray-Symbols. Sie bestimmt auch Name und Datei, unter denen
+/// es beim Desktop liegt; mit derselben zeigten nach dem Entsperren alle
+/// Instanzen das zuletzt geschriebene Symbol.
+pub fn tray_id() -> String {
+    match profile() {
+        "" => "main".to_owned(),
+        p => format!("main-p{p}"),
+    }
+}
+
 pub fn set_icon(app: &AppHandle, window: &tauri::WebviewWindow) {
     if !profile().is_empty()
         && let Some(icon) = icon(app)
@@ -885,7 +895,7 @@ pub fn apply_titles(app: &AppHandle) {
         let _ = w.set_title(&titles.quick);
         set_icon(app, &w);
     }
-    if let Some(tray) = app.tray_by_id("main") {
+    if let Some(tray) = app.tray_by_id(&tray_id()) {
         let _ = tray.set_tooltip(Some(titles.tooltip));
     }
 }

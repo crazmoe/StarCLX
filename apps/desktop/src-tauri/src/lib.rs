@@ -748,7 +748,7 @@ fn account_label(a: &settings::Account) -> String {
 }
 
 fn rebuild_tray_menu(app: &AppHandle, session: Option<&Session>) {
-    if let Some(tray) = app.tray_by_id("main") {
+    if let Some(tray) = app.tray_by_id(&instances::tray_id()) {
         match tray_menu(app, session) {
             Ok(menu) => {
                 let _ = tray.set_menu(Some(menu));
@@ -766,7 +766,7 @@ fn relabel(app: &AppHandle, session: Option<&Session>) {
 
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = tray_menu(app, None)?;
-    let mut tray = TrayIconBuilder::with_id("main")
+    let mut tray = TrayIconBuilder::with_id(instances::tray_id())
         .tooltip(t("StarCLX: abgemeldet"))
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
