@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use enumflags2::BitFlags;
 use serde::{Deserialize, Serialize};
 use sf_core::phone::{CallPhase, CallView};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use zbus::blocking::Connection;
 use zbus::blocking::fdo::DBusProxy;
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
@@ -47,13 +47,11 @@ static APP: OnceLock<AppHandle> = OnceLock::new();
 static PENDING: Mutex<Vec<Request>> = Mutex::new(Vec::new());
 /// Profile der anderen laufenden Instanzen
 static OTHERS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
-/// Die anderen Instanzen halten für ein Gespräch hier; nach dessen Ende
-/// holen sie ihre zurück
-static HOLDING: Mutex<Holding> = Mutex::new(Holding::None);
-/// Eigene Gespräche, gehalten für eine andere Instanz: (Gespräch, Profil
-/// der anderen). Zurück kommen sie erst, wenn genau diese auflegt; so
-/// stapeln sich auch drei und mehr Instanzen richtig.
-static HELD_FOR_OTHER: Mutex<Vec<(String, String)>> = Mutex::new(Vec::new());
+/// Andere Instanzen, die gerade telefonieren: Profil → Anlage. Solange
+/// eine telefoniert, nehmen die anderen nicht an und wählen nicht.
+static BUSY: Mutex<BTreeMap<String, String>> = Mutex::new(BTreeMap::new());
+/// Zuletzt gemeldet: Diese Instanz telefoniert
+static TALKING: AtomicBool = AtomicBool::new(false);
 /// Angemeldete Anlage (Rechnername) und Benutzer, für Titel und Tray
 static LABEL: Mutex<Option<(String, String)>> = Mutex::new(None);
 /// Eigener Anrufzustand für Headset und Busylight
@@ -442,6 +440,7 @@ fn owner_changed(name: &str, new_owner: Option<&str>, own: Option<&str>) {
     }
     if new_owner.is_none() {
         REPORTS.lock().unwrap().remove(&p);
+        BUSY.lock().unwrap().remove(&p);
     }
     dispatch(Request::OthersChanged);
 }
@@ -487,14 +486,9 @@ impl Iface {
         dispatch(Request::BusylightTest(sound, volume));
     }
 
-    /// In einer anderen Instanz beginnt ein Gespräch: das eigene halten
-    fn hold(&self, from: String) {
-        dispatch(Request::Hold(from));
-    }
-
-    /// Das Gespräch der anderen Instanz ist vorbei: das gehaltene zurückholen
-    fn resume(&self, from: String) {
-        dispatch(Request::Resume(from));
+    /// Eine andere Instanz beginnt oder beendet ein Gespräch
+    fn busy(&self, profile: String, host: String, talking: bool) {
+        dispatch(Request::Busy(profile, host, talking));
     }
 }
 
@@ -505,8 +499,7 @@ enum Request {
     Headset(crate::plugins::headset::Action),
     HeadsetTest,
     BusylightTest(String, u8),
-    Hold(String),
-    Resume(String),
+    Busy(String, String, bool),
     BecameMain,
     MainChanged,
     OthersChanged,
@@ -554,52 +547,29 @@ fn handle(app: &AppHandle, request: Request) {
                 app, sound, volume,
             ));
         }
-        Request::Hold(from) => {
-            let ids = active_calls(&OWN.lock().unwrap());
-            if !ids.is_empty() {
-                tracing::info!(
-                    n = ids.len(),
-                    "Gespräch gehalten, andere Instanz telefoniert"
-                );
-                HELD_FOR_OTHER
-                    .lock()
-                    .unwrap()
-                    .extend(ids.iter().map(|id| (id.clone(), from.clone())));
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    crate::plugins::call::set_held(&app, ids, true).await;
-                });
-            }
-        }
-        Request::Resume(from) => {
-            let held: Vec<String> = {
-                let mut all = HELD_FOR_OTHER.lock().unwrap();
-                let (mine, rest) = all.drain(..).partition(|(_, f)| *f == from);
-                *all = rest;
-                mine.into_iter().map(|(id, _)| id).collect()
-            };
-            let own = OWN.lock().unwrap().clone();
-            // Telefoniert hier inzwischen wieder jemand, bleibt es gehalten
-            let ids = if active_calls(&own).is_empty() {
-                still_held(&own, &held)
-            } else {
-                Vec::new()
-            };
-            if !ids.is_empty() {
-                tracing::info!(n = ids.len(), "Gehaltenes Gespräch zurückgeholt");
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    crate::plugins::call::set_held(&app, ids, false).await;
-                });
-            }
-        }
         Request::BecameMain => became_main(app),
         Request::MainChanged => {
             if !is_main() {
                 push_report();
             }
         }
+        Request::Busy(profile, host, talking) => {
+            {
+                let mut busy = BUSY.lock().unwrap();
+                if talking {
+                    busy.insert(profile, host);
+                } else {
+                    busy.remove(&profile);
+                }
+            }
+            let _ = app.emit("busy-elsewhere", busy_elsewhere());
+        }
         Request::OthersChanged => {
+            let _ = app.emit("busy-elsewhere", busy_elsewhere());
+            // Eine neue Instanz soll wissen, dass hier telefoniert wird
+            if TALKING.load(Ordering::Relaxed) {
+                send_busy(true);
+            }
             apply_titles(app);
             if is_main() {
                 bus::publish(app, Event::Devices);
@@ -644,14 +614,9 @@ pub fn ready(app: &AppHandle) {
             }
             *own = report.clone();
         }
-        let resume = {
-            let mut holding = HOLDING.lock().unwrap();
-            let (next, resume) = holding.next(&report);
-            *holding = next;
-            resume
-        };
-        if resume {
-            send_others("Resume");
+        let talking = is_talking(&report);
+        if TALKING.swap(talking, Ordering::Relaxed) != talking {
+            send_busy(talking);
         }
         push_report();
     });
@@ -828,71 +793,52 @@ pub fn forward_link(url: &str) {
     }
 }
 
-/// Gespräche, die beim Telefonieren in einer anderen Instanz zu halten
-/// sind: laufende, nicht klingelnde und nicht schon gehaltene
-fn active_calls(report: &Report) -> Vec<String> {
-    report
-        .lines
-        .iter()
-        .filter(|l| !l.ringing && !l.held)
-        .map(|l| l.id.clone())
-        .collect()
+/// Telefoniert die Instanz? Klingelnde Anrufe zählen nicht, gehaltene und
+/// abgehende schon.
+fn is_talking(report: &Report) -> bool {
+    report.lines.iter().any(|l| !l.ringing)
 }
 
-/// Hier beginnt ein Gespräch (angenommen oder gewählt): Die anderen
-/// Instanzen halten ihre, wie ein Telefon mit mehreren Leitungen.
-pub fn hold_others() {
-    // Für eine andere gehaltene Gespräche kämen sonst mitten in dieses zurück
-    HELD_FOR_OTHER.lock().unwrap().clear();
-    if others() == 0 {
-        return;
-    }
-    *HOLDING.lock().unwrap() = Holding::Starting;
-    send_others("Hold");
-}
-
-fn send_others(method: &'static str) {
+/// Den anderen melden, dass hier ein Gespräch beginnt bzw. endet
+fn send_busy(talking: bool) {
+    let host = LABEL
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|(h, _)| h.clone())
+        .unwrap_or_default();
     let others = OTHERS.lock().unwrap().clone();
     for p in others {
-        send_profile(&p, method, profile().to_owned());
+        send_profile(&p, "Busy", (profile().to_owned(), host.clone(), talking));
     }
 }
 
-/// Von den für eine andere Instanz gehaltenen Gesprächen die, die noch
-/// gehalten sind (nicht inzwischen von Hand zurückgeholt oder beendet)
-fn still_held(report: &Report, held: &[String]) -> Vec<String> {
-    report
-        .lines
-        .iter()
-        .filter(|l| l.held && held.contains(&l.id))
-        .map(|l| l.id.clone())
-        .collect()
-}
-
-/// Gespräch hier, für das die anderen Instanzen halten
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Holding {
-    None,
-    /// Angenommen bzw. gewählt, noch nicht als Gespräch gemeldet
-    Starting,
-    Talking,
-}
-
-impl Holding {
-    /// Neuer eigener Anrufzustand; `true`: Die anderen holen ihre
-    /// Gespräche zurück, weil hier keins mehr läuft (klingelnde zählen nicht).
-    fn next(self, report: &Report) -> (Self, bool) {
-        let talking = report.lines.iter().any(|l| !l.ringing);
-        match self {
-            Holding::None => (Holding::None, false),
-            Holding::Starting if talking => (Holding::Talking, false),
-            // Der Anruf war weg, bevor er zum Gespräch wurde
-            Holding::Starting if report.lines.is_empty() => (Holding::None, true),
-            Holding::Starting => (Holding::Starting, false),
-            Holding::Talking if talking => (Holding::Talking, false),
-            Holding::Talking => (Holding::None, true),
+/// Anlage, über die eine andere Instanz gerade telefoniert
+pub fn busy_elsewhere() -> Option<String> {
+    BUSY.lock().unwrap().values().next().map(|host| {
+        if host.is_empty() {
+            t("einer anderen Anlage").to_owned()
+        } else {
+            host.clone()
         }
+    })
+}
+
+/// Annehmen und Wählen sind gesperrt, solange eine andere Instanz
+/// telefoniert.
+pub fn ensure_free() -> Result<(), String> {
+    match busy_elsewhere() {
+        Some(host) => Err(tf(
+            "Gesperrt: Es wird gerade über {host} telefoniert.",
+            &[("host", &host)],
+        )),
+        None => Ok(()),
     }
+}
+
+#[tauri::command]
+pub fn instances_busy() -> Option<String> {
+    busy_elsewhere()
 }
 
 pub fn send_headset_test() {
@@ -1310,66 +1256,24 @@ mod tests {
     }
 
     #[test]
-    fn hold_only_running_calls() {
-        let line = |id: &str, ringing, held| ReportLine {
-            id: id.into(),
+    fn talking_ignores_ringing() {
+        let line = |ringing, held| ReportLine {
+            id: "a".into(),
             ringing,
             held,
         };
-        let report = Report {
+        let report = |lines| Report {
             ready: true,
             muted: false,
-            lines: vec![
-                line("talk", false, false),
-                line("held", false, true),
-                line("ring", true, false),
-            ],
+            lines,
         };
-        assert_eq!(active_calls(&report), ["talk"]);
-        assert!(active_calls(&Report::default()).is_empty());
-        let ids = ["held".to_owned(), "talk".to_owned(), "gone".to_owned()];
-        assert_eq!(still_held(&report, &ids), ["held"]);
-    }
-
-    #[test]
-    fn resume_after_own_call() {
-        let report = |lines: &[(&str, bool)]| Report {
-            ready: true,
-            muted: false,
-            lines: lines
-                .iter()
-                .map(|(id, ringing)| ReportLine {
-                    id: (*id).into(),
-                    ringing: *ringing,
-                    held: false,
-                })
-                .collect(),
-        };
-        let ringing = report(&[("a", true)]);
-        let talking = report(&[("a", false)]);
-        let idle = report(&[]);
-        // Angenommen: klingelt noch kurz, dann Gespräch, dann aufgelegt
-        let s = Holding::Starting;
-        assert_eq!(s.next(&ringing), (Holding::Starting, false));
-        let (s, _) = s.next(&talking);
-        assert_eq!(s, Holding::Talking);
-        // Selbst für eine dritte Instanz gehalten: Das Gespräch bleibt
-        let held = Report {
-            lines: vec![ReportLine {
-                id: "a".into(),
-                ringing: false,
-                held: true,
-            }],
-            ..talking.clone()
-        };
-        assert_eq!(s.next(&held), (Holding::Talking, false));
-        // Ein Anklopfer allein holt nichts zurück
-        assert!(!s.next(&report(&[("a", false), ("b", true)])).1);
-        assert_eq!(s.next(&report(&[("b", true)])), (Holding::None, true));
-        assert_eq!(s.next(&idle), (Holding::None, true));
-        // Anrufer legt auf, bevor das Gespräch steht
-        assert_eq!(Holding::Starting.next(&idle), (Holding::None, true));
-        assert_eq!(Holding::None.next(&idle), (Holding::None, false));
+        assert!(!is_talking(&report(vec![])));
+        assert!(!is_talking(&report(vec![line(true, false)])));
+        assert!(is_talking(&report(vec![line(false, false)])));
+        assert!(is_talking(&report(vec![
+            line(false, true),
+            line(true, false)
+        ])));
     }
 
     #[test]

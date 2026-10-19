@@ -118,6 +118,7 @@ pub async fn mailbox_record(
     state: State<'_, AppState>,
     mailbox: String,
 ) -> Result<(), String> {
+    crate::instances::ensure_free()?;
     let phone_id = crate::plugins::call::dial_phone_id(&app)
         .await
         .ok_or(t("Das Softphone ist nicht aktiv."))?;

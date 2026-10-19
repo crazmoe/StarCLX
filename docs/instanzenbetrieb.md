@@ -30,10 +30,9 @@ wird nie dorthin gemergt (siehe `.github/workflows/instanzenbetrieb-sperre.yml`)
   Gesprächs- und Stumm-LED zeigen den Zustand aller Instanzen.
 - Bluetooth-Kopfhörer und -Headsets: Während eines Anrufs meldet sich der
   Hauptclient als Medienspieler (MPRIS); Play/Pause nimmt an bzw. legt auf.
-- **Halten über Instanzen hinweg**: Wird in einer Instanz angenommen oder
-  gewählt, halten die anderen ihr laufendes Gespräch. Legt sie auf, holen die
-  anderen ihr Gespräch zurück. Das stapelt sich: Jede Instanz holt nur zurück,
-  was sie für die gerade auflegende gehalten hat.
+- **Eine Instanz telefoniert, die anderen sind gesperrt**: Anrufe klingeln
+  dort weiter, aber Annehmen und Wählen gehen erst nach dem Auflegen wieder.
+  Ein Hinweis am Anruf nennt die Anlage, über die telefoniert wird.
 - Busylight: blinkt, wenn es irgendwo klingelt, rot bei irgendeinem Gespräch,
   grün wenn alle frei sind.
 - **Beenden** im Hauptclient fragt und beendet zuerst alle anderen, dann sich
@@ -55,8 +54,8 @@ Startreihenfolge und bekommen ihn bei einem Ausfall automatisch. `<id>` ist
 
 Die anderen Instanzen melden dem Hauptclient ihren Anrufzustand über die
 Methode `Report`; Headset-Tasten gibt er per `HeadsetAction` an die
-betroffene Instanz zurück. Beginnt ein Gespräch, ruft die Instanz bei den
-anderen `Hold(Profil)` auf, nach dem Ende `Resume(Profil)`.
+betroffene Instanz zurück. Beginnt oder endet ein Gespräch, meldet die
+Instanz das allen anderen per `Busy(Profil, Anlage, telefoniert)`.
 
 ## Testen
 

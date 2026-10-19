@@ -284,6 +284,7 @@ const dict: Record<string, string> = {
   "Rufnummern nicht geladen: {e}": "Numéros non chargés : {e}",
   "Die Anlage bietet keine Auswahl an.": "La centrale ne propose aucun choix.",
   "Beim Empfang eines Anrufs die App in den Vordergrund bringen": "Mettre l'application au premier plan lors d'un appel entrant",
+  "Gesperrt: Es wird gerade über {host} telefoniert.": "Verrouillé : un appel est en cours via {host}.",
   "Headset-Tasten": "Touches du casque",
   "Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)": "Utiliser les touches du casque (Jabra, Poly, EPOS, Bluetooth)",
   "Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.": "Écouteurs et casques Bluetooth : la touche lecture/pause répond et raccroche pendant qu'un appel sonne ou est en cours.",

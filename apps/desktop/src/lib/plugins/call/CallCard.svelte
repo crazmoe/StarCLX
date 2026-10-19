@@ -76,6 +76,7 @@
       <strong>{who(call)}</strong>
       {#if call.remote_name && call.remote_number}<span>{call.remote_number}</span>{/if}
       {#if sub}<span class="sub">{sub}</span>{/if}
+      {#if ringingIn && phone.busyElsewhere}<span class="sub">{t("Gesperrt: Es wird gerade über {host} telefoniert.", { host: phone.busyElsewhere })}</span>{/if}
       {#if transfers}<span class="sub">{t("Auflegen vermittelt das gehaltene Gespräch")}</span>{/if}
       {#if call.local_number || call.local_name}
         <small><b>{call.local_number}</b> {call.local_name}</small>
@@ -102,7 +103,7 @@
       </button>
     {/if}
     {#if ringingIn && hasSoftphone()}
-      <button class="round green big" title={t("Annehmen")} onclick={() => run("phone_answer", { callId: call.id })}>
+      <button class="round green big" title={t("Annehmen")} disabled={!!phone.busyElsewhere} onclick={() => run("phone_answer", { callId: call.id })}>
         <Icon name="call" size={32} />
       </button>
     {/if}
@@ -262,6 +263,7 @@
   /* Grauer Ring wie beim Original */
   .red { background: radial-gradient(circle at 50% 30%, #f03a3a, #b3060c); box-shadow: 0 0 0 3px #b3b6ba, 0 2px 4px #0005; }
   .green { background: radial-gradient(circle at 50% 30%, #8fe04a, #3a9a12); box-shadow: 0 0 0 3px #b3b6ba, 0 2px 4px #0005; }
+  .round:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
   .mute { background: none; border: none; color: #5d636a; padding: 0.3rem; border-radius: 50%; cursor: pointer; }
   .mute.on { color: #fff; background: var(--red); }
   .tabs { display: flex; justify-content: space-around; padding: 0.35rem 0.6rem 0.1rem; }

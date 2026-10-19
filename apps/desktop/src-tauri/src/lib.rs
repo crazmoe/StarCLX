@@ -958,6 +958,7 @@ pub fn run() {
             busylight::busylight_info,
             busylight::busylight_test,
             plugins::headset::headset_info,
+            instances::instances_busy,
             plugins::headset::headset_test,
             restore_session,
             connection::connection_online,

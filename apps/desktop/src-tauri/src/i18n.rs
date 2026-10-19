@@ -108,6 +108,23 @@ const TEXTS: &[(&str, [&str; 3])] = &[
     ("Abbrechen", ["Cancel", "Annuler", "Annulla"]),
     // Bluetooth-Taste (Medienspieler)
     ("Anruf", ["Call", "Appel", "Chiamata"]),
+    // Gesperrt, weil eine andere Instanz telefoniert
+    (
+        "Gesperrt: Es wird gerade über {host} telefoniert.",
+        [
+            "Locked: a call is in progress via {host}.",
+            "Verrouillé : un appel est en cours via {host}.",
+            "Bloccato: è in corso una chiamata tramite {host}.",
+        ],
+    ),
+    (
+        "einer anderen Anlage",
+        [
+            "another phone system",
+            "un autre PBX",
+            "un altro centralino",
+        ],
+    ),
     // Konten
     (
         "Konto wechseln",

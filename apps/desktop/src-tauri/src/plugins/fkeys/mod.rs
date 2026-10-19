@@ -503,6 +503,9 @@ pub async fn fkey_park(
     call_id: Option<String>,
     number: String,
 ) -> Result<(), String> {
+    if call_id.is_none() {
+        crate::instances::ensure_free()?;
+    }
     let phone = dial_phone_id(&app).await;
     sf_core::fkeys::park(
         &hub(&state).await?,
@@ -521,6 +524,7 @@ pub async fn fkey_grab(
     state: State<'_, AppState>,
     user_id: String,
 ) -> Result<(), String> {
+    crate::instances::ensure_free()?;
     let phone = dial_phone_id(&app).await;
     sf_core::fkeys::grab(&hub(&state).await?, &user_id, phone.as_deref())
         .await
