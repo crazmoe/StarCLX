@@ -320,7 +320,7 @@ fn autostart_file() -> Option<PathBuf> {
 
 /// Pfad als Argument der Exec-Zeile: in Anführungszeichen, Sonderzeichen
 /// maskiert, danach `\` für den Zeichenketten-Wert verdoppelt, `%` als `%%`.
-fn exec_quote(path: &str) -> String {
+pub(crate) fn exec_quote(path: &str) -> String {
     let mut q = String::from("\"");
     for c in path.chars().filter(|c| !c.is_control()) {
         match c {

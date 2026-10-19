@@ -16,7 +16,11 @@ wird nie dorthin gemergt (siehe `.github/workflows/instanzenbetrieb-sperre.yml`)
 - Jedes weitere Profil hat ein Symbol in eigener Farbe (Farbton gedreht),
   im Tray und an den Fenstern; das Standardprofil behält die Originalfarben.
   Unter Wayland nehmen GNOME und KDE das Symbol der Taskleiste aus der
-  .desktop-Datei, dort bleibt es dann einheitlich.
+  .desktop-Datei zur `app_id`. Weitere Profile melden sich deshalb als
+  `starclx-p<n>` und legen beim Start einen im Menü versteckten Eintrag
+  `~/.local/share/applications/starclx-p<n>.desktop` mit ihrem farbigen
+  Symbol und dem Namen der Anlage an. Als Flatpak bestimmt die Sandbox die
+  `app_id`; dort bleibt das Taskleisten-Symbol einheitlich.
 - Oben im Tray-Menü steht die Anlage der Instanz.
 - Der **Hauptclient** (zuerst gestartete Instanz) bekommt `tel:`-, `callto:`-
   und `sip:`-Links, Tastenkürzel und Login-Rücksprünge aus dem Browser, trägt

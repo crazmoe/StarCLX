@@ -265,6 +265,10 @@ pub fn init() -> bool {
         }
     };
     let _ = PROFILE.set(profile.clone());
+    // Vor GTK setzen: wird die app_id unter Wayland bzw. WM_CLASS unter X11
+    if let Some(id) = desktop_id(&profile) {
+        gtk::glib::set_prgname(Some(id.as_str()));
+    }
     let base = crate::flatpak::app_id().unwrap_or_else(|| IDENTIFIER.into());
     let names = NAMES.get_or_init(|| Names::new(&base));
     let conn = match connect() {
@@ -757,8 +761,116 @@ pub fn send_busylight_test(sound: String, volume: u8) {
 
 /// Angemeldete Anlage für Titel und Tray merken
 pub fn set_label(app: &AppHandle, label: Option<(String, String)>) {
+    if let Some((host, _)) = &label {
+        install_desktop_entry(app, Some(host));
+    }
     *LABEL.lock().unwrap() = label;
     apply_titles(app);
+}
+
+/// Name, unter dem sich weitere Profile beim Desktop melden (Wayland
+/// `app_id`, unter X11 `WM_CLASS`); das Standardprofil bleibt `starclx`.
+/// Als Flatpak bestimmt die Sandbox die ID, dort geht das nicht.
+fn desktop_id(profile: &str) -> Option<String> {
+    (!profile.is_empty() && crate::flatpak::app_id().is_none())
+        .then(|| format!("starclx-p{profile}"))
+}
+
+/// Unter Wayland nimmt die Taskleiste das Symbol aus der .desktop-Datei zur
+/// `app_id`, nicht vom Fenster. Weitere Profile bekommen deshalb einen
+/// eigenen, im Menü versteckten Eintrag mit ihrem farbigen Symbol. Muss vor
+/// dem ersten Fenster liegen, sonst ordnet der Desktop es nicht zu.
+pub fn install_desktop_entry(app: &AppHandle, host: Option<&str>) {
+    let Some(id) = desktop_id(profile()) else {
+        return;
+    };
+    let result = (|| -> Result<(), String> {
+        let dir = dir(app.path().app_local_data_dir().map_err(|e| e.to_string())?);
+        let icon_path = dir.join("icon.png");
+        if !icon_path.exists() {
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            save_icon(&icon_path)?;
+        }
+        let apps = app
+            .path()
+            .data_dir()
+            .map_err(|e| e.to_string())?
+            .join("applications");
+        let file = apps.join(format!("{id}.desktop"));
+        let host = host.map(str::to_owned).or_else(|| {
+            std::fs::read_to_string(&file)
+                .ok()?
+                .lines()
+                .find_map(|l| l.strip_prefix("X-StarCLX-Host=").map(str::to_owned))
+        });
+        let program = program().ok_or("Programmpfad unbekannt")?;
+        let entry = desktop_entry(
+            &id,
+            profile(),
+            host.as_deref(),
+            &program.to_string_lossy(),
+            &icon_path.to_string_lossy(),
+        );
+        if std::fs::read_to_string(&file).is_ok_and(|old| old == entry) {
+            return Ok(());
+        }
+        std::fs::create_dir_all(&apps).map_err(|e| e.to_string())?;
+        std::fs::write(&file, entry).map_err(|e| e.to_string())
+    })();
+    if let Err(e) = result {
+        tracing::warn!(error = %e, "Desktop-Eintrag des Profils nicht angelegt");
+    }
+}
+
+fn desktop_entry(id: &str, profile: &str, host: Option<&str>, program: &str, icon: &str) -> String {
+    let name = match host {
+        Some(h) => format!("StarCLX – {h}"),
+        None => format!("StarCLX {profile}"),
+    };
+    let mut entry = format!(
+        "[Desktop Entry]\nType=Application\nName={name}\nExec={} --profile {profile}\nIcon={icon}\nStartupWMClass={id}\nNoDisplay=true\nTerminal=false\n",
+        crate::desktop::exec_quote(program)
+    );
+    if let Some(h) = host {
+        entry.push_str(&format!("X-StarCLX-Host={h}\n"));
+    }
+    entry
+}
+
+/// Grosses Symbol (256 px) in der Farbe des Profils als PNG
+fn save_icon(path: &std::path::Path) -> Result<(), String> {
+    use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
+    use gtk::gio::{Cancellable, MemoryInputStream};
+    use gtk::glib::Bytes;
+    const ICON: &[u8] = include_bytes!("../icons/128x128@2x.png");
+    let source = Pixbuf::from_stream(
+        &MemoryInputStream::from_bytes(&Bytes::from_static(ICON)),
+        None::<&Cancellable>,
+    )
+    .map_err(|e| e.to_string())?;
+    let source = source
+        .add_alpha(false, 0, 0, 0)
+        .map_err(|e| e.to_string())?;
+    let (w, h) = (source.width(), source.height());
+    let (stride, bytes) = (source.rowstride() as usize, source.read_pixel_bytes());
+    let rgba: Vec<u8> = bytes
+        .chunks(stride)
+        .take(h as usize)
+        .flat_map(|row| &row[..w as usize * 4])
+        .copied()
+        .collect();
+    let tinted = rotate_hue(&rgba, hue_for(profile()));
+    Pixbuf::from_bytes(
+        &Bytes::from_owned(tinted),
+        Colorspace::Rgb,
+        true,
+        8,
+        w,
+        h,
+        w * 4,
+    )
+    .savev(path, "png", &[])
+    .map_err(|e| e.to_string())
 }
 
 /// Fenstertitel und Tray: mit mehreren Instanzen samt Anlage
@@ -878,11 +990,15 @@ pub fn open_new(app: &AppHandle) {
 }
 
 /// Startet dieses Programm noch einmal mit einem Profil.
-fn spawn(profile: &str) {
-    let program = std::env::var_os("APPIMAGE")
+/// Dieses Programm; beim AppImage das AppImage selbst, nicht der Mount
+fn program() -> Option<PathBuf> {
+    std::env::var_os("APPIMAGE")
         .map(PathBuf::from)
-        .or_else(|| std::env::current_exe().ok());
-    let Some(program) = program else {
+        .or_else(|| std::env::current_exe().ok())
+}
+
+fn spawn(profile: &str) {
+    let Some(program) = program() else {
         return;
     };
     match std::process::Command::new(&program)
@@ -1069,6 +1185,23 @@ mod tests {
             .map(|p| hue_for(p) as u32)
             .collect();
         assert_eq!(hues.len(), 6);
+    }
+
+    #[test]
+    fn desktop_entries() {
+        let e = desktop_entry(
+            "starclx-p2",
+            "2",
+            Some("pbx.example.ch"),
+            "/opt/Star CLX/starclx",
+            "/h/icon.png",
+        );
+        assert!(e.contains("Name=StarCLX – pbx.example.ch\n"));
+        assert!(e.contains("Exec=\"/opt/Star CLX/starclx\" --profile 2\n"));
+        assert!(e.contains("StartupWMClass=starclx-p2\n"));
+        assert!(e.contains("NoDisplay=true\n"));
+        assert!(e.contains("X-StarCLX-Host=pbx.example.ch\n"));
+        assert!(desktop_entry("starclx-p3", "3", None, "/x", "/i").contains("Name=StarCLX 3\n"));
     }
 
     #[test]

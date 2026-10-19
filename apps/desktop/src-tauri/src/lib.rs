@@ -853,6 +853,7 @@ pub fn run() {
         .setup(move |app| {
             log::open(app.handle());
             settings::seed_profile(app.handle());
+            instances::install_desktop_entry(app.handle(), None);
             create_main_window(app.handle())?;
             plugins::start(app.handle());
             certs::init(app.handle());
