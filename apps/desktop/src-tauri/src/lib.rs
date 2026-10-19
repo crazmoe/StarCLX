@@ -653,8 +653,10 @@ async fn owns_login(app: &AppHandle, redirect: &str) -> bool {
 /// ausgegraut.
 fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<tauri::Wry>> {
     let open = MenuItem::with_id(app, "open", t("Öffnen"), true, None::<&str>)?;
-    let quick = MenuItem::with_id(app, "quick", t("Schnellwahl"), true, None::<&str>)?;
-    let logout_item = MenuItem::with_id(app, "logout", t("Abmelden"), true, None::<&str>)?;
+    // Ohne Anmeldung gibt es nichts zu wählen und nichts abzumelden
+    let signed_in = session.is_some();
+    let quick = MenuItem::with_id(app, "quick", t("Schnellwahl"), signed_in, None::<&str>)?;
+    let logout_item = MenuItem::with_id(app, "logout", t("Abmelden"), signed_in, None::<&str>)?;
     let another = MenuItem::with_id(
         app,
         "instance-new",
