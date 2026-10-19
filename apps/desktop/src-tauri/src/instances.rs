@@ -198,7 +198,7 @@ fn rotate_hue(rgba: &[u8], degrees: f32) -> Vec<u8> {
     if degrees == 0.0 {
         return out;
     }
-    for px in out.chunks_exact_mut(4) {
+    for px in out.as_chunks_mut::<4>().0 {
         let [r, g, b] = [px[0], px[1], px[2]].map(|c| f32::from(c) / 255.0);
         let max = r.max(g).max(b);
         let min = r.min(g).min(b);
