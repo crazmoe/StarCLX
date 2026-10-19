@@ -15,6 +15,11 @@ pub enum Event {
     Calls { calls: Vec<CallView>, muted: bool },
     /// Einstellungen gespeichert
     PrefsSaved,
+    /// Anrufzustand irgendeiner Instanz geändert (nur im Hauptclient), siehe
+    /// [`crate::instances::devices`]
+    Devices,
+    /// Diese Instanz ist Hauptclient geworden
+    Role,
 }
 
 pub struct Bus(broadcast::Sender<Event>);

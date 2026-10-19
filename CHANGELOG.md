@@ -2,6 +2,24 @@
 
 ## Unveröffentlicht
 
+### Mehrere Anlagen gleichzeitig (Instanzenbetrieb)
+- Tray › „Weitere Anlage öffnen“ startet ein weiteres StarCLX mit eigenem Profil, je eins pro
+  Anlage. Ab zwei Instanzen zeigen Titelleiste und Tray-Menü die Anlage; Tray- und
+  Taskleistensymbol sind je Instanz anders eingefärbt, auch unter Wayland.
+- `tel:`/`sip:`-Links, Tastenkürzel, Headset und Busylight bedient der Hauptclient (die erste
+  Instanz) für alle. Fällt er aus, übernimmt die älteste andere Instanz.
+- „Beenden“ im Hauptclient beendet nach Rückfrage alle Instanzen; beim nächsten Start öffnen sich
+  die zuletzt offenen wieder.
+- Telefoniert eine Instanz, klingeln Anrufe in den anderen weiter, Annehmen und Wählen sind dort
+  aber gesperrt, bis aufgelegt ist.
+
+### Headset
+- Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt während eines Anrufs an bzw.
+  legt auf. Ohne Anruf bleibt sie beim Musikspieler.
+
+### Tray
+- „Schnellwahl“ und „Abmelden“ sind ohne Anmeldung ausgegraut
+
 ### Sicherheit
 - Die Anmeldung schickt Passwort und Tokens nur noch verschlüsselt (HTTPS) an die Anlage, auch
   nach einer Weiterleitung. Eine `http://`-Adresse wird abgelehnt; unverschlüsseltes HTTP ist

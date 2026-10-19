@@ -266,7 +266,36 @@ fn settings_path(app: &AppHandle) -> Option<PathBuf> {
     app.path()
         .app_config_dir()
         .ok()
-        .map(|d| d.join("settings.json"))
+        .map(|d| crate::instances::dir(d).join("settings.json"))
+}
+
+/// Neues Profil einer weiteren Instanz: Einstellungen (Geräte, Sprache …)
+/// vom Standardprofil übernehmen, Konten und Zertifikate nicht.
+pub fn seed_profile(app: &AppHandle) {
+    let Some(path) = settings_path(app) else {
+        return;
+    };
+    if crate::instances::profile().is_empty() || path.exists() {
+        return;
+    }
+    let prefs = app
+        .path()
+        .app_config_dir()
+        .ok()
+        .and_then(|d| std::fs::read(d.join("settings.json")).ok())
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
+        .and_then(|v| v.get("prefs").cloned());
+    if let Some(prefs) = prefs
+        && let Ok(prefs) = serde_json::from_value::<Prefs>(prefs)
+    {
+        save(
+            app,
+            &Settings {
+                prefs,
+                ..Default::default()
+            },
+        );
+    }
 }
 
 /// Gespeicherte Einstellungen mit den Vorgaben des Systems (siehe

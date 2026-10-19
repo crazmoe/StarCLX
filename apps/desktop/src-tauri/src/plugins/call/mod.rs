@@ -419,6 +419,7 @@ pub async fn phone_dial(
         return Err(t("Keine Nummer").into());
     }
     // Die Anlage ruft zuerst das primäre Telefon an.
+    crate::instances::ensure_free()?;
     let via = dial_phone_id(&app).await;
     with_phone(&state, async |p| p.dial(&number, via.as_deref()).await).await
 }
@@ -430,6 +431,7 @@ pub async fn phone_answer(app: AppHandle, call_id: String) -> Result<(), String>
 
 /// Anruf annehmen, auch von der Headset-Taste
 pub async fn answer(app: &AppHandle, call_id: &str) -> Result<(), String> {
+    crate::instances::ensure_free()?;
     let primary = settings::load(app).prefs.primary_on_answer;
     with_phone(&app.state::<CallState>(), async |p| {
         p.answer(call_id)?;

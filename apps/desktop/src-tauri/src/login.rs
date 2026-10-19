@@ -16,27 +16,29 @@ pub fn open(app: &AppHandle, url: &url::Url) -> tauri::Result<()> {
     let handle = app.clone();
     // Erst leer öffnen: die Zertifikatsfreigabe muss stehen, bevor die
     // Anmeldeseite lädt.
-    let window = WebviewWindowBuilder::new(
+    let builder = WebviewWindowBuilder::new(
         app,
         LABEL,
         WebviewUrl::External("about:blank".parse().unwrap()),
-    )
-    .title(crate::i18n::t("StarCLX – Anmelden"))
-    .inner_size(480.0, 680.0)
-    .on_navigation(move |url| {
-        if !url.as_str().starts_with(sf_auth::REDIRECT_URI) {
-            return true;
-        }
-        crate::handle_urls(&handle, vec![url.to_string()]);
-        let handle = handle.clone();
-        tauri::async_runtime::spawn(async move {
-            if let Some(window) = handle.get_webview_window(LABEL) {
-                let _ = window.close();
+    );
+    let window = crate::instances::webview(app, builder)
+        .title(crate::i18n::t("StarCLX – Anmelden"))
+        .inner_size(480.0, 680.0)
+        .on_navigation(move |url| {
+            if !url.as_str().starts_with(sf_auth::REDIRECT_URI) {
+                return true;
             }
-        });
-        false
-    })
-    .build()?;
+            crate::handle_urls(&handle, vec![url.to_string()]);
+            let handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Some(window) = handle.get_webview_window(LABEL) {
+                    let _ = window.close();
+                }
+            });
+            false
+        })
+        .build()?;
+    crate::instances::set_icon(app, &window);
     #[cfg(target_os = "linux")]
     window.with_webview(allow_confirmed_certificates)?;
     window.navigate(url.clone())

@@ -38,6 +38,9 @@ export const phone = $state({
   status: { state: "off", detail: "", calls: [], muted: false, callback: "", control: false, sip_certificate: "" } as PhoneStatus,
   notice: "",
   now: Date.now(),
+  /** Anlage, über die eine andere StarCLX-Instanz gerade telefoniert;
+   *  solange sind Annehmen und Wählen hier gesperrt */
+  busyElsewhere: null as string | null,
 });
 
 let started = false;
@@ -49,6 +52,8 @@ export function initPhone() {
   listen<PhoneStatus>("phone", (e) => (phone.status = e.payload));
   listen<string>("phone-error", (e) => (phone.notice = e.payload));
   invoke<PhoneStatus>("phone_status").then((s) => (phone.status = s));
+  listen<string | null>("busy-elsewhere", (e) => (phone.busyElsewhere = e.payload));
+  invoke<string | null>("instances_busy").then((b) => (phone.busyElsewhere = b));
   // Die Uhr für Gesprächsdauern tickt nur, solange es Anrufe gibt; im
   // Leerlauf (etwa im Tray) weckt sie die Oberfläche nicht jede Sekunde.
   $effect.root(() => {

@@ -30,8 +30,9 @@
 <section id="headset">
   <h3>{t("Headset-Tasten")}</h3>
   <div class="card">
-    <Toggle bind:checked={draft.headset} label={t("Tasten am Headset verwenden (Jabra, Poly, EPOS)")} />
+    <Toggle bind:checked={draft.headset} label={t("Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)")} />
     <p class="small muted">{t("Gesprächstaste: annehmen und auflegen · Stummtaste: Mikrofon stumm · Das Headset klingelt bei Anrufen und zeigt Gespräch und Stummschaltung an.")}</p>
+    <p class="small muted">{t("Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.")}</p>
     <p class="muted">
       {#if headset.devices.length}
         {t("Angeschlossen:")} {headset.devices.join(", ")}

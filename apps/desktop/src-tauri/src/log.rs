@@ -109,11 +109,8 @@ pub fn init() {
 
 /// Öffnet die Datei im Log-Ordner der App und schreibt den Puffer hinein.
 pub fn open(app: &AppHandle) {
-    let result = app
-        .path()
-        .app_log_dir()
-        .map_err(|e| e.to_string())
-        .and_then(|dir| open_in(&dir).map_err(|e| format!("{}: {e}", dir.display())));
+    let result =
+        log_dir(app).and_then(|dir| open_in(&dir).map_err(|e| format!("{}: {e}", dir.display())));
     if let Err(e) = result {
         *sink() = Sink::Off;
         tracing::warn!(error = %e, "Protokolldatei nicht geöffnet");
@@ -210,7 +207,10 @@ fn report(dir: &Path) -> Vec<u8> {
 }
 
 fn log_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path().app_log_dir().map_err(|e| e.to_string())
+    app.path()
+        .app_log_dir()
+        .map(crate::instances::dir)
+        .map_err(|e| e.to_string())
 }
 
 /// Speichert das Protokoll an einem Ort, den der Benutzer wählt. Liefert den

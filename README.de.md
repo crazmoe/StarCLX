@@ -31,7 +31,8 @@ Nicht mit der STARFACE GmbH verbunden. „STARFACE“ wird nur beschreibend verw
 - **Erreichbarkeit**: Umleitungen, iFMC, signalisierte Rufnummer
 - **Arbeitsbereich** als Reiter oder frei angeordnete Kacheln
 - **Headset-Tasten** von Jabra, Poly und EPOS (USB-HID-Telefonie): annehmen, auflegen,
-  stummschalten; das Headset klingelt und zeigt Gespräch und Stummschaltung an
+  stummschalten; das Headset klingelt und zeigt Gespräch und Stummschaltung an.
+  Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf
 - **Einstellungen**: Audiogeräte, Klingeltöne, Busylight (Kuando), Erscheinungsbild,
   Sprache (Deutsch, English, Français, Italiano)
 - **Desktop-Integration**: Symbol im Infobereich, Autostart, Schnellwahl-Fenster,

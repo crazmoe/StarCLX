@@ -134,6 +134,7 @@ pub async fn queue_grab(
     queue: String,
     call: String,
 ) -> Result<(), String> {
+    crate::instances::ensure_free()?;
     let phone_id = crate::plugins::call::dial_phone_id(&app)
         .await
         .ok_or(t("Kein Telefon zum Annehmen verfügbar."))?;
