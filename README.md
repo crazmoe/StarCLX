@@ -31,8 +31,10 @@ Not affiliated with STARFACE GmbH. "STARFACE" is used for descriptive purposes o
 - **Reachability**: redirects, iFMC, displayed caller number
 - **Workspace** as tabs or freely arranged tiles
 - **Headset buttons** on Jabra, Poly and EPOS (USB HID telephony): answer, hang up,
-  mute; the headset rings and shows call and mute state. Bluetooth headphones and
-  headsets: the play/pause button answers and hangs up during a call
+  mute; the headset rings and shows call and mute state. This needs USB: a cable or the
+  manufacturer's dongle (e.g. Jabra Link). Headsets connected directly via Bluetooth only
+  offer the play/pause button during a call, and only if the headset sends it; PipeWire
+  does not pass the Bluetooth call buttons on to applications
 - **Settings**: audio devices, ringtones, Busylight (Kuando), appearance,
   language (Deutsch, English, Français, Italiano)
 - **Desktop integration**: tray icon, autostart, quick dial window,

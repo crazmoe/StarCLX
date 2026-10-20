@@ -32,11 +32,17 @@
 - Die Headset-Einstellungen zeigen verbundene Bluetooth-Geräte an
 - Bluetooth-Headsets schalten für ein Gespräch am Softphone ins Telefonie-Profil, damit ihr
   Mikrofon verwendet wird; nach dem Auflegen zurück ins Musikprofil
+- Jabra Link 380 (und andere Jabra-Geräte, die ihre Tasten als konstant beschreiben) wird als
+  Headset mit Telefonietasten erkannt
+- Die Headset-Einstellungen sagen, dass Telefonietasten, Klingeln und LEDs nur über USB (Kabel
+  oder Dongle) gehen, bei direktem Bluetooth nur Play/Pause
 
 ### Audio
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
   Headset-Profil wechseln. Fehlt eins, steht sein Name (vom Bluetooth-Dienst des Systems)
   statt `bluez_output.…` da.
+- Dasselbe für USB-Headsets wie den Jabra Link 380: Abgesteckt steht ihr Name statt
+  `alsa_output.usb-…` da, und sie bleiben beim Profilwechsel (Stereo/Mono) dasselbe Gerät.
 - Mit nur einem Bluetooth-Headset steht bei den Headset-Tasten statt des gesperrten
   Klingeltests ein Hinweis auf die Klingeltöne
 
