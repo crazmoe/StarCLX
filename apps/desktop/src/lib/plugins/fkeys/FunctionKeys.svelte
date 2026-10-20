@@ -28,7 +28,7 @@
 <div class="fk">
   {#if fkeys.error && connection.online}<p class="error">{t(fkeys.error)}</p>{/if}
   {#if fkeys.notice && connection.online}<p class="error">{fkeys.notice}</p>{/if}
-  <div class="grid" style="grid-template-columns: repeat({columns}, minmax(0, 1fr))">
+  <div class="grid" style="--cols: {columns}">
     {#each shown as k (k.id)}
       <FkeyTile key={k} onclick={() => press(k)} />
     {/each}
@@ -61,7 +61,12 @@
 
 <style>
   .fk { height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; }
-  .grid { display: grid; gap: 0.5rem; max-width: 60rem; }
+  /* Höchstens die eingestellte Spaltenzahl; wird eine Taste schmaler als
+     10rem, rücken die Tasten in weniger Spalten zusammen */
+  .grid {
+    display: grid; gap: 0.5rem; max-width: 60rem;
+    grid-template-columns: repeat(auto-fill, minmax(max(10rem, (100% - (var(--cols) - 1) * 0.5rem) / var(--cols)), 1fr));
+  }
   .muted { color: var(--muted); }
   .error { color: var(--accent-text); margin: 0; }
   .small { font-size: 0.85rem; margin: 0; }

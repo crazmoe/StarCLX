@@ -45,6 +45,11 @@
     display: flex; align-items: center; gap: 0.75rem; min-width: 15rem;
     background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; padding: 0.45rem 0.6rem 0.45rem 1.1rem;
   }
+  /* Schmales Fenster: ohne Mindestbreite, die Beschriftung darf schrumpfen */
+  @media (max-width: 760px) {
+    .toggle { min-width: 0; gap: 0.5rem; padding-left: 0.8rem; }
+    .toggle > span:first-child { white-space: nowrap; }
+  }
   .toggle.ringing { border-color: var(--green); animation: pulse 1s infinite alternate; }
   @keyframes pulse { to { box-shadow: 0 0 0 4px #5cb82b55; } }
   .count { margin-left: auto; background: var(--panel-2); border-radius: 999px; padding: 0 0.55rem; font-size: 0.85rem; }

@@ -411,6 +411,7 @@
   .scrim { position: fixed; inset: 0; background: #0007; z-index: 30; }
   .dialog {
     position: fixed; z-index: 31; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30rem, 92vw);
+    max-height: 92vh; overflow-y: auto; box-sizing: border-box;
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem;
   }
   .dialog h4 { margin: 0 0 0.2rem; }
