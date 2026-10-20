@@ -1,6 +1,7 @@
 //! Audio der Oberfläche: Klingeln auf dem gewählten Gerät, Testton,
 //! Mikrofontest und die Geräteauswahl fürs Softphone.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
@@ -114,6 +115,61 @@ fn device_arg(device: Option<String>) -> Option<String> {
 }
 
 /// Spielt einen Klingelton (oder mit `name = None` den Testton) einmal ab.
+/// Namen gekoppelter Bluetooth-Geräte, auch wenn sie gerade nicht verbunden
+/// sind, für Einträge wie `bluez_output.84_D3_52_8C_B9_D0.1`. Fragt BlueZ
+/// auf dem Systembus; was es nicht kennt, fehlt in der Antwort.
+#[tauri::command]
+pub async fn bluetooth_names(devices: Vec<String>) -> HashMap<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let aliases = bluez_aliases().unwrap_or_else(|e| {
+            tracing::debug!(error = %e, "Bluetooth-Namen nicht gelesen");
+            HashMap::new()
+        });
+        devices
+            .into_iter()
+            .filter_map(|d| {
+                let alias = aliases.get(&bluetooth_address(&d)?)?.clone();
+                Some((d, alias))
+            })
+            .collect()
+    })
+    .await
+    .unwrap_or_default()
+}
+
+/// `bluez_output.84_D3_52_8C_B9_D0.1` → `84:D3:52:8C:B9:D0`
+fn bluetooth_address(device: &str) -> Option<String> {
+    let rest = device
+        .strip_prefix("bluez_output.")
+        .or_else(|| device.strip_prefix("bluez_input."))?;
+    let addr = rest.split('.').next()?.replace('_', ":");
+    (addr.len() == 17).then_some(addr)
+}
+
+/// Adresse → Name aller Geräte, die BlueZ kennt
+fn bluez_aliases() -> zbus::Result<HashMap<String, String>> {
+    let conn = zbus::blocking::Connection::system()?;
+    let objects = zbus::blocking::fdo::ObjectManagerProxy::builder(&conn)
+        .destination("org.bluez")?
+        .path("/")?
+        .build()?
+        .get_managed_objects()?;
+    let text = |props: &HashMap<_, zbus::zvariant::OwnedValue>, key: &str| {
+        props
+            .get(key)
+            .and_then(|v| String::try_from(v.clone()).ok())
+    };
+    Ok(objects
+        .values()
+        .filter_map(|ifaces| {
+            let dev = ifaces.get("org.bluez.Device1")?;
+            let addr = text(dev, "Address")?;
+            let name = text(dev, "Alias").or_else(|| text(dev, "Name"))?;
+            Some((addr.to_uppercase(), name))
+        })
+        .collect())
+}
+
 #[tauri::command]
 pub fn audio_preview(state: State<'_, AudioState>, name: Option<String>, device: Option<String>) {
     let samples = name.map_or_else(|| Arc::new(sf_audio::tones::test_tone()), |n| ringtone(&n));
@@ -152,4 +208,23 @@ pub async fn pick_ringtone(app: AppHandle) -> Result<Option<String>, String> {
     let path = file.into_path().map_err(|e| e.to_string())?;
     sf_audio::load_wav(&path).map_err(|e| e.to_string())?;
     Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn address_from_node_name() {
+        assert_eq!(
+            bluetooth_address("bluez_output.84_D3_52_8C_B9_D0.1").as_deref(),
+            Some("84:D3:52:8C:B9:D0")
+        );
+        assert_eq!(
+            bluetooth_address("bluez_input.84_D3_52_8C_B9_D0").as_deref(),
+            Some("84:D3:52:8C:B9:D0")
+        );
+        assert_eq!(bluetooth_address("alsa_output.pci-0000"), None);
+        assert_eq!(bluetooth_address("bluez_output.kaputt.1"), None);
+    }
 }

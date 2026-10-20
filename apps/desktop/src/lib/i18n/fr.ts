@@ -287,6 +287,7 @@ const dict: Record<string, string> = {
   "Gesperrt: Es wird gerade über {host} telefoniert.": "Verrouillé : un appel est en cours via {host}.",
   "Bluetooth (Play/Pause):": "Bluetooth (lecture/pause) :",
   "Bluetooth-Headsets klingeln nicht selbst, sondern über den Klingelton. Unter „Klingeltöne“ lassen sie sich als Klingelgerät wählen und testen.": "Les casques Bluetooth ne sonnent pas eux-mêmes mais diffusent la sonnerie. Sous « Sonneries », vous pouvez les choisir et les tester comme appareil de sonnerie.",
+  "Bluetooth-Gerät": "Appareil Bluetooth",
   "Headset-Tasten": "Touches du casque",
   "Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)": "Utiliser les touches du casque (Jabra, Poly, EPOS, Bluetooth)",
   "Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.": "Écouteurs et casques Bluetooth : la touche lecture/pause répond et raccroche pendant qu'un appel sonne ou est en cours.",
