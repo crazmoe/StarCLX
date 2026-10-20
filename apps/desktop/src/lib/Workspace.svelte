@@ -7,16 +7,18 @@
   /** Darunter (Breite der Fläche in px) stehen höchstens zwei Kacheln
    *  nebeneinander, damit sie in schmalen Fenstern bedienbar bleiben */
   const NARROW = 1080;
+  /** Darunter steht jede Kachel allein in ihrer Zeile */
+  const SINGLE = 700;
 
   type Box = Pick<Tile, "x" | "y" | "w" | "h">;
 
   /** Schmale Kacheln halb, breite ganz so breit wie die Fläche, von oben
    *  nach unten dicht gepackt; die gespeicherte Anordnung bleibt unverändert. */
-  function reflow(list: Tile[]): Record<string, Box> {
+  function reflow(list: Tile[], single: boolean): Record<string, Box> {
     const sky = Array<number>(COLS).fill(0);
     const out: Record<string, Box> = {};
     for (const t of [...list].sort((a, b) => a.y - b.y || a.x - b.x)) {
-      const w = t.w <= COLS / 3 ? COLS / 2 : COLS;
+      const w = !single && t.w <= COLS / 3 ? COLS / 2 : COLS;
       let best = 0;
       let top = Infinity;
       for (let x = 0; x + w <= COLS; x++) {
@@ -90,7 +92,7 @@
   const shown = $derived(tiles.filter((x) => x.visible && !hidden?.(x.id)));
   /** Schmales Fenster: neu angeordnet; beim Bearbeiten immer die echte Lage */
   const narrow = $derived(!editing && width > 0 && width < NARROW);
-  const boxes = $derived<Record<string, Box>>(narrow ? reflow(shown) : Object.fromEntries(shown.map((t) => [t.id, t])));
+  const boxes = $derived<Record<string, Box>>(narrow ? reflow(shown, width < SINGLE) : Object.fromEntries(shown.map((t) => [t.id, t])));
   const height = $derived(Math.max(...Object.values(boxes).map((b) => b.y + b.h), 1) * ROW + ROW * 4);
 
   function start(e: PointerEvent, t: Tile, mode: "move" | "size") {

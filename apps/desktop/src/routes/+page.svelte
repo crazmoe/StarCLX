@@ -530,7 +530,10 @@
   .top {
     display: flex; align-items: center; gap: 0.8rem;
     padding: 0.5rem 1rem 0.5rem 0.6rem; background: var(--bar);
+    min-width: 0;
   }
+  .top > * { flex-shrink: 0; }
+  .top > :global(.dial) { flex-shrink: 1; }
   .menuwrap { position: relative; }
   .me {
     position: relative; padding: 0; color: #fff; cursor: pointer; width: 3rem; height: 3rem; border-radius: 50%; flex: none;
@@ -554,6 +557,11 @@
   .brand { font-weight: 700; letter-spacing: 0.12em; color: var(--accent-text); white-space: nowrap; }
   .brand { display: flex; align-items: center; gap: 0.4rem; letter-spacing: 0.06em; }
   .brand img { width: 1.6em; height: 1.6em; }
+  /* Schmales Fenster: nur das Logo, damit Suche und Call Manager Platz haben */
+  @media (max-width: 760px) {
+    .top .brand { font-size: 0; }
+    .top .brand img { width: 1.6rem; height: 1.6rem; }
+  }
   .brand.big { font-size: 1.6rem; margin-bottom: 1.5rem; }
 
   .accounts { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.8rem; }
@@ -566,7 +574,7 @@
   .tabs { display: flex; gap: 0.2rem; padding: 0 0.6rem; background: var(--bar); border-top: 1px solid var(--bar-2); overflow-x: auto; scrollbar-width: none; }
   /* Schmales Fenster: nur der gewählte Reiter mit Namen */
   .tabs.compact .tab:not(.current, .keep) > span:not(.unread) { display: none; }
-  .tabs.compact .tab { padding: 0.55rem 0.7rem; }
+  .tabs.compact .tab { padding: 0.55rem 0.6rem; }
   .tab { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 0.45rem; background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.55rem 0.9rem; color: var(--muted); }
   .unread { background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 0 0.45rem; font-size: 0.78rem; font-weight: 700; }
   .arrange { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; padding: 0; color: var(--muted); }

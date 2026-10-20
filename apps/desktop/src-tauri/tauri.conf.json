@@ -16,9 +16,9 @@
         "create": false,
         "title": "StarCLX",
         "width": 1000,
-        "height": 800,
-        "minWidth": 900,
-        "minHeight": 800,
+        "height": 700,
+        "minWidth": 600,
+        "minHeight": 480,
         "visible": false
       }
     ],

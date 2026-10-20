@@ -3,12 +3,17 @@
 ## Unveröffentlicht
 
 ### Kleine Fenster
-- Das Hauptfenster lässt sich bis 900 × 800 Pixel verkleinern, ohne dass etwas abgeschnitten wird.
-  Passen nicht alle Reiter, zeigen die nicht gewählten nur ihr Symbol (Name im Tooltip).
-- Freier Arbeitsbereich: In schmalen Fenstern stehen höchstens zwei Kacheln nebeneinander; die
-  gespeicherte Anordnung bleibt erhalten und gilt wieder, sobald das Fenster breiter ist.
+- Das Hauptfenster lässt sich bis 600 × 480 Pixel verkleinern, ohne dass etwas abgeschnitten wird,
+  z. B. als halber Bildschirm neben einem anderen Programm.
+- Passen nicht alle Reiter, zeigen die nicht gewählten nur ihr Symbol (Name im Tooltip). In
+  schmalen Fenstern zeigt die Kopfzeile nur das Logo, Suche und Call Manager rücken zusammen.
+- Freier Arbeitsbereich: In schmalen Fenstern stehen höchstens zwei Kacheln nebeneinander, in sehr
+  schmalen eine. Die gespeicherte Anordnung bleibt erhalten und gilt wieder, sobald das Fenster
+  breiter ist.
 - Funktionstasten rücken in weniger Spalten zusammen, wenn sie sonst zu schmal würden.
 - Voicemail: In schmalen Kacheln stehen die Aktionen unter dem Eintrag.
+- Menü am Profilbild und Funktionstasten-Dialog scrollen in niedrigen Fenstern, statt unten
+  abgeschnitten zu werden. Die Bereiche der Einstellungen brechen in schmalen Fenstern um.
 
 ### Mehrere Anlagen gleichzeitig (Instanzenbetrieb)
 - Tray › „Weitere Anlage öffnen“ startet ein weiteres StarCLX mit eigenem Profil, je eins pro
