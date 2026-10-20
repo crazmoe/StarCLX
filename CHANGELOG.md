@@ -19,6 +19,8 @@
 - Die Headset-Einstellungen zeigen verbundene Bluetooth-Geräte an
 - Bluetooth-Headsets schalten für ein Gespräch am Softphone ins Telefonie-Profil, damit ihr
   Mikrofon verwendet wird; nach dem Auflegen zurück ins Musikprofil
+- Jabra Link 380 (und andere Jabra-Geräte, die ihre Tasten als konstant beschreiben) wird als
+  Headset mit Telefonietasten erkannt
 
 ### Audio
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
