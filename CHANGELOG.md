@@ -17,6 +17,8 @@
 - Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt während eines Anrufs an bzw.
   legt auf. Ohne Anruf bleibt sie beim Musikspieler.
 - Die Headset-Einstellungen zeigen verbundene Bluetooth-Geräte an
+- Bluetooth-Headsets schalten für ein Gespräch am Softphone ins Telefonie-Profil, damit ihr
+  Mikrofon verwendet wird; nach dem Auflegen zurück ins Musikprofil
 
 ### Audio
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und

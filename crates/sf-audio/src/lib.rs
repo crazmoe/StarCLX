@@ -47,8 +47,8 @@ pub struct Devices {
     pub microphones: Vec<Device>,
 }
 
-/// Fragt die vorhandenen Ausgabe- und Eingabegeräte ab (ohne Monitore).
-pub fn list() -> Result<Devices, Error> {
+/// Verbindung zum Audioserver für Abfragen
+fn connect() -> Result<(Mainloop, Context), Error> {
     let err = |e: &dyn std::fmt::Display| Error::Pulse(e.to_string());
     let mut ml = Mainloop::new().ok_or_else(|| Error::Pulse("Mainloop".into()))?;
     let mut ctx = Context::new(&ml, "StarCLX").ok_or_else(|| Error::Pulse("Kontext".into()))?;
@@ -69,7 +69,12 @@ pub fn list() -> Result<Devices, Error> {
             _ => {}
         }
     }
+    Ok((ml, ctx))
+}
 
+/// Fragt die vorhandenen Ausgabe- und Eingabegeräte ab (ohne Monitore).
+pub fn list() -> Result<Devices, Error> {
+    let (mut ml, mut ctx) = connect()?;
     let out = Rc::new(RefCell::new(Devices::default()));
     let pending = Rc::new(RefCell::new(2));
     {
@@ -102,6 +107,114 @@ pub fn list() -> Result<Devices, Error> {
     }
     ctx.disconnect();
     Ok(out.take())
+}
+
+/// Bluetooth-Gerät als Karte des Audioservers mit seinen Profilen
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Card {
+    /// `bluez_card.<Adresse>`
+    pub name: String,
+    pub active: String,
+    /// Verfügbare Profile
+    pub profiles: Vec<String>,
+}
+
+impl Card {
+    /// Profil fürs Telefonieren (mit Mikrofon), das beste zuerst
+    pub fn headset_profile(&self) -> Option<&str> {
+        const BEST: [&str; 3] = [
+            "headset-head-unit-msbc",
+            "headset-head-unit",
+            "headset-head-unit-cvsd",
+        ];
+        BEST.iter()
+            .find(|b| self.profiles.iter().any(|p| p == *b))
+            .copied()
+            .or_else(|| {
+                self.profiles
+                    .iter()
+                    .find(|p| p.starts_with("headset-head-unit"))
+                    .map(String::as_str)
+            })
+    }
+
+    pub fn in_headset_mode(&self) -> bool {
+        self.active.starts_with("headset-head-unit")
+    }
+}
+
+/// Karte zu einem Bluetooth-Knoten: `bluez_output.<Adresse>.1` → `bluez_card.<Adresse>`
+pub fn card_of(device: &str) -> Option<String> {
+    let key = bluetooth_key(device)?;
+    let addr = key.split_once('.')?.1;
+    Some(format!("bluez_card.{addr}"))
+}
+
+/// Bluetooth-Karten mit aktivem und verfügbaren Profilen
+pub fn bluetooth_cards() -> Result<Vec<Card>, Error> {
+    let (mut ml, ctx) = connect()?;
+    let out = Rc::new(RefCell::new(Vec::new()));
+    let done = Rc::new(RefCell::new(false));
+    {
+        let (out, done) = (out.clone(), done.clone());
+        ctx.introspect().get_card_info_list(move |r| match r {
+            ListResult::Item(i) => {
+                let name = i.name.as_deref().unwrap_or_default();
+                if !name.starts_with("bluez_card.") {
+                    return;
+                }
+                out.borrow_mut().push(Card {
+                    name: name.to_owned(),
+                    active: i
+                        .active_profile
+                        .as_ref()
+                        .and_then(|p| p.name.as_deref())
+                        .unwrap_or_default()
+                        .to_owned(),
+                    profiles: i
+                        .profiles
+                        .iter()
+                        .filter(|p| p.available)
+                        .filter_map(|p| p.name.as_deref().map(str::to_owned))
+                        .collect(),
+                });
+            }
+            _ => *done.borrow_mut() = true,
+        });
+    }
+    while !*done.borrow() {
+        if let IterateResult::Quit(_) | IterateResult::Err(_) = ml.iterate(true) {
+            break;
+        }
+    }
+    let mut ctx = ctx;
+    ctx.disconnect();
+    Ok(out.take())
+}
+
+/// Profil einer Karte setzen, z. B. Bluetooth-Headset auf Telefonieren
+pub fn set_card_profile(card: &str, profile: &str) -> Result<(), Error> {
+    let (mut ml, ctx) = connect()?;
+    let result = Rc::new(RefCell::new(None));
+    {
+        let result = result.clone();
+        ctx.introspect().set_card_profile_by_name(
+            card,
+            profile,
+            Some(Box::new(move |ok| *result.borrow_mut() = Some(ok))),
+        );
+    }
+    while result.borrow().is_none() {
+        if let IterateResult::Quit(_) | IterateResult::Err(_) = ml.iterate(true) {
+            break;
+        }
+    }
+    let mut ctx = ctx;
+    ctx.disconnect();
+    match *result.borrow() {
+        Some(true) => Ok(()),
+        _ => Err(Error::Pulse(format!("Profil {profile} für {card}"))),
+    }
 }
 
 /// Erstes bevorzugtes Gerät, das vorhanden ist, mit seinem aktuellen
@@ -356,6 +469,30 @@ mod tests {
             "bluez_input.84_D3_52_8C_B9_D0.1"
         ));
         assert!(!same_device("alsa.a.1", "alsa.a.2"));
+    }
+
+    #[test]
+    fn bluetooth_card_profiles() {
+        assert_eq!(
+            card_of("bluez_output.84_D3_52_8C_B9_D0.1").as_deref(),
+            Some("bluez_card.84_D3_52_8C_B9_D0")
+        );
+        assert_eq!(card_of("alsa_output.pci"), None);
+        let card = |active: &str, profiles: &[&str]| Card {
+            name: "bluez_card.X".into(),
+            active: active.into(),
+            profiles: profiles.iter().map(|p| (*p).to_owned()).collect(),
+        };
+        let c = card(
+            "a2dp-sink",
+            &["a2dp-sink", "headset-head-unit-cvsd", "headset-head-unit"],
+        );
+        assert_eq!(c.headset_profile(), Some("headset-head-unit"));
+        assert!(!c.in_headset_mode());
+        let c = card("headset-head-unit-msbc", &["headset-head-unit-msbc"]);
+        assert_eq!(c.headset_profile(), Some("headset-head-unit-msbc"));
+        assert!(c.in_headset_mode());
+        assert_eq!(card("a2dp-sink", &["a2dp-sink"]).headset_profile(), None);
     }
 
     #[test]

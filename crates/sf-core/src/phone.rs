@@ -158,6 +158,17 @@ pub enum PhoneEvent {
     Error {
         message: String,
     },
+    /// Das Softphone braucht Audio (ein SIP-Anruf klingelt oder läuft) bzw.
+    /// nicht mehr. Zeit, ein Bluetooth-Headset ins Telefonie-Profil zu
+    /// schalten und zurück.
+    SoftphoneAudio {
+        needed: bool,
+    },
+    /// Ein SIP-Anruf am Softphone steht; sein Audio lässt sich jetzt mit
+    /// [`Phone::set_call_audio`] umlenken.
+    SipEstablished {
+        sip_call_id: String,
+    },
 }
 
 #[derive(Default)]
@@ -420,6 +431,24 @@ impl Phone {
             .map_err(sf_onehub::Error::from)?;
         }
         Ok(false)
+    }
+
+    /// Lenkt Wiedergabe und Aufnahme eines laufenden SIP-Anrufs auf andere
+    /// Geräte (PipeWire-Knotennamen); `None` lässt die Seite, wie sie ist.
+    pub fn set_call_audio(
+        &self,
+        sip_call_id: &str,
+        player: Option<&str>,
+        source: Option<&str>,
+    ) -> PhoneResult<()> {
+        let sip = self.sip()?;
+        if let Some(dev) = player {
+            sip.set_player(sip_call_id, "pipewire", dev)?;
+        }
+        if let Some(dev) = source {
+            sip.set_source(sip_call_id, "pipewire", dev)?;
+        }
+        Ok(())
     }
 
     /// Nimmt einen eingehenden Anruf am Softphone an.
@@ -702,6 +731,9 @@ impl Phone {
                     SipEvent::Incoming { call, auto_answer } => {
                         let answer = {
                             let mut inner = inner.lock().unwrap();
+                            if inner.sip_ringing.is_empty() && inner.sip_active.is_empty() {
+                                let _ = events.send(PhoneEvent::SoftphoneAudio { needed: true });
+                            }
                             let ours = inner.dial_until.is_some_and(|t| Instant::now() < t);
                             if auto_answer || ours {
                                 inner.dial_until = None;
@@ -727,6 +759,9 @@ impl Phone {
                         if muted {
                             let _ = sip.set_mute(&call_id, true);
                         }
+                        let _ = events.send(PhoneEvent::SipEstablished {
+                            sip_call_id: call_id,
+                        });
                     }
                     SipEvent::Closed { call_id, .. } => {
                         let mut inner = inner.lock().unwrap();
@@ -734,6 +769,9 @@ impl Phone {
                         inner.sip_active.retain(|id| *id != call_id);
                         if inner.sip_active.is_empty() {
                             inner.muted = false;
+                        }
+                        if inner.sip_active.is_empty() && inner.sip_ringing.is_empty() {
+                            let _ = events.send(PhoneEvent::SoftphoneAudio { needed: false });
                         }
                     }
                     SipEvent::AudioError { info } => {

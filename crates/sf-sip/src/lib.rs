@@ -31,6 +31,7 @@ mod ffi {
     pub const OP_RESET: c_int = 9;
     pub const OP_AUSRC: c_int = 10;
     pub const OP_HEADER: c_int = 11;
+    pub const OP_AUPLAY: c_int = 12;
 
     pub const EV_READY: c_int = 1;
     pub const EV_ERROR: c_int = 2;
@@ -477,6 +478,19 @@ impl Softphone {
         }
         self.cmd(
             ffi::OP_AUSRC,
+            Some(call_id),
+            Some(&format!("{module},{device}")),
+        )
+    }
+
+    /// Wechselt das Wiedergabegerät eines laufenden Anrufs, z. B. auf ein
+    /// Bluetooth-Headset nach dem Wechsel ins Telefonie-Profil.
+    pub fn set_player(&self, call_id: &str, module: &str, device: &str) -> Result<()> {
+        if module.contains(',') {
+            return Err(Error::InvalidValue("module".into()));
+        }
+        self.cmd(
+            ffi::OP_AUPLAY,
             Some(call_id),
             Some(&format!("{module},{device}")),
         )

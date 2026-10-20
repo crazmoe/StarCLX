@@ -28,6 +28,82 @@ fn devices() -> Devices {
     })
 }
 
+/// Bluetooth-Headset, das für ein Gespräch ins Telefonie-Profil geschaltet
+/// wurde: (Karte, vorheriges Profil)
+static BT_SWITCHED: Mutex<Option<(String, String)>> = Mutex::new(None);
+
+/// Ein Gespräch am Softphone steht. Ist das gewählte Gerät ein
+/// Bluetooth-Headset im Musikprofil (ohne Mikrofon), auf Telefonieren
+/// umschalten und Wiedergabe und Mikrofon des Gesprächs dorthin legen.
+/// Liefert (Wiedergabe, Aufnahme) für das Gespräch.
+pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
+    let present = devices();
+    let speaker = sf_audio::pick(&prefs.speakers, &present.speakers);
+    let mic = sf_audio::pick(&prefs.microphones, &present.microphones);
+    let card_name = speaker
+        .as_deref()
+        .and_then(sf_audio::card_of)
+        .or_else(|| mic.as_deref().and_then(sf_audio::card_of))?;
+    let cards = sf_audio::bluetooth_cards().ok()?;
+    let card = cards.into_iter().find(|c| c.name == card_name)?;
+    if !card.in_headset_mode() {
+        let profile = card.headset_profile()?;
+        if let Err(e) = sf_audio::set_card_profile(&card.name, profile) {
+            tracing::warn!(error = %e, "Bluetooth-Headset nicht auf Telefonieren geschaltet");
+            return None;
+        }
+        tracing::info!(
+            card = card.name,
+            profile,
+            "Bluetooth-Headset auf Telefonieren"
+        );
+        BT_SWITCHED
+            .lock()
+            .unwrap()
+            .get_or_insert_with(|| (card.name.clone(), card.active.clone()));
+    }
+    // Die Knoten des Telefonie-Profils erscheinen erst nach dem Umschalten
+    let of_card = |d: &&sf_audio::Device| sf_audio::card_of(&d.name).as_deref() == Some(&card_name);
+    let mut now = present;
+    for _ in 0..20 {
+        if now.speakers.iter().any(|d| of_card(&d)) && now.microphones.iter().any(|d| of_card(&d)) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        now = devices();
+    }
+    let bt_out = now.speakers.iter().find(of_card).map(|d| d.name.clone());
+    let bt_in = now.microphones.iter().find(of_card).map(|d| d.name.clone());
+    let player = speaker
+        .filter(|s| sf_audio::card_of(s).is_some())
+        .and(bt_out);
+    // Mikrofon des Headsets, ausser ein anderes ist ausdrücklich davor gereiht
+    let source = match sf_audio::pick(&prefs.microphones, &now.microphones) {
+        Some(m) if sf_audio::card_of(&m).as_deref() == Some(&card_name) => Some(m),
+        _ if !prefs
+            .microphones
+            .iter()
+            .any(|m| sf_audio::card_of(m).as_deref() == Some(&card_name)) =>
+        {
+            bt_in
+        }
+        _ => None,
+    };
+    Some((player, source))
+}
+
+/// Kein Gespräch mehr am Softphone: ein umgeschaltetes Bluetooth-Headset
+/// zurück ins vorherige Profil (Musik)
+pub fn bluetooth_call_done() {
+    let Some((card, profile)) = BT_SWITCHED.lock().unwrap().take() else {
+        return;
+    };
+    match sf_audio::set_card_profile(&card, &profile) {
+        Ok(()) => tracing::info!(card, profile, "Bluetooth-Headset zurück"),
+        Err(e) => tracing::warn!(error = %e, card, "Bluetooth-Headset nicht zurückgeschaltet"),
+    }
+}
+
 /// baresip-Einstellungen für Lautsprecher und Mikrofon aus der Reihenfolge
 /// in den Einstellungen.
 pub async fn softphone_config(prefs: &Prefs) -> sf_sip::Config {
@@ -114,7 +190,6 @@ fn device_arg(device: Option<String>) -> Option<String> {
     device.filter(|d| !d.is_empty() && d != sf_audio::DEFAULT_DEVICE)
 }
 
-/// Spielt einen Klingelton (oder mit `name = None` den Testton) einmal ab.
 /// Namen gekoppelter Bluetooth-Geräte, auch wenn sie gerade nicht verbunden
 /// sind, für Einträge wie `bluez_output.84_D3_52_8C_B9_D0.1`. Fragt BlueZ
 /// auf dem Systembus; was es nicht kennt, fehlt in der Antwort.
@@ -170,6 +245,7 @@ fn bluez_aliases() -> zbus::Result<HashMap<String, String>> {
         .collect())
 }
 
+/// Spielt einen Klingelton (oder mit `name = None` den Testton) einmal ab.
 #[tauri::command]
 pub fn audio_preview(state: State<'_, AudioState>, name: Option<String>, device: Option<String>) {
     let samples = name.map_or_else(|| Arc::new(sf_audio::tones::test_tone()), |n| ringtone(&n));
