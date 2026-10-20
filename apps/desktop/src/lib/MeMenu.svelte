@@ -88,8 +88,9 @@
 
   // Untermenü auf Höhe der angeklickten Zeile, wie in der STARFACE-App
   let subTop = $state(0);
+  let itemsEl = $state<HTMLElement>();
   const toggle = (name: typeof sub, e: MouseEvent) => {
-    subTop = (e.currentTarget as HTMLElement).offsetTop;
+    subTop = (e.currentTarget as HTMLElement).offsetTop - (itemsEl?.scrollTop ?? 0);
     sub = sub === name ? "" : name;
   };
   // Ragt das Untermenü unten aus dem Fenster, rückt es nach oben; ist es höher
@@ -147,6 +148,8 @@
 </script>
 
 <div class="menu" bind:this={menuEl}>
+  <!-- Bei niedrigem Fenster scrollen die Einträge; das Untermenü bleibt daneben -->
+  <div class="items" bind:this={itemsEl}>
   <div class="head">
     <span class="big">
       {#if avatar}<img src={avatar} alt="" />{:else}{initials}{/if}
@@ -199,6 +202,7 @@
     <span class="more"><Icon name="chevron" size={20} /></span>
   </button>
   <button class="row plain" onclick={onlogout}><span class="ic"><Icon name="logout" size={20} /></span><span class="lbl">{t("Abmelden")}</span></button>
+  </div>
 
   {#if sub}
     <div class="sub" class:wide={sub === "number"} bind:this={subEl} style="top: {subTop - subShift}px">
@@ -253,8 +257,11 @@
   .menu {
     position: absolute; left: 0; top: calc(100% + 0.4rem); z-index: 15; width: 19rem;
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px #000a;
-    display: flex; flex-direction: column; gap: 0.3rem; padding: 0.6rem;
+    display: flex; flex-direction: column; padding: 0.6rem;
+    max-height: calc(100vh - 5rem); box-sizing: border-box;
   }
+  .items { display: flex; flex-direction: column; gap: 0.3rem; min-height: 0; overflow-y: auto; }
+  .items > * { flex: none; }
   .head { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.4rem 0 0.7rem; text-align: center; }
   .big {
     position: relative; width: 4.6rem; height: 4.6rem; border-radius: 50%; margin-bottom: 0.4rem;
@@ -322,4 +329,9 @@
   .switch::after { content: ""; position: absolute; left: 0.15rem; top: 0.15rem; width: 0.85rem; height: 0.85rem; border-radius: 50%; background: #fff; transition: left 0.15s; }
   .switch.on { background: var(--green); }
   .switch.on::after { left: 1.1rem; }
+  /* Niedriges Fenster: kleineres Profilbild, damit mehr Einträge sichtbar bleiben */
+  @media (max-height: 640px) {
+    .head { padding: 0.2rem 0 0.4rem; }
+    .big { width: 3rem; height: 3rem; font-size: 1rem; margin-bottom: 0.2rem; }
+  }
 </style>

@@ -768,7 +768,7 @@
   .primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
   @media (max-width: 700px) {
     .settings { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; }
-    nav { flex-direction: row; padding: 0.4rem 0.6rem; gap: 0.3rem; overflow-x: auto; }
+    nav { flex-direction: row; flex-wrap: wrap; padding: 0.4rem 0.6rem; gap: 0.3rem; overflow-x: auto; }
     .tab { white-space: nowrap; }
     .nav { display: none; }
   }
