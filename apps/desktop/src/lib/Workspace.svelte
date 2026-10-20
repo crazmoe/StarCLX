@@ -4,6 +4,30 @@
   /** Rasterspalten der Fläche; Zeilen sind ROW Pixel hoch */
   export const COLS = 12;
   const ROW = 40;
+  /** Darunter (Breite der Fläche in px) stehen höchstens zwei Kacheln
+   *  nebeneinander, damit sie in schmalen Fenstern bedienbar bleiben */
+  const NARROW = 1080;
+
+  type Box = Pick<Tile, "x" | "y" | "w" | "h">;
+
+  /** Schmale Kacheln halb, breite ganz so breit wie die Fläche, von oben
+   *  nach unten dicht gepackt; die gespeicherte Anordnung bleibt unverändert. */
+  function reflow(list: Tile[]): Record<string, Box> {
+    const sky = Array<number>(COLS).fill(0);
+    const out: Record<string, Box> = {};
+    for (const t of [...list].sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const w = t.w <= COLS / 3 ? COLS / 2 : COLS;
+      let best = 0;
+      let top = Infinity;
+      for (let x = 0; x + w <= COLS; x++) {
+        const y = Math.max(...sky.slice(x, x + w));
+        if (y < top) { top = y; best = x; }
+      }
+      out[t.id] = { x: best, y: top, w, h: t.h };
+      sky.fill(top + t.h, best, best + w);
+    }
+    return out;
+  }
 
   export const DEFAULT_TILES: Tile[] = [
     { id: "fkeys", x: 0, y: 0, w: 6, h: 8, visible: true },
@@ -63,7 +87,11 @@
   let drag: { id: string; mode: "move" | "size"; sx: number; sy: number; start: Tile } | null = null;
 
   const z = (id: string) => order.indexOf(id) + 1;
-  const height = $derived(Math.max(...tiles.filter((t) => t.visible).map((t) => t.y + t.h), 1) * ROW + ROW * 4);
+  const shown = $derived(tiles.filter((x) => x.visible && !hidden?.(x.id)));
+  /** Schmales Fenster: neu angeordnet; beim Bearbeiten immer die echte Lage */
+  const narrow = $derived(!editing && width > 0 && width < NARROW);
+  const boxes = $derived<Record<string, Box>>(narrow ? reflow(shown) : Object.fromEntries(shown.map((t) => [t.id, t])));
+  const height = $derived(Math.max(...Object.values(boxes).map((b) => b.y + b.h), 1) * ROW + ROW * 4);
 
   function start(e: PointerEvent, t: Tile, mode: "move" | "size") {
     if (!editing || e.button !== 0 || (mode === "move" && (e.target as HTMLElement).closest("button"))) return;
@@ -121,11 +149,12 @@
 <svelte:window onpointermove={onmove} onpointerup={onup} onpointercancel={onup} />
 
 <div class="area" class:editing bind:clientWidth={width} style="height: {height}px">
-  {#each tiles.filter((x) => x.visible && !hidden?.(x.id)) as tile (tile.id)}
+  {#each shown as tile (tile.id)}
+    {@const b = boxes[tile.id] ?? tile}
     <section
       class="tile"
       data-tile={tile.id}
-      style="left: {tile.x * col}px; top: {tile.y * ROW}px; width: {tile.w * col}px; height: {tile.h * ROW}px; z-index: {z(tile.id)}"
+      style="left: {b.x * col}px; top: {b.y * ROW}px; width: {b.w * col}px; height: {b.h * ROW}px; z-index: {z(tile.id)}"
     >
       <header role="toolbar" tabindex="-1" onpointerdown={(e) => start(e, tile, "move")}>
         <Icon name={meta[tile.id].icon} size={16} />

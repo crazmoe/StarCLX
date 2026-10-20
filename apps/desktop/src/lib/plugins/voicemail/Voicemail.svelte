@@ -150,7 +150,7 @@
 </div>
 
 <style>
-  .vm { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.5rem; }
+  .vm { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.5rem; container-type: inline-size; }
   .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 2.4rem; }
   .chip { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.9rem; background: var(--panel); }
   .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -159,7 +159,13 @@
   .row.new .who strong { color: var(--accent-text); }
   .playbtn { width: 2.3rem; height: 2.3rem; padding: 0; border-radius: 50%; display: grid; place-items: center; }
   .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .who strong, .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .who small { color: var(--muted); }
+  /* Schmale Kachel: Aktionen in eine eigene Zeile, damit der Name Platz hat */
+  @container (max-width: 34rem) {
+    .row { flex-wrap: wrap; row-gap: 0.2rem; }
+    .acts { flex-basis: 100%; justify-content: flex-end; }
+  }
   .when { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
   .when small { color: var(--muted); font-size: 0.75rem; }
   .acts { display: flex; align-items: center; gap: 0.25rem; }

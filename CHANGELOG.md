@@ -2,6 +2,14 @@
 
 ## Unveröffentlicht
 
+### Kleine Fenster
+- Das Hauptfenster lässt sich bis 900 × 800 Pixel verkleinern, ohne dass etwas abgeschnitten wird.
+  Passen nicht alle Reiter, zeigen die nicht gewählten nur ihr Symbol (Name im Tooltip).
+- Freier Arbeitsbereich: In schmalen Fenstern stehen höchstens zwei Kacheln nebeneinander; die
+  gespeicherte Anordnung bleibt erhalten und gilt wieder, sobald das Fenster breiter ist.
+- Funktionstasten rücken in weniger Spalten zusammen, wenn sie sonst zu schmal würden.
+- Voicemail: In schmalen Kacheln stehen die Aktionen unter dem Eintrag.
+
 ### Mehrere Anlagen gleichzeitig (Instanzenbetrieb)
 - Tray › „Weitere Anlage öffnen“ startet ein weiteres StarCLX mit eigenem Profil, je eins pro
   Anlage. Ab zwei Instanzen zeigen Titelleiste und Tray-Menü die Anlage; Tray- und

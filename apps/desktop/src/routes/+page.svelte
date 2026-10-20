@@ -4,7 +4,7 @@
   import { contactEdit } from "#lib/plugins/contacts/contactform.svelte.ts";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import CallManager from "#lib/plugins/call/CallManager.svelte";
   import Contacts from "#lib/plugins/contacts/Contacts.svelte";
   import DialSearch from "#lib/DialSearch.svelte";
@@ -277,6 +277,33 @@
     if (!tabs.some((x) => x.id === tab) && tabs.length) tab = tabs[0].id;
   });
 
+  /** Reiterleiste: Passen nicht alle Beschriftungen, zeigen die nicht
+   *  gewählten Reiter nur ihr Symbol (Name im Tooltip). */
+  let tabBar = $state<HTMLElement>();
+  let tabsCompact = $state(false);
+  /** Breite der Leiste mit allen Beschriftungen */
+  let tabsFull = 0;
+  function fitTabs() {
+    if (tabBar) tabsCompact = tabsFull > tabBar.clientWidth;
+  }
+  $effect(() => {
+    // Neu messen, wenn sich Reiter, Beschriftungen oder Zähler ändern
+    void [tabs.map((x) => x.label), unreadTotal(), unheard(), activeConferences(), waitingCalls(), editing];
+    if (!tabBar) return;
+    tabsCompact = false;
+    tick().then(() => {
+      if (!tabBar) return;
+      tabsFull = tabBar.scrollWidth;
+      fitTabs();
+    });
+  });
+  $effect(() => {
+    if (!tabBar) return;
+    const ro = new ResizeObserver(fitTabs);
+    ro.observe(tabBar);
+    return () => ro.disconnect();
+  });
+
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
   const free = $derived(prefs.value?.workspace === "free");
   let tiles = $state<Tile[]>([]);
@@ -368,12 +395,13 @@
     </header>
 
     {#if !free || editing}
-    <nav class="tabs">
+    <nav class="tabs" class:compact={tabsCompact} bind:this={tabBar}>
       {#each tabs as tb}
         <button
           class="tab"
           class:active={free ? tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
-          title={free && editing ? t("Kachel ein- oder ausblenden") : undefined}
+          class:current={!free && tab === tb.id}
+          title={free && editing ? t("Kachel ein- oder ausblenden") : tabsCompact ? tb.label : undefined}
           onclick={() => tabClick(tb.id)}
         >
           <Icon name={tb.icon} size={20} /><span>{tb.label}</span>
@@ -386,9 +414,9 @@
       {#if free}
         <span class="spacer"></span>
         {#if editing}
-          <button class="tab" title={t("Standardanordnung")} onclick={() => (tiles = tilesOf(null))}><span>{t("Standard")}</span></button>
-          <button class="tab" title={t("Änderungen verwerfen")} onclick={editCancel}><Icon name="close" size={20} /><span>{t("Abbrechen")}</span></button>
-          <button class="tab lock on" title={t("Anordnung speichern und fixieren")} onclick={editDone}><Icon name="check" size={20} /><span>{t("Fertig")}</span></button>
+          <button class="tab keep" title={t("Standardanordnung")} onclick={() => (tiles = tilesOf(null))}><span>{t("Standard")}</span></button>
+          <button class="tab keep" title={t("Änderungen verwerfen")} onclick={editCancel}><Icon name="close" size={20} /><span>{t("Abbrechen")}</span></button>
+          <button class="tab keep lock on" title={t("Anordnung speichern und fixieren")} onclick={editDone}><Icon name="check" size={20} /><span>{t("Fertig")}</span></button>
         {/if}
       {/if}
     </nav>
@@ -495,6 +523,8 @@
 <style>
   .shell {
     display: grid; grid-template-rows: auto auto 1fr;
+    /* Spalte nie breiter als das Fenster, sonst schieben Reiter und Kopfzeile alles hinaus */
+    grid-template-columns: minmax(0, 1fr);
     height: 100vh; overflow: hidden;
   }
   .top {
@@ -533,8 +563,11 @@
   .account .pick small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .account .drop { display: grid; place-items: center; padding: 0 0.5rem; }
   .scrim { position: fixed; inset: 0; z-index: 14; background: transparent; border: none; padding: 0; cursor: default; }
-  .tabs { display: flex; gap: 0.2rem; padding: 0 0.6rem; background: var(--bar); border-top: 1px solid var(--bar-2); }
-  .tab { display: flex; align-items: center; gap: 0.45rem; background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.55rem 0.9rem; color: var(--muted); }
+  .tabs { display: flex; gap: 0.2rem; padding: 0 0.6rem; background: var(--bar); border-top: 1px solid var(--bar-2); overflow-x: auto; scrollbar-width: none; }
+  /* Schmales Fenster: nur der gewählte Reiter mit Namen */
+  .tabs.compact .tab:not(.current, .keep) > span:not(.unread) { display: none; }
+  .tabs.compact .tab { padding: 0.55rem 0.7rem; }
+  .tab { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 0.45rem; background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 0.55rem 0.9rem; color: var(--muted); }
   .unread { background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 0 0.45rem; font-size: 0.78rem; font-weight: 700; }
   .arrange { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; padding: 0; color: var(--muted); }
   .tab.lock.on { color: var(--on-accent); background: var(--accent); border-radius: 6px 6px 0 0; }
