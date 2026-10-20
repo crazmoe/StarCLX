@@ -85,6 +85,18 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.6.0" date="2026-10-20">
+      <description>
+        <ul>
+          <li>Run several StarCLX instances at once, one per PBX, each with its own coloured icon</li>
+          <li>The main window works down to 600 x 480 pixels</li>
+          <li>The play/pause button of Bluetooth headsets answers and ends calls</li>
+          <li>Bluetooth headsets switch to the telephony profile during calls</li>
+          <li>Jabra Link 380 and similar headsets are recognised with their telephony buttons</li>
+          <li>Sign-in only sends credentials over HTTPS</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.5.0" date="2026-10-16">
       <description>
         <ul>
