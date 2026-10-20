@@ -46,9 +46,14 @@
       {/if}
     </p>
     {#if headset.error}<p class="notice">{headset.error}</p>{/if}
-    <button class="play" onclick={test} disabled={testing || !draft.headset || !headset.devices.length}>
-      <Icon name="headset" size={18} /> {testing ? t("Teste …") : t("Klingeln testen")}
-    </button>
+    <!-- Selbst klingeln können nur USB-Headsets; Bluetooth klingelt über den Klingelton -->
+    {#if headset.devices.length || !headset.bluetooth.length}
+      <button class="play" onclick={test} disabled={testing || !draft.headset || !headset.devices.length}>
+        <Icon name="headset" size={18} /> {testing ? t("Teste …") : t("Klingeln testen")}
+      </button>
+    {:else}
+      <p class="small muted">{t("Bluetooth-Headsets klingeln nicht selbst, sondern über den Klingelton. Unter „Klingeltöne“ lassen sie sich als Klingelgerät wählen und testen.")}</p>
+    {/if}
   </div>
 </section>
 
