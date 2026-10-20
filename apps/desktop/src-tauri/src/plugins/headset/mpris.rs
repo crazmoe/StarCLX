@@ -2,7 +2,8 @@
 //! bzw. Pause, die der Desktop an den Medienspieler (MPRIS) gibt. Solange
 //! ein Anruf klingelt oder läuft, meldet sich StarCLX als solcher Spieler
 //! an; die Taste nimmt dann an oder legt auf. Ohne Anruf bleibt die Taste
-//! beim Musikspieler.
+//! beim Musikspieler. Ob die Taste dann zählt, entscheidet die Einstellung
+//! `play_pause_call` (siehe `super::media_key`).
 
 use std::collections::HashMap;
 use std::sync::mpsc::{self, Sender};
@@ -66,7 +67,7 @@ fn serve(app: &AppHandle) -> zbus::Result<Connection> {
 
 fn press(app: &AppHandle, button: Button) {
     let app = app.clone();
-    tauri::async_runtime::spawn(async move { super::pressed(&app, button).await });
+    tauri::async_runtime::spawn(async move { super::media_key(&app, button).await });
 }
 
 struct Root {

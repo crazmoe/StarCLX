@@ -34,7 +34,9 @@ Not affiliated with STARFACE GmbH. "STARFACE" is used for descriptive purposes o
   mute; the headset rings and shows call and mute state. This needs USB: a cable or the
   manufacturer's dongle (e.g. Jabra Link). Headsets connected directly via Bluetooth only
   offer the play/pause button during a call, and only if the headset sends it; PipeWire
-  does not pass the Bluetooth call buttons on to applications
+  does not pass the Bluetooth call buttons on to applications. If a headset with call
+  buttons is connected (also a virtual one, e.g. via bt-headset-hid), play/pause is
+  ignored by default so a press is not counted twice; adjustable in the settings
 - **Settings**: audio devices, ringtones, Busylight (Kuando), appearance,
   language (Deutsch, English, Français, Italiano)
 - **Desktop integration**: tray icon, autostart, quick dial window,

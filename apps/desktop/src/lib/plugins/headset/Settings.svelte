@@ -33,6 +33,15 @@
     <Toggle bind:checked={draft.headset} label={t("Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)")} />
     <p class="small muted">{t("Gesprächstaste: annehmen und auflegen · Stummtaste: Mikrofon stumm · Das Headset klingelt bei Anrufen und zeigt Gespräch und Stummschaltung an.")}</p>
     <p class="small muted">{t("Telefonietasten, Klingeln und LEDs gehen nur über USB: per Kabel oder mit dem Dongle des Herstellers (z. B. Jabra Link). Direkt per Bluetooth verbundene Headsets: Nur die Play/Pause-Taste nimmt an und legt auf, und auch das nur, wenn das Headset sie sendet.")}</p>
+    <label class="field">
+      <span>{t("Play/Pause als Anruftaste")}</span>
+      <select bind:value={draft.play_pause_call} disabled={!draft.headset}>
+        <option value="auto">{t("Nur ohne Headset mit Telefonietasten")}</option>
+        <option value="always">{t("Immer")}</option>
+        <option value="never">{t("Nie")}</option>
+      </select>
+    </label>
+    <p class="small muted">{t("Manche Bluetooth-Headsets (z. B. Jabra Evolve 65 mit bt-headset-hid) senden für die Gesprächstaste beides, Telefonietaste und Play/Pause. Dann nimmt der eine Druck an und der andere legt gleich wieder auf; deshalb zählt Play/Pause standardmässig nur, wenn kein Headset mit Telefonietasten angeschlossen ist.")}</p>
     <p class="muted">
       {#if headset.devices.length}
         {t("Angeschlossen:")} {headset.devices.join(", ")}
@@ -64,5 +73,7 @@
   .small { font-size: 0.85rem; margin: -0.3rem 0 0.6rem; }
   .muted { color: var(--muted); margin: 0.3rem 0; }
   .notice { color: var(--accent-text); margin: 0; flex: 1; }
+  .field { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.4rem; }
+  .field select { padding: 0.35rem 0.5rem; background: var(--panel-2); color: inherit; border: 1px solid var(--line); border-radius: 4px; max-width: 22rem; }
   .play { align-self: flex-start; display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; }
 </style>

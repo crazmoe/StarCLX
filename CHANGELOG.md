@@ -1,5 +1,14 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Headset
+- Neue Einstellung „Play/Pause als Anruftaste“: „Nur ohne Headset mit Telefonietasten“
+  (Standard), „Immer“ oder „Nie“. Headsets wie das Jabra Evolve 65 (über bt-headset-hid)
+  senden für die Gesprächstaste sowohl die Telefonietaste als auch Play/Pause; bisher nahm der
+  eine Druck an und der andere legte gleich wieder auf. Während eines Anrufs startet die
+  ignorierte Taste trotzdem keine Musik.
+
 ## 1.6.0 – 2026-10-20
 
 ### Kleine Fenster
