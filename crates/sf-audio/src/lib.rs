@@ -231,11 +231,25 @@ pub fn pick(preferred: &[String], present: &[Device]) -> Option<String> {
     None
 }
 
-/// Derselbe Knoten, oder dasselbe Bluetooth-Gerät: PipeWire hängt an
-/// `bluez_output.<Adresse>` bzw. `bluez_input.<Adresse>` eine Nummer an,
-/// die mit dem Profil wechselt (Musik bzw. Headset).
+/// Derselbe Knoten, oder dasselbe Gerät in einem anderen Profil: PipeWire
+/// hängt an `bluez_output.<Adresse>` eine Nummer an, die mit dem Profil
+/// wechselt (Musik bzw. Headset), an USB-Geräte wie
+/// `alsa_input.usb-<Hersteller>_<Gerät>_<Serie>-00` das Profil
+/// (`.analog-stereo`, `.mono-fallback.3` …).
 pub fn same_device(a: &str, b: &str) -> bool {
-    a == b || bluetooth_key(a).is_some_and(|k| bluetooth_key(b) == Some(k))
+    a == b || device_key(a).is_some_and(|k| device_key(b) == Some(k))
+}
+
+fn device_key(name: &str) -> Option<&str> {
+    bluetooth_key(name).or_else(|| usb_key(name))
+}
+
+fn usb_key(name: &str) -> Option<&str> {
+    let rest = name
+        .strip_prefix("alsa_output.usb-")
+        .or_else(|| name.strip_prefix("alsa_input.usb-"))?;
+    let end = name.len() - rest.len() + rest.find('.').unwrap_or(rest.len());
+    Some(&name[..end])
 }
 
 fn bluetooth_key(name: &str) -> Option<&str> {
@@ -469,6 +483,19 @@ mod tests {
             "bluez_input.84_D3_52_8C_B9_D0.1"
         ));
         assert!(!same_device("alsa.a.1", "alsa.a.2"));
+        // USB-Headset in einem anderen Profil
+        assert!(same_device(
+            "alsa_input.usb-0b0e_Jabra_Link_380_08C8C2294988-00.mono-fallback.3",
+            "alsa_input.usb-0b0e_Jabra_Link_380_08C8C2294988-00.analog-stereo"
+        ));
+        assert!(!same_device(
+            "alsa_input.usb-0b0e_Jabra_Link_380_08C8C2294988-00.mono-fallback",
+            "alsa_output.usb-0b0e_Jabra_Link_380_08C8C2294988-00.analog-stereo"
+        ));
+        assert!(!same_device(
+            "alsa_output.pci-0000_00_1f.3.analog-stereo",
+            "alsa_output.pci-0000_00_1f.3.hdmi-stereo"
+        ));
     }
 
     #[test]

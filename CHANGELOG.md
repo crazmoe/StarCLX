@@ -39,6 +39,8 @@
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
   Headset-Profil wechseln. Fehlt eins, steht sein Name (vom Bluetooth-Dienst des Systems)
   statt `bluez_output.…` da.
+- Dasselbe für USB-Headsets wie den Jabra Link 380: Abgesteckt steht ihr Name statt
+  `alsa_output.usb-…` da, und sie bleiben beim Profilwechsel (Stereo/Mono) dasselbe Gerät.
 - Mit nur einem Bluetooth-Headset steht bei den Headset-Tasten statt des gesperrten
   Klingeltests ein Hinweis auf die Klingeltöne
 

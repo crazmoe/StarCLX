@@ -11,10 +11,24 @@
     return m ? m[1] : null;
   }
 
-  /** Derselbe Knoten, oder dasselbe Bluetooth-Gerät in einem anderen Profil */
+  /** USB-Geräte heissen `alsa_output.usb-<Hersteller>_<Gerät>_<Serie>-00.<Profil>` */
+  function usbKey(name: string) {
+    const m = /^(alsa_(?:output|input)\.usb-[^.]+)/.exec(name);
+    return m ? m[1] : null;
+  }
+
+  const deviceKey = (name: string) => bluetoothKey(name) ?? usbKey(name);
+
+  /** Derselbe Knoten, oder dasselbe Gerät in einem anderen Profil */
   export function sameDevice(a: string, b: string) {
-    const k = bluetoothKey(a);
-    return a === b || (k !== null && k === bluetoothKey(b));
+    const k = deviceKey(a);
+    return a === b || (k !== null && k === deviceKey(b));
+  }
+
+  /** `alsa_output.usb-0b0e_Jabra_Link_380_08C8C2294988-00` → „Jabra Link 380“ */
+  function usbName(key: string) {
+    const parts = key.replace(/^alsa_(?:output|input)\.usb-/, "").split("_");
+    return parts.length > 2 ? parts.slice(1, -1).join(" ") : null;
   }
 
   /** Das vorhandene Gerät zu einem gespeicherten Namen */
@@ -29,7 +43,7 @@
     return out;
   }
 
-  // Namen von Bluetooth-Geräten, die schon einmal verbunden waren
+  // Namen von Bluetooth- und USB-Geräten, die schon einmal verbunden waren
   const KNOWN = "starclx.bluetooth-names";
   function known(): Record<string, string> {
     try {
@@ -42,7 +56,7 @@
     const names = known();
     let changed = false;
     for (const d of devices) {
-      const k = bluetoothKey(d.name);
+      const k = deviceKey(d.name);
       if (k && d.description && names[k] !== d.description) {
         names[k] = d.description;
         changed = true;
@@ -56,12 +70,15 @@
     }
   }
 
-  /** Name für ein Gerät, das gerade fehlt: bei Bluetooth der Name aus dem
-   *  System (gekoppelte Geräte) oder der zuletzt gesehene */
+  /** Name für ein Gerät, das gerade fehlt: der zuletzt gesehene, bei
+   *  Bluetooth sonst der aus dem System (gekoppelte Geräte), bei USB der
+   *  Gerätename aus dem Knotennamen */
   function absentLabel(name: string, system: Record<string, string>) {
-    const k = bluetoothKey(name);
-    if (!k) return name;
-    return system[name] ?? known()[k] ?? t("Bluetooth-Gerät");
+    const bt = bluetoothKey(name);
+    if (bt) return system[name] ?? known()[bt] ?? t("Bluetooth-Gerät");
+    const usb = usbKey(name);
+    if (usb) return known()[usb] ?? usbName(usb) ?? t("USB-Gerät");
+    return name;
   }
 </script>
 
