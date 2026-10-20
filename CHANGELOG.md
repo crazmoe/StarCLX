@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.0 – 2026-10-20
 
 ### Kleine Fenster
 - Das Hauptfenster lässt sich bis 600 × 480 Pixel verkleinern, ohne dass etwas abgeschnitten wird,
