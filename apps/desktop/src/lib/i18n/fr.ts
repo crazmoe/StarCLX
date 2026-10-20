@@ -291,7 +291,7 @@ const dict: Record<string, string> = {
   "USB-Gerät": "Appareil USB",
   "Headset-Tasten": "Touches du casque",
   "Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)": "Utiliser les touches du casque (Jabra, Poly, EPOS, Bluetooth)",
-  "Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.": "Écouteurs et casques Bluetooth : la touche lecture/pause répond et raccroche pendant qu'un appel sonne ou est en cours.",
+  "Telefonietasten, Klingeln und LEDs gehen nur über USB: per Kabel oder mit dem Dongle des Herstellers (z. B. Jabra Link). Direkt per Bluetooth verbundene Headsets: Nur die Play/Pause-Taste nimmt an und legt auf, und auch das nur, wenn das Headset sie sendet.": "Les touches d'appel, la sonnerie et les voyants ne fonctionnent qu'en USB : par câble ou avec le dongle du fabricant (p. ex. Jabra Link). Casques connectés directement en Bluetooth : seule la touche lecture/pause répond et raccroche, et seulement si le casque l'envoie.",
   "Gesprächstaste: annehmen und auflegen · Stummtaste: Mikrofon stumm · Das Headset klingelt bei Anrufen und zeigt Gespräch und Stummschaltung an.": "Touche d'appel : répondre et raccrocher · Touche secret : couper le micro · Le casque sonne lors d'un appel et indique la communication et le secret.",
   "Kein Headset mit Telefonietasten angeschlossen.": "Aucun casque avec touches d'appel branché.",
   "Klingeln testen": "Tester la sonnerie",

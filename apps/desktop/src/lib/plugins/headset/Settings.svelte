@@ -32,7 +32,7 @@
   <div class="card">
     <Toggle bind:checked={draft.headset} label={t("Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)")} />
     <p class="small muted">{t("Gesprächstaste: annehmen und auflegen · Stummtaste: Mikrofon stumm · Das Headset klingelt bei Anrufen und zeigt Gespräch und Stummschaltung an.")}</p>
-    <p class="small muted">{t("Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.")}</p>
+    <p class="small muted">{t("Telefonietasten, Klingeln und LEDs gehen nur über USB: per Kabel oder mit dem Dongle des Herstellers (z. B. Jabra Link). Direkt per Bluetooth verbundene Headsets: Nur die Play/Pause-Taste nimmt an und legt auf, und auch das nur, wenn das Headset sie sendet.")}</p>
     <p class="muted">
       {#if headset.devices.length}
         {t("Angeschlossen:")} {headset.devices.join(", ")}

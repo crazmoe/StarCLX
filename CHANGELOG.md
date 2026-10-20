@@ -34,6 +34,8 @@
   Mikrofon verwendet wird; nach dem Auflegen zurück ins Musikprofil
 - Jabra Link 380 (und andere Jabra-Geräte, die ihre Tasten als konstant beschreiben) wird als
   Headset mit Telefonietasten erkannt
+- Die Headset-Einstellungen sagen, dass Telefonietasten, Klingeln und LEDs nur über USB (Kabel
+  oder Dongle) gehen, bei direktem Bluetooth nur Play/Pause
 
 ### Audio
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
