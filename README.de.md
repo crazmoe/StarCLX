@@ -32,7 +32,10 @@ Nicht mit der STARFACE GmbH verbunden. „STARFACE“ wird nur beschreibend verw
 - **Arbeitsbereich** als Reiter oder frei angeordnete Kacheln
 - **Headset-Tasten** von Jabra, Poly und EPOS (USB-HID-Telefonie): annehmen, auflegen,
   stummschalten; das Headset klingelt und zeigt Gespräch und Stummschaltung an.
-  Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf
+  Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf.
+  Ist ein Headset mit Telefonietasten angeschlossen (auch ein virtuelles, z. B. über
+  bt-headset-hid), zählt Play/Pause standardmässig nicht, damit ein Druck nicht doppelt
+  wirkt; einstellbar
 - **Einstellungen**: Audiogeräte, Klingeltöne, Busylight (Kuando), Erscheinungsbild,
   Sprache (Deutsch, English, Français, Italiano)
 - **Desktop-Integration**: Symbol im Infobereich, Autostart, Schnellwahl-Fenster,

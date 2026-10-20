@@ -2,6 +2,8 @@
 //! EPOS) nehmen an, legen auf und schalten stumm. Bei einem Anruf klingelt
 //! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone. Die Taste von
 //! Bluetooth-Kopfhörern und -Headsets kommt über den Medienspieler (`mpris`).
+//! Ist ein Headset mit Telefonietasten da, zählt Play/Pause standardmässig
+//! nicht: Manche Headsets senden beides für denselben Druck.
 //! Laufen mehrere StarCLX, bedient der Hauptclient die Headsets für alle.
 
 mod mpris;
@@ -107,6 +109,16 @@ fn action_for(button: Button, lines: &[DeviceLine], muted: &BTreeMap<String, boo
     }
 }
 
+/// Zählt Play/Pause als Gesprächstaste? `mode` ist die Einstellung
+/// `play_pause_call`, `hid` ob ein Headset mit Telefonietasten offen ist.
+fn play_pause_counts(mode: &str, hid: bool) -> bool {
+    match mode {
+        "always" => true,
+        "never" => false,
+        _ => !hid,
+    }
+}
+
 pub fn start(app: &AppHandle) {
     bus::listen(app, "headset", |app, event| match event {
         Event::Devices | Event::Role | Event::PrefsSaved => refresh(app),
@@ -152,6 +164,25 @@ async fn pressed(app: &AppHandle, button: Button) {
     }
     // Ohne Wirkung meint das Headset sonst, es sei im Gespräch
     refresh(app);
+}
+
+/// Play/Pause bzw. Stop vom Medienspieler. Während eines Anrufs bleibt
+/// StarCLX trotzdem der Spieler, damit die Taste keine Musik startet.
+async fn media_key(app: &AppHandle, button: Button) {
+    let hid = app
+        .state::<HeadsetState>()
+        .inner
+        .lock()
+        .unwrap()
+        .headset
+        .as_ref()
+        .is_some_and(Headset::connected);
+    let mode = settings::load(app).prefs.play_pause_call;
+    if play_pause_counts(&mode, hid) {
+        pressed(app, button).await;
+    } else {
+        tracing::debug!(?button, mode, hid, "Play/Pause nicht als Gesprächstaste");
+    }
 }
 
 /// Tastendruck in dieser Instanz ausführen
@@ -328,6 +359,17 @@ mod tests {
             action_for(Button::HookOn, &lines, &muted),
             hangup("", "talk")
         );
+    }
+
+    #[test]
+    fn play_pause_with_hid_headset() {
+        // Standard: nur ohne Headset mit Telefonietasten
+        assert!(play_pause_counts("auto", false));
+        assert!(!play_pause_counts("auto", true));
+        assert!(play_pause_counts("always", true));
+        assert!(!play_pause_counts("never", false));
+        // Unbekannter Wert wie "auto"
+        assert!(!play_pause_counts("", true));
     }
 
     #[test]

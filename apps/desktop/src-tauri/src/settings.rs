@@ -153,6 +153,11 @@ pub struct Prefs {
     pub busylight_volume: u8,
     /// Tasten, Klingeln und LEDs von USB-Headsets (Jabra, Poly, EPOS)
     pub headset: bool,
+    /// Play/Pause (Bluetooth, über den Medienspieler) als Gesprächstaste:
+    /// "auto" nur ohne Headset mit Telefonietasten, "always" oder "never".
+    /// Headsets wie das Jabra Evolve 65 senden beides; zählten beide, nähme
+    /// der eine Druck an und der andere legte gleich wieder auf.
+    pub play_pause_call: String,
     /// Chat: Desktop-Benachrichtigung und Ton bei neuer Nachricht
     pub chat_notify: bool,
     pub chat_sound: bool,
@@ -222,6 +227,7 @@ impl Default for Prefs {
             busylight_sound: String::new(),
             busylight_volume: 50,
             headset: true,
+            play_pause_call: "auto".into(),
             chat_notify: true,
             chat_sound: true,
             download_dir: String::new(),

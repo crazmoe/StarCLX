@@ -14,7 +14,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -219,6 +219,8 @@ pub struct Headset {
     tx: mpsc::Sender<Msg>,
     thread: Option<JoinHandle<()>>,
     stop: Arc<AtomicBool>,
+    /// Anzahl geöffneter Headsets, vom Worker gepflegt
+    open: Arc<AtomicUsize>,
 }
 
 enum Msg {
@@ -231,19 +233,26 @@ impl Headset {
     pub fn start(on_button: impl Fn(Button) + Send + Sync + 'static) -> Self {
         let (tx, rx) = mpsc::channel();
         let stop = Arc::new(AtomicBool::new(false));
+        let open = Arc::new(AtomicUsize::new(0));
         let worker = Worker {
             state: State::default(),
             devices: Vec::new(),
             error: None,
             tx: tx.clone(),
             stop: stop.clone(),
+            open: open.clone(),
             on_button: Arc::new(on_button),
         };
         let thread = std::thread::Builder::new()
             .name("headset".into())
             .spawn(move || worker.run(&rx))
             .ok();
-        Self { tx, thread, stop }
+        Self {
+            tx,
+            thread,
+            stop,
+            open,
+        }
     }
 
     /// Zustand übernehmen; wird auch bei unverändertem Zustand neu
@@ -259,6 +268,12 @@ impl Headset {
             return Status::default();
         }
         rx.recv_timeout(Duration::from_secs(2)).unwrap_or_default()
+    }
+
+    /// Ist gerade ein Headset mit Telefonietasten geöffnet? Wartet nicht
+    /// auf den Worker.
+    pub fn connected(&self) -> bool {
+        self.open.load(Ordering::Relaxed) > 0
     }
 }
 
@@ -288,6 +303,7 @@ struct Worker {
     /// Für die Lese-Threads, die ein abgezogenes Gerät melden
     tx: mpsc::Sender<Msg>,
     stop: Arc<AtomicBool>,
+    open: Arc<AtomicUsize>,
     on_button: Arc<dyn Fn(Button) + Send + Sync>,
 }
 
@@ -314,6 +330,7 @@ impl Worker {
                         tracing::info!(name = %d.name, "Headset getrennt");
                     }
                     self.devices.retain(|d| d.dev != dev);
+                    self.open.store(self.devices.len(), Ordering::Relaxed);
                 }
                 Err(RecvTimeoutError::Timeout) => self.scan(),
                 Err(RecvTimeoutError::Disconnected) => return,
@@ -354,6 +371,7 @@ impl Worker {
             });
             self.write(self.devices.len() - 1);
         }
+        self.open.store(self.devices.len(), Ordering::Relaxed);
     }
 
     fn spawn_reader(&self, found: &Found, mut file: File) {

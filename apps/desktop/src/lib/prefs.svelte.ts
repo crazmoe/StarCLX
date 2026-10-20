@@ -21,6 +21,8 @@ export type Prefs = {
   busylight_volume: number;
   /** Headset-Tasten (Plugin src-tauri/src/plugins/headset) */
   headset: boolean;
+  /** Play/Pause als Gesprächstaste: "auto" (nur ohne USB-/HID-Headset), "always", "never" */
+  play_pause_call: string;
   chat_notify: boolean;
   chat_sound: boolean;
   download_dir: string;
