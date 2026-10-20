@@ -104,13 +104,34 @@ pub fn list() -> Result<Devices, Error> {
     Ok(out.take())
 }
 
-/// Erstes bevorzugtes Gerät, das vorhanden ist. `None` heisst Standardgerät.
+/// Erstes bevorzugtes Gerät, das vorhanden ist, mit seinem aktuellen
+/// Namen. `None` heisst Standardgerät.
 pub fn pick(preferred: &[String], present: &[Device]) -> Option<String> {
-    preferred
-        .iter()
-        .find(|p| p.as_str() == DEFAULT_DEVICE || present.iter().any(|d| &d.name == *p))
-        .filter(|p| p.as_str() != DEFAULT_DEVICE)
-        .cloned()
+    for p in preferred {
+        if p == DEFAULT_DEVICE {
+            return None;
+        }
+        if let Some(d) = present.iter().find(|d| same_device(&d.name, p)) {
+            return Some(d.name.clone());
+        }
+    }
+    None
+}
+
+/// Derselbe Knoten, oder dasselbe Bluetooth-Gerät: PipeWire hängt an
+/// `bluez_output.<Adresse>` bzw. `bluez_input.<Adresse>` eine Nummer an,
+/// die mit dem Profil wechselt (Musik bzw. Headset).
+pub fn same_device(a: &str, b: &str) -> bool {
+    a == b || bluetooth_key(a).is_some_and(|k| bluetooth_key(b) == Some(k))
+}
+
+fn bluetooth_key(name: &str) -> Option<&str> {
+    if !name.starts_with("bluez_output.") && !name.starts_with("bluez_input.") {
+        return None;
+    }
+    let mut dots = name.match_indices('.').map(|(i, _)| i);
+    let _kind = dots.next()?;
+    Some(dots.next().map_or(name, |end| &name[..end]))
 }
 
 fn spec(channels: u8) -> Spec {
@@ -306,6 +327,35 @@ mod tests {
         assert_eq!(pick(&pref(&["@default", "speakers"]), &present), None);
         assert_eq!(pick(&pref(&["jabra"]), &present), None);
         assert_eq!(pick(&[], &present), None);
+    }
+
+    #[test]
+    fn bluetooth_device_survives_profile_change() {
+        // Gespeichert im Musikprofil (.1), jetzt im Headset-Profil (.0)
+        let present = [dev("speakers"), dev("bluez_output.84_D3_52_8C_B9_D0.0")];
+        let pref = vec!["bluez_output.84_D3_52_8C_B9_D0.1".to_owned()];
+        assert_eq!(
+            pick(&pref, &present).as_deref(),
+            Some("bluez_output.84_D3_52_8C_B9_D0.0")
+        );
+        assert!(same_device(
+            "bluez_input.84_D3_52_8C_B9_D0.0",
+            "bluez_input.84_D3_52_8C_B9_D0.2"
+        ));
+        assert!(same_device(
+            "bluez_output.84_D3_52_8C_B9_D0",
+            "bluez_output.84_D3_52_8C_B9_D0.1"
+        ));
+        // Anderes Gerät, andere Richtung, kein Bluetooth
+        assert!(!same_device(
+            "bluez_output.84_D3_52_8C_B9_D0.1",
+            "bluez_output.00_11_22_33_44_55.1"
+        ));
+        assert!(!same_device(
+            "bluez_output.84_D3_52_8C_B9_D0.1",
+            "bluez_input.84_D3_52_8C_B9_D0.1"
+        ));
+        assert!(!same_device("alsa.a.1", "alsa.a.2"));
     }
 
     #[test]

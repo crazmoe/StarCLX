@@ -4,7 +4,7 @@
   import { getVersion } from "@tauri-apps/api/app";
   import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
-  import DeviceList, { DEFAULT, mergeOrder, type Device } from "./DeviceList.svelte";
+  import DeviceList, { DEFAULT, findDevice, mergeOrder, type Device } from "./DeviceList.svelte";
   import Icon, { type IconName } from "./Icon.svelte";
   import FkeyEditor from "./plugins/fkeys/FkeyEditor.svelte";
   import Reach from "./plugins/reach/Reach.svelte";
@@ -143,8 +143,15 @@
     };
   });
 
-  const firstPresent = (order: string[], devs: Device[]) =>
-    order.find((n) => n === DEFAULT || devs.some((d) => d.name === n)) ?? DEFAULT;
+  // Mit dem aktuellen Namen (Bluetooth wechselt ihn mit dem Profil)
+  const firstPresent = (order: string[], devs: Device[]) => {
+    for (const n of order) {
+      if (n === DEFAULT) return DEFAULT;
+      const d = findDevice(n, devs);
+      if (d) return d.name;
+    }
+    return DEFAULT;
+  };
   const fileName = (path: string) => path.split("/").pop() ?? path;
 
   async function preview(name: string | null) {
