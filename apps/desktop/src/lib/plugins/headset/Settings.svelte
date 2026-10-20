@@ -10,7 +10,7 @@
 
   let { draft = $bindable() }: { draft: Prefs } = $props();
 
-  let headset = $state<{ devices: string[]; error: string | null }>({ devices: [], error: null });
+  let headset = $state<{ devices: string[]; bluetooth: string[]; error: string | null }>({ devices: [], bluetooth: [], error: null });
   let testing = $state(false);
 
   onMount(() => {
@@ -36,7 +36,12 @@
     <p class="muted">
       {#if headset.devices.length}
         {t("Angeschlossen:")} {headset.devices.join(", ")}
-      {:else}
+      {/if}
+      {#if headset.bluetooth.length}
+        {#if headset.devices.length}<br />{/if}
+        {t("Bluetooth (Play/Pause):")} {headset.bluetooth.join(", ")}
+      {/if}
+      {#if !headset.devices.length && !headset.bluetooth.length}
         {t("Kein Headset mit Telefonietasten angeschlossen.")}
       {/if}
     </p>

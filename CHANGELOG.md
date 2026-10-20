@@ -16,6 +16,12 @@
 ### Headset
 - Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt während eines Anrufs an bzw.
   legt auf. Ohne Anruf bleibt sie beim Musikspieler.
+- Die Headset-Einstellungen zeigen verbundene Bluetooth-Geräte an
+
+### Audio
+- Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
+  Headset-Profil wechseln. Fehlt eins, steht sein zuletzt bekannter Name statt
+  `bluez_output.…` da.
 
 ### Tray
 - „Schnellwahl“ und „Abmelden“ sind ohne Anmeldung ausgegraut

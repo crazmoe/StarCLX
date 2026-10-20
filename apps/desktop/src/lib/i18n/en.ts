@@ -285,6 +285,7 @@ const dict: Record<string, string> = {
   "Die Anlage bietet keine Auswahl an.": "The phone system offers no choice.",
   "Beim Empfang eines Anrufs die App in den Vordergrund bringen": "Bring the app to the front when a call comes in",
   "Gesperrt: Es wird gerade über {host} telefoniert.": "Locked: a call is in progress via {host}.",
+  "Bluetooth (Play/Pause):": "Bluetooth (play/pause):",
   "Headset-Tasten": "Headset buttons",
   "Tasten am Headset verwenden (Jabra, Poly, EPOS, Bluetooth)": "Use headset buttons (Jabra, Poly, EPOS, Bluetooth)",
   "Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt an und legt auf, solange ein Anruf klingelt oder läuft.": "Bluetooth headphones and headsets: the play/pause button answers and hangs up while a call is ringing or active.",

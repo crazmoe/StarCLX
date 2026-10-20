@@ -170,6 +170,8 @@ pub async fn perform(app: &AppHandle, action: Action) {
 #[derive(Serialize)]
 pub struct HeadsetInfo {
     devices: Vec<String>,
+    /// Verbundene Bluetooth-Geräte; ihre Taste kommt über den Medienspieler
+    bluetooth: Vec<String>,
     error: Option<String>,
 }
 
@@ -178,10 +180,31 @@ pub async fn headset_info() -> HeadsetInfo {
     let status = tauri::async_runtime::spawn_blocking(sf_headset::probe)
         .await
         .unwrap_or_default();
+    let audio = tauri::async_runtime::spawn_blocking(sf_audio::list)
+        .await
+        .ok()
+        .and_then(Result::ok)
+        .unwrap_or_default();
     HeadsetInfo {
         devices: status.devices,
+        bluetooth: bluetooth_names(&audio),
         error: status.error,
     }
+}
+
+/// Namen der Bluetooth-Audiogeräte, je Gerät einmal
+fn bluetooth_names(audio: &sf_audio::Devices) -> Vec<String> {
+    let mut names: Vec<String> = audio
+        .speakers
+        .iter()
+        .chain(&audio.microphones)
+        .filter(|d| d.name.starts_with("bluez_"))
+        .map(|d| d.description.clone())
+        .filter(|n| !n.is_empty())
+        .collect();
+    names.sort();
+    names.dedup();
+    names
 }
 
 /// Lässt das Headset drei Sekunden klingeln.
