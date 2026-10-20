@@ -28,6 +28,8 @@ finish-args:
   - --talk-name=org.gnome.ScreenSaver
   - --talk-name=org.freedesktop.ScreenSaver
   - --system-talk-name=org.freedesktop.login1
+  # Namen gekoppelter Bluetooth-Geräte in der Audio-Auswahl
+  - --system-talk-name=org.bluez
   # Programme des Systems: Programm bei Anruf, GNOME-Tastenkürzel,
   # tel:-Links als Standard. Hebt die Sandbox praktisch auf, wie beim .deb.
   - --talk-name=org.freedesktop.Flatpak

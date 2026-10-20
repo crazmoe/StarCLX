@@ -226,6 +226,35 @@ async fn start_phone(app: AppHandle, hub: sf_onehub::OneHub, host: String) {
             PhoneEvent::Error { message } => {
                 let _ = app.emit("phone-error", message);
             }
+            PhoneEvent::SipEstablished { sip_call_id } => {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let prefs = settings::load(&app).prefs;
+                    let route = tauri::async_runtime::spawn_blocking(move || {
+                        audio::bluetooth_call_route(&prefs)
+                    })
+                    .await
+                    .ok()
+                    .flatten();
+                    if let Some((player, source)) = route
+                        && (player.is_some() || source.is_some())
+                    {
+                        let state = app.state::<CallState>();
+                        let result = with_phone(&state, async |p| {
+                            p.set_call_audio(&sip_call_id, player.as_deref(), source.as_deref())
+                        })
+                        .await;
+                        if let Err(e) = result {
+                            tracing::warn!(error = %e, "Gespräch nicht aufs Bluetooth-Headset gelegt");
+                        }
+                    }
+                });
+            }
+            PhoneEvent::SoftphoneAudio { needed } => {
+                if !needed {
+                    tauri::async_runtime::spawn_blocking(audio::bluetooth_call_done);
+                }
+            }
         }
     }
 }

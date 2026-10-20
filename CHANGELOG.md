@@ -17,11 +17,15 @@
 - Bluetooth-Kopfhörer und -Headsets: Die Play/Pause-Taste nimmt während eines Anrufs an bzw.
   legt auf. Ohne Anruf bleibt sie beim Musikspieler.
 - Die Headset-Einstellungen zeigen verbundene Bluetooth-Geräte an
+- Bluetooth-Headsets schalten für ein Gespräch am Softphone ins Telefonie-Profil, damit ihr
+  Mikrofon verwendet wird; nach dem Auflegen zurück ins Musikprofil
 
 ### Audio
 - Bluetooth-Geräte bleiben in der Gerätereihenfolge erhalten, wenn sie zwischen Musik- und
-  Headset-Profil wechseln. Fehlt eins, steht sein zuletzt bekannter Name statt
-  `bluez_output.…` da.
+  Headset-Profil wechseln. Fehlt eins, steht sein Name (vom Bluetooth-Dienst des Systems)
+  statt `bluez_output.…` da.
+- Mit nur einem Bluetooth-Headset steht bei den Headset-Tasten statt des gesperrten
+  Klingeltests ein Hinweis auf die Klingeltöne
 
 ### Tray
 - „Schnellwahl“ und „Abmelden“ sind ohne Anmeldung ausgegraut

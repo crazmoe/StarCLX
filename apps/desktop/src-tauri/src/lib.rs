@@ -1072,6 +1072,7 @@ pub fn run() {
             log::log_open_dir,
             audio::audio_info,
             audio::audio_preview,
+            audio::bluetooth_names,
             audio::audio_stop,
             audio::mic_test,
             audio::pick_ringtone

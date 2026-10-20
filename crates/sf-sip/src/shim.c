@@ -32,6 +32,7 @@ enum sfsip_op {
 	SFSIP_OP_RESET,
 	SFSIP_OP_AUSRC,
 	SFSIP_OP_HEADER,
+	SFSIP_OP_AUPLAY,
 };
 
 /* Stabile Ereigniscodes für Rust (unabhängig von enum bevent_ev) */
@@ -315,6 +316,18 @@ static void mqueue_handler(int id, void *data, void *arg)
 			if (dev)
 				*dev++ = '\0';
 			err = audio_set_source(call_audio(call), c->b, dev);
+		}
+		break;
+
+	case SFSIP_OP_AUPLAY:
+		/* b: "modul,gerät", z. B. "pipewire,bluez_output.XX.1" */
+		ua = find_ua_for_call(c->a, false, &call);
+		if (ua && c->b) {
+			char *dev = strchr(c->b, ',');
+
+			if (dev)
+				*dev++ = '\0';
+			err = audio_set_player(call_audio(call), c->b, dev);
 		}
 		break;
 

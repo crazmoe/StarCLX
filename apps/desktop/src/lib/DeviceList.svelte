@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import { t } from "./i18n.svelte";
+
   export type Device = { name: string; description: string };
   export const DEFAULT = "@default";
 
@@ -54,25 +56,36 @@
     }
   }
 
-  /** Name für ein Gerät, das gerade fehlt: bei Bluetooth der zuletzt
-   *  gesehene Name, sonst die Adresse */
-  function absentLabel(name: string) {
+  /** Name für ein Gerät, das gerade fehlt: bei Bluetooth der Name aus dem
+   *  System (gekoppelte Geräte) oder der zuletzt gesehene */
+  function absentLabel(name: string, system: Record<string, string>) {
     const k = bluetoothKey(name);
     if (!k) return name;
-    return known()[k] ?? `Bluetooth ${k.slice(k.indexOf(".") + 1).replaceAll("_", ":")}`;
+    return system[name] ?? known()[k] ?? t("Bluetooth-Gerät");
   }
 </script>
 
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
   import Icon from "./Icon.svelte";
-  import { t } from "./i18n.svelte";
 
   let { order = $bindable([]), devices }: { order: string[]; devices: Device[] } = $props();
   let selected = $state(0);
   $effect(() => rememberNames(devices));
 
+  // Namen fehlender Bluetooth-Geräte vom System
+  let systemNames = $state<Record<string, string>>({});
+  $effect(() => {
+    const missing = order.filter((n) => bluetoothKey(n) && !findDevice(n, devices));
+    if (!missing.length) return;
+    invoke<Record<string, string>>("bluetooth_names", { devices: missing }).then(
+      (names) => (systemNames = { ...systemNames, ...names }),
+      () => {},
+    );
+  });
+
   const label = (name: string) =>
-    name === DEFAULT ? t("Systemstandard") : findDevice(name, devices)?.description || absentLabel(name);
+    name === DEFAULT ? t("Systemstandard") : findDevice(name, devices)?.description || absentLabel(name, systemNames);
   const present = (name: string) => name === DEFAULT || !!findDevice(name, devices);
   // Das Gerät, das tatsächlich benutzt wird
   const active = $derived(order.find(present));
