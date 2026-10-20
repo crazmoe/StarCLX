@@ -38,8 +38,10 @@ static BT_SWITCHED: Mutex<Option<(String, String)>> = Mutex::new(None);
 /// Liefert (Wiedergabe, Aufnahme) für das Gespräch.
 pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
     let present = devices();
-    let speaker = sf_audio::pick(&prefs.speakers, &present.speakers);
-    let mic = sf_audio::pick(&prefs.microphones, &present.microphones);
+    // „Systemstandard“: das Standardgerät des Audioservers
+    let (default_out, default_in) = sf_audio::defaults().unwrap_or_default();
+    let speaker = sf_audio::pick(&prefs.speakers, &present.speakers).or(default_out);
+    let mic = sf_audio::pick(&prefs.microphones, &present.microphones).or(default_in);
     let card_name = speaker
         .as_deref()
         .and_then(sf_audio::card_of)
@@ -77,17 +79,12 @@ pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<Str
     let player = speaker
         .filter(|s| sf_audio::card_of(s).is_some())
         .and(bt_out);
-    // Mikrofon des Headsets, ausser ein anderes ist ausdrücklich davor gereiht
+    // Mikrofon des Headsets, ausser ein anderes ist ausdrücklich davor
+    // gereiht; bei „Systemstandard“ das des Headsets
     let source = match sf_audio::pick(&prefs.microphones, &now.microphones) {
         Some(m) if sf_audio::card_of(&m).as_deref() == Some(&card_name) => Some(m),
-        _ if !prefs
-            .microphones
-            .iter()
-            .any(|m| sf_audio::card_of(m).as_deref() == Some(&card_name)) =>
-        {
-            bt_in
-        }
-        _ => None,
+        Some(_) => None,
+        None => bt_in,
     };
     Some((player, source))
 }
