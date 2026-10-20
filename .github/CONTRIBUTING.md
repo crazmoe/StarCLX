@@ -10,6 +10,10 @@ include the StarCLX version (shown at the bottom of the Settings), the installat
 operating system and the STARFACE version. Remove passwords, tokens and other personal data
 from logs and screenshots.
 
+Rough ideas and questions are welcome in
+[Discussions](https://github.com/crazmoe/StarCLX/discussions), where others can comment and
+vote on them; a concrete feature request can then become an issue.
+
 Security problems are reported privately, see [SECURITY.md](SECURITY.md).
 
 ## Development setup

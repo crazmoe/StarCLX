@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Thanks for the suggestion. Issues may be written in English or German.
+        For a rough idea you would like to discuss first, please open a post in
+        [Discussions → Ideas](https://github.com/crazmoe/StarCLX/discussions/categories/ideas) instead.
   - type: textarea
     id: problem
     attributes:
