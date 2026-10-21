@@ -2,6 +2,7 @@
 //! Mikrofontest und die Geräteauswahl fürs Softphone.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
@@ -14,6 +15,9 @@ use crate::settings::{self, Prefs};
 #[derive(Default)]
 pub struct AudioState {
     ringer: Mutex<Option<Playback>>,
+    /// Es soll geklingelt werden; der Klingelton kann noch fehlen, solange
+    /// ein Bluetooth-Headset umschaltet
+    ringing: AtomicBool,
     /// Vorschau oder Testton aus den Einstellungen
     preview: Mutex<Option<Playback>>,
     meter: Mutex<Option<MicMeter>>,
@@ -46,6 +50,26 @@ pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<Str
         .as_deref()
         .and_then(sf_audio::card_of)
         .or_else(|| mic.as_deref().and_then(sf_audio::card_of))?;
+    let now = to_headset_profile(&card_name, present)?;
+    let of_card = |d: &&sf_audio::Device| sf_audio::card_of(&d.name).as_deref() == Some(&card_name);
+    let bt_out = now.speakers.iter().find(of_card).map(|d| d.name.clone());
+    let bt_in = now.microphones.iter().find(of_card).map(|d| d.name.clone());
+    let player = speaker
+        .filter(|s| sf_audio::card_of(s).is_some())
+        .and(bt_out);
+    // Mikrofon des Headsets, ausser ein anderes ist ausdrücklich davor
+    // gereiht; bei „Systemstandard“ das des Headsets
+    let source = match sf_audio::pick(&prefs.microphones, &now.microphones) {
+        Some(m) if sf_audio::card_of(&m).as_deref() == Some(&card_name) => Some(m),
+        Some(_) => None,
+        None => bt_in,
+    };
+    Some((player, source))
+}
+
+/// Bluetooth-Karte ins Telefonie-Profil schalten (falls nötig) und warten,
+/// bis ihre Knoten da sind. Liefert die Geräte danach.
+fn to_headset_profile(card_name: &str, present: Devices) -> Option<Devices> {
     let cards = sf_audio::bluetooth_cards().ok()?;
     let card = cards.into_iter().find(|c| c.name == card_name)?;
     if !card.in_headset_mode() {
@@ -65,28 +89,16 @@ pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<Str
             .get_or_insert_with(|| (card.name.clone(), card.active.clone()));
     }
     // Die Knoten des Telefonie-Profils erscheinen erst nach dem Umschalten
-    let of_card = |d: &&sf_audio::Device| sf_audio::card_of(&d.name).as_deref() == Some(&card_name);
+    let of_card = |d: &sf_audio::Device| sf_audio::card_of(&d.name).as_deref() == Some(card_name);
     let mut now = present;
     for _ in 0..20 {
-        if now.speakers.iter().any(|d| of_card(&d)) && now.microphones.iter().any(|d| of_card(&d)) {
+        if now.speakers.iter().any(of_card) && now.microphones.iter().any(of_card) {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
         now = devices();
     }
-    let bt_out = now.speakers.iter().find(of_card).map(|d| d.name.clone());
-    let bt_in = now.microphones.iter().find(of_card).map(|d| d.name.clone());
-    let player = speaker
-        .filter(|s| sf_audio::card_of(s).is_some())
-        .and(bt_out);
-    // Mikrofon des Headsets, ausser ein anderes ist ausdrücklich davor
-    // gereiht; bei „Systemstandard“ das des Headsets
-    let source = match sf_audio::pick(&prefs.microphones, &now.microphones) {
-        Some(m) if sf_audio::card_of(&m).as_deref() == Some(&card_name) => Some(m),
-        Some(_) => None,
-        None => bt_in,
-    };
-    Some((player, source))
+    Some(now)
 }
 
 /// Kein Gespräch mehr am Softphone: ein umgeschaltetes Bluetooth-Headset
@@ -141,26 +153,55 @@ pub fn play_message_tone(app: &AppHandle, prefs: &Prefs) {
 /// Startet oder beendet das Klingeln je nach Anrufstand.
 pub fn update_ringer(app: &AppHandle, ringing: Option<bool>) {
     let state = app.state::<AudioState>();
-    let mut ringer = state.ringer.lock().unwrap();
     match ringing {
         None => {
-            ringer.take();
+            state.ringing.store(false, Ordering::SeqCst);
+            state.ringer.lock().unwrap().take();
         }
-        Some(_) if ringer.is_some() => {}
+        Some(_) if state.ringing.load(Ordering::SeqCst) => {}
         Some(internal) => {
             let prefs = settings::load(app).prefs;
             if !prefs.ringtone {
                 return;
             }
+            state.ringing.store(true, Ordering::SeqCst);
             let tone = if internal {
-                &prefs.ringtone_internal
+                prefs.ringtone_internal.clone()
             } else {
-                &prefs.ringtone_external
+                prefs.ringtone_external.clone()
             };
-            let samples = ringtone(tone);
-            let device = sf_audio::pick(&prefs.ring_devices, &devices().speakers);
-            *ringer = Some(Playback::start(device, samples, true));
+            let app = app.clone();
+            // Abseits, weil ein Bluetooth-Headset erst umschalten muss
+            std::thread::spawn(move || ring_on(&app, &prefs.ring_devices, &tone));
         }
+    }
+}
+
+/// Klingelton auf dem ersten vorhandenen Klingelgerät starten. Ein
+/// Bluetooth-Headset klingelt im Telefonie-Profil: Im Musikprofil schickt
+/// seine Taste Play/Pause statt „Annehmen“.
+fn ring_on(app: &AppHandle, ring_devices: &[String], tone: &str) {
+    let state = app.state::<AudioState>();
+    let samples = ringtone(tone);
+    let present = devices();
+    let mut device = sf_audio::pick(ring_devices, &present.speakers);
+    // „Systemstandard“: das Standardgerät des Audioservers
+    let target = device
+        .clone()
+        .or_else(|| sf_audio::defaults().ok().and_then(|d| d.0));
+    if let Some(card) = target.as_deref().and_then(sf_audio::card_of)
+        && let Some(now) = to_headset_profile(&card, present)
+    {
+        device = sf_audio::pick(ring_devices, &now.speakers);
+        if !state.ringing.load(Ordering::SeqCst) {
+            // Während des Umschaltens aufgelegt
+            bluetooth_call_done();
+            return;
+        }
+    }
+    let mut ringer = state.ringer.lock().unwrap();
+    if state.ringing.load(Ordering::SeqCst) {
+        *ringer = Some(Playback::start(device, samples, true));
     }
 }
 
