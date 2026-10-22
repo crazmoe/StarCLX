@@ -85,6 +85,14 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.6.2" date="2026-10-22">
+      <description>
+        <ul>
+          <li>Call audio and microphone reliably use the selected device again, also after a Bluetooth profile switch or a PipeWire restart</li>
+          <li>The minimised main window opens again from the tray on X11</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.6.1" date="2026-10-22">
       <description>
         <ul>

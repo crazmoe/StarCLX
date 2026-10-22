@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.2 – 2026-10-22
 
 ### Audio
 - Gesprächston und Mikrofon landen wieder zuverlässig auf dem gewählten Gerät. baresip band die
