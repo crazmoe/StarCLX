@@ -3,6 +3,12 @@
 ## Unveröffentlicht
 
 ### Headset
+- Bluetooth-Headset als „Systemstandard“: Auch dann schaltet StarCLX es im Gespräch ins
+  Telefonie-Profil und nimmt sein Mikrofon. Bisher geschah das nur, wenn das Headset
+  ausdrücklich in der Gerätereihenfolge stand.
+- Klingelt es auf einem Bluetooth-Headset, schaltet StarCLX es schon zum Klingeln ins
+  Telefonie-Profil. Im Musikprofil schickte die Headset-Taste Play/Pause, und der Anruf liess sich
+  mit bt-headset-hid nicht per Taste annehmen.
 - Neue Einstellung „Play/Pause als Anruftaste“: „Nur ohne Headset mit Telefonietasten“
   (Standard), „Immer“ oder „Nie“. Headsets wie das Jabra Evolve 65 (über bt-headset-hid)
   senden für die Gesprächstaste sowohl die Telefonietaste als auch Play/Pause; bisher nahm der

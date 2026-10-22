@@ -109,6 +109,26 @@ pub fn list() -> Result<Devices, Error> {
     Ok(out.take())
 }
 
+/// Aktuelle Standardgeräte des Audioservers: (Lautsprecher, Mikrofon)
+pub fn defaults() -> Result<(Option<String>, Option<String>), Error> {
+    let (mut ml, mut ctx) = connect()?;
+    let out = Rc::new(RefCell::new(None));
+    {
+        let out = out.clone();
+        ctx.introspect().get_server_info(move |i| {
+            let name = |n: &Option<std::borrow::Cow<'_, str>>| n.as_deref().map(str::to_owned);
+            *out.borrow_mut() = Some((name(&i.default_sink_name), name(&i.default_source_name)));
+        });
+    }
+    while out.borrow().is_none() {
+        if let IterateResult::Quit(_) | IterateResult::Err(_) = ml.iterate(true) {
+            break;
+        }
+    }
+    ctx.disconnect();
+    Ok(out.take().unwrap_or_default())
+}
+
 /// Bluetooth-Gerät als Karte des Audioservers mit seinen Profilen
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Card {
