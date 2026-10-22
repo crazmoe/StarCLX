@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.1 – 2026-10-22
 
 ### Headset
 - Bluetooth-Headset als „Systemstandard“: Auch dann schaltet StarCLX es im Gespräch ins

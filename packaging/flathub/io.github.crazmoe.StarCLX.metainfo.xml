@@ -85,6 +85,15 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.6.1" date="2026-10-22">
+      <description>
+        <ul>
+          <li>Bluetooth headsets set as the system default also switch to the telephony profile during calls</li>
+          <li>Bluetooth headsets switch to the telephony profile already while ringing, so their button answers the call</li>
+          <li>New setting to choose whether play/pause acts as the call button</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.6.0" date="2026-10-20">
       <description>
         <ul>
