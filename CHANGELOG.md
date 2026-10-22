@@ -8,6 +8,11 @@
   Neuverbinden eines Geräts oder einem Neustart von PipeWire nicht mehr existierte; dann nahm
   WirePlumber das Standardgerät. Jetzt zählt nur noch der Gerätename.
 
+### Fenster
+- Mit „Beim Minimieren nur als Symbol im Infobereich anzeigen“ liess sich das minimierte
+  Hauptfenster unter Linux (X11, etwa Zorin OS oder Ubuntu) nicht mehr öffnen: „Öffnen“ im Tray
+  versteckte es gleich wieder. Jetzt erscheint es wieder und bekommt den Fokus.
+
 ## 1.6.1 – 2026-10-22
 
 ### Headset
