@@ -2,6 +2,12 @@
 
 ## Unveröffentlicht
 
+### Audio
+- Gesprächston und Mikrofon landen wieder zuverlässig auf dem gewählten Gerät. baresip band die
+  Streams zusätzlich an eine PipeWire-Node-ID, die nach einem Bluetooth-Profilwechsel, dem
+  Neuverbinden eines Geräts oder einem Neustart von PipeWire nicht mehr existierte; dann nahm
+  WirePlumber das Standardgerät. Jetzt zählt nur noch der Gerätename.
+
 ### Fenster
 - Mit „Beim Minimieren nur als Symbol im Infobereich anzeigen“ liess sich das minimierte
   Hauptfenster unter Linux (X11, etwa Zorin OS oder Ubuntu) nicht mehr öffnen: „Öffnen“ im Tray
