@@ -1,5 +1,13 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Audio
+- Gesprächston und Mikrofon landen wieder zuverlässig auf dem gewählten Gerät. baresip band die
+  Streams zusätzlich an eine PipeWire-Node-ID, die nach einem Bluetooth-Profilwechsel, dem
+  Neuverbinden eines Geräts oder einem Neustart von PipeWire nicht mehr existierte; dann nahm
+  WirePlumber das Standardgerät. Jetzt zählt nur noch der Gerätename.
+
 ## 1.6.1 – 2026-10-22
 
 ### Headset
