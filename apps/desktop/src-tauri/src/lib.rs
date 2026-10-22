@@ -36,6 +36,10 @@ use tokio::sync::{Mutex, mpsc};
 /// Beenden läuft: Aufräumen vor dem Beenden ist erledigt bzw. unterwegs
 static EXITING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Hauptfenster wurde beim Minimieren in den Tray versteckt und ist seither
+/// nicht wieder normal angezeigt worden
+static IN_TRAY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 struct PendingLogin {
     server: String,
     auth: sf_auth::Client,
@@ -78,8 +82,11 @@ impl From<&sf_core::SessionInfo> for SessionInfo {
 
 pub(crate) fn show_main_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
+        // Erst den Minimiert-Zustand aufheben, dann zeigen: GTK zeigt ein
+        // minimiert verstecktes Fenster sonst wieder nur minimiert an, und
+        // der Fokus scheitert, solange es als minimiert gilt.
         let _ = w.unminimize();
+        let _ = w.show();
         let _ = w.set_focus();
     }
 }
@@ -941,13 +948,24 @@ pub fn run() {
                 let _ = window.hide();
                 api.prevent_close();
             }
-            // Minimieren kommt unter Linux als Grössenänderung an
-            WindowEvent::Resized(_)
-                if window.label() == "main"
-                    && window.is_minimized().unwrap_or(false)
-                    && settings::load(window.app_handle()).prefs.minimize_to_tray =>
-            {
-                let _ = window.hide();
+            // Minimieren kommt unter Linux als Grössenänderung an. Versteckt
+            // wird nur beim Übergang: Beim Zeigen aus dem Tray meldet GTK
+            // noch Grössenänderungen mit veraltetem Minimiert-Zustand, die
+            // das Fenster sonst gleich wieder verstecken würden.
+            WindowEvent::Resized(_) if window.label() == "main" => {
+                use std::sync::atomic::Ordering;
+                if !window.is_minimized().unwrap_or(false) {
+                    // Wieder normal sichtbar; den beim Zeigen übersprungenen
+                    // Fokus nachholen
+                    if IN_TRAY.swap(false, Ordering::AcqRel) {
+                        let _ = window.set_focus();
+                    }
+                } else if !IN_TRAY.load(Ordering::Acquire)
+                    && settings::load(window.app_handle()).prefs.minimize_to_tray
+                {
+                    IN_TRAY.store(true, Ordering::Release);
+                    let _ = window.hide();
+                }
             }
             _ => {}
         })
