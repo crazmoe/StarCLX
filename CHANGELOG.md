@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.3 – 2026-10-23
 
 ### Audio
 - Ist ein Gerät gewählt (etwa bt-headset-hid), bleibt das Gespräch dort, auch wenn ein
