@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Fri, 23 Oct 2026 14:40:56 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ aa4ee705e598d441f6e63431e70a811d              138 Release
+ 10d89a315577fc8ff6a2f454f25e7367             2676 main/binary-amd64/Packages
+ 15fa7a32c01ecffb2a4baa976cd4895b             1007 main/binary-amd64/Packages.gz
+SHA1:
+ 3bf017be4194c2db0981a1c9764b5e94d15f5f3c              138 Release
+ 882d85fdecc1d73f6b1c4b9b5035b05a92db5e02             2676 main/binary-amd64/Packages
+ c28a43d0b7a749169c926684776c17ff6d7b7b89             1007 main/binary-amd64/Packages.gz
+SHA256:
+ 1ac954b747f887739e99a922957125c6d88917e4221287bb080dc7fb14d9a3f7              138 Release
+ 6006b1a77b6ca0e37f3284cc0502b18164a0197087dc1c15fdf040d90c7dced4             2676 main/binary-amd64/Packages
+ fb9039312a058fc01329ca1f1f154e3ad83b360fa56a6d1300fcb14b0f3f2372             1007 main/binary-amd64/Packages.gz
+SHA512:
+ 77ee1b3c705ba696c908642af67007b0302f5736127ec5f1e2e76de64b2f99211733d18f097bd9a9157c0cef47e695aefe2a39f319680fa3d2a6597281467f7b              138 Release
+ 79ea900e7c39fe622c9d46e8a8f9105b7273f97150fdf7c1c3fbb901e413032823bbaf003bea6933c31620429fdbb5ac98928a4063d472b4aa9c5988ccdb3e59             2676 main/binary-amd64/Packages
+ 92319e051acc7d97501fc465910baecd92b3a652e93e9149705bf97a1a5ce0e750a27285d49deed0c46950dc65cd1c1f99a4bde31a8e89f0a3cef1f6dad38063             1007 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEBVBU+NvGrWfgmNPWP1MLX5W/c0EFAmrbcfgACgkQP1MLX5W/
+c0FIOxAAiiAAC0kJaNeGu9MBUCIZbeDVm2CCxYxXoyVYyHG0WZkXr+snSpRhRMuS
+Gr7FhQnC/5zdyy0G3WVFZTvEK8drOWhw1APZWUc2fIXSUAz2ERxmjT5+pbzK6hGT
+JvPMcGbDdDFqUlMWZvihuMsvqfT/Kgx7xsoNuYgUIOZFtUBgA5SpvcYvXpuSxmWE
+v216xfEe/bwTeREZPWzkx9SZmSkaoDI2+AjR3WwTQNTid5xswyG8NRQsELt+YbpE
+m/AfkqB17r8EVNAM+Di6pry6bbHY2KZMm8ihKbtf6KfEPnOREC6BmUKEQDzjESly
+HNQjmz1+nGSVd3Uaz/+6KjzYaP+fxKI72etm8+pNRp+LACpfXD29j6JJgOv1UdCk
+E8Zut45QTQ43vt3AqxolK72q+8tcHtZyyLnOrJScjv8ngz8xFFK6tsocht2QrmgY
+pC3LWrs5D/46058G4RSeH8+P2DKRbIz6hTEY+mf641dM1pg2zAo//U9r7FA91kgP
+xzp0nQIPZsmQvlLM2p1f09K/LrQS4thwGsOigKIgYq4PqlZs+8oMLe8yTnyXWdno
+o4q3OGXol4yReF1lPWNp0fpUUqOjqq6KIg4hRjhgICKVhcqY/NJEVe+/J1sikZQo
+/h9JzWwLm/IP/igjrCEKdIrF3SyR6KollM/qKjqLz6xINxx7Kd4=
+=amuo
+-----END PGP SIGNATURE-----
