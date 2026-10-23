@@ -1,5 +1,12 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Audio
+- Ist ein Gerät gewählt (etwa bt-headset-hid), bleibt das Gespräch dort, auch wenn ein
+  Bluetooth-Headset im Freisprechprofil verbunden ist. Bisher legte WirePlumber die Streams wegen
+  ihrer Rolle „Communication“ auf die Freisprech-Nodes des Headsets um.
+
 ## 1.6.2 – 2026-10-22
 
 ### Audio

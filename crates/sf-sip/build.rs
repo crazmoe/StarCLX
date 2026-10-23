@@ -109,6 +109,12 @@ fn main() {
 /// eines Loopbacks oder von PipeWire zeigt sie ins Leere, und WirePlumber
 /// nimmt das Standardgerät. Mit `PW_ID_ANY` gilt allein `target.object`,
 /// also der Node-Name, den baresip ohnehin setzt.
+///
+/// Ausserdem setzt das Modul `media.role = Communication`. WirePlumbers
+/// `intended-roles.lua` legt solche Streams per `target.node` auf jedes
+/// Gerät mit dieser Rolle, etwa die Freisprech-Nodes eines
+/// Bluetooth-Headsets, und übergeht damit das gewählte Gerät. Die Rolle
+/// gibt es deshalb nur noch ohne gewähltes Gerät.
 const BARESIP_PATCHES: &[(&str, &str, &str)] = &[
     (
         "modules/pipewire/playback.c",
@@ -119,6 +125,16 @@ const BARESIP_PATCHES: &[(&str, &str, &str)] = &[
         "modules/pipewire/capture.c",
         "PW_DIRECTION_INPUT,\n\t\t\t\tpw_device_id(dev),",
         "PW_DIRECTION_INPUT,\n\t\t\t\tPW_ID_ANY,",
+    ),
+    (
+        "modules/pipewire/playback.c",
+        "PW_KEY_MEDIA_ROLE, \"Communication\",",
+        "PW_KEY_MEDIA_ROLE, str_isset(dev) ? NULL : \"Communication\",",
+    ),
+    (
+        "modules/pipewire/capture.c",
+        "PW_KEY_MEDIA_ROLE, \"Communication\",",
+        "PW_KEY_MEDIA_ROLE, str_isset(dev) ? NULL : \"Communication\",",
     ),
 ];
 
