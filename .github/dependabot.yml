@@ -14,6 +14,9 @@ updates:
       # 2.6.2 kompiliert unter Linux nicht mit rust-ini 0.21.3 (ParseOption hat neue Pflichtfelder).
       - dependency-name: tauri-plugin-deep-link
         versions: ["2.6.2"]
+      # zbus 6 bringt eine neue API; Tauri, keyring und notify-rust hängen noch an zbus 5.
+      - dependency-name: zbus
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /apps/desktop
