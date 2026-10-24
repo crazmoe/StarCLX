@@ -192,6 +192,14 @@ impl Client {
         let http = reqwest::Client::builder()
             .user_agent(concat!("starclx/", env!("CARGO_PKG_VERSION")))
             .tls_backend_preconfigured(sf_tls::client_config())
+            // Ohne Zeitgrenzen hängt eine Token-Erneuerung nach dem Standby
+            // auf einer toten Verbindung, bis TCP nach vielen Minuten aufgibt.
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            // Keine Verbindungen aufheben: Erneuert wird nur alle paar Minuten,
+            // und eine aufgehobene ist nach dem Standby meist tot, gilt aber
+            // noch als frisch (die Leerlaufzeit läuft im Standby nicht weiter).
+            .pool_max_idle_per_host(0)
             // Auch eine Weiterleitung darf nicht auf HTTP zurückfallen.
             .redirect(reqwest::redirect::Policy::custom(|attempt| {
                 if secure_url(attempt.url()).is_err() {

@@ -1,5 +1,24 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Verbindung nach langem Standby
+Nach einem langen Standby blieben Softphone und Verbindung zur Anlage getrennt, die Module zeigten
+Fehler. Die Neuverbindung lief los, bevor WLAN oder VPN wieder da waren, und hing dann an toten
+Verbindungen fest; baresip versuchte die Registrierung danach erst nach bis zu 30 Minuten erneut.
+
+- Unter Linux meldet logind das Aufwachen direkt (`PrepareForSleep`); der Uhrvergleich bleibt als
+  Rückfall
+- Nach dem Aufwachen wird zuerst eine neue Verbindung zur Anlage aufgebaut und gewartet, bis sie
+  antwortet (bis zu 2 Minuten, danach übernimmt die Verbindungsüberwachung)
+- Das Softphone startet danach neu: frische SIP-Zugangsdaten, frisch aufgelöste Adresse der Anlage
+  (zu Hause über VPN oft eine andere als im Büro) und neue TLS-Verbindung. Läuft ein Gespräch, wird
+  nur die SIP-Verbindung neu aufgebaut
+- Die Token-Erneuerung hat Zeitgrenzen und nutzt keine aufgehobenen Verbindungen mehr, die nach
+  dem Standby tot sind
+- Geht die Verbindung zur Anlage verloren, baut StarCLX sie sofort neu auf, statt auf die
+  Keepalive-Pings zu warten
+
 ## 1.6.3 – 2026-10-23
 
 ### Audio

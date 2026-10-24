@@ -78,6 +78,9 @@ pub fn start(app: &AppHandle) {
                     tracing::debug!(error = %e, failures, "Anlage antwortet nicht");
                     if failures >= FAILURES && set_online(&app, false) {
                         tracing::warn!(error = %e, "Verbindung zur Anlage verloren");
+                        // Nicht warten, bis die Keepalive-Pings die tote
+                        // Verbindung bemerken; die nächste Prüfung baut neu auf.
+                        hub.reconnect();
                     }
                 }
             }
@@ -85,7 +88,7 @@ pub fn start(app: &AppHandle) {
     });
 }
 
-async fn reachable(hub: &sf_onehub::OneHub) -> Result<(), String> {
+pub(crate) async fn reachable(hub: &sf_onehub::OneHub) -> Result<(), String> {
     match tokio::time::timeout(TIMEOUT, hub.server_version()).await {
         Err(_) => Err("keine Antwort".into()),
         Ok(Err(e)) if e.unreachable() => Err(e.to_string()),

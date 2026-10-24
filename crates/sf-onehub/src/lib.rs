@@ -169,17 +169,18 @@ impl Interceptor for BearerInterceptor {
 type Svc = tonic::service::interceptor::InterceptedService<Channel, BearerInterceptor>;
 
 /// Eine Verbindung zur Anlage. Günstig zu klonen; alle Clients teilen sich
-/// denselben HTTP/2-Kanal.
+/// denselben HTTP/2-Kanal, auch nach [`OneHub::reconnect`].
 #[derive(Clone)]
 pub struct OneHub {
-    channel: Channel,
+    channel: Arc<RwLock<Channel>>,
+    endpoint: Endpoint,
     token: TokenHandle,
 }
 
 macro_rules! service {
     ($name:ident, $($client:ident)::+) => {
         pub fn $name(&self) -> $($client)::+<Svc> {
-            $($client)::+::with_interceptor(self.channel.clone(), self.interceptor())
+            $($client)::+::with_interceptor(self.channel(), self.interceptor())
         }
     };
 }
@@ -194,17 +195,37 @@ impl OneHub {
         // Keepalive: Nach Ruhezustand oder Netzwechsel ist die Verbindung oft
         // tot, ohne dass ein Abbau ankommt. Ohne Pings warten die Event-Streams
         // dann ewig; mit Pings brechen sie ab und verbinden neu.
-        let channel = Endpoint::from_shared(format!("https://{host}:{port}"))?
+        let endpoint = Endpoint::from_shared(format!("https://{host}:{port}"))?
             .tls_config_with_verifier(ClientTlsConfig::new().domain_name(host), sf_tls::verifier())?
             .user_agent(concat!("starclx/", env!("CARGO_PKG_VERSION")))?
             .connect_timeout(Duration::from_secs(10))
             .tcp_keepalive(Some(Duration::from_secs(20)))
             .http2_keep_alive_interval(KEEPALIVE_INTERVAL)
             .keep_alive_timeout(KEEPALIVE_TIMEOUT)
-            .keep_alive_while_idle(true)
-            .connect()
-            .await?;
-        Ok(Self { channel, token })
+            .keep_alive_while_idle(true);
+        let channel = endpoint.connect().await?;
+        Ok(Self {
+            channel: Arc::new(RwLock::new(channel)),
+            endpoint,
+            token,
+        })
+    }
+
+    /// Verwirft die bestehende HTTP/2-Verbindung und baut beim nächsten
+    /// Aufruf eine neue auf, für alle Klone. Nach dem Standby ist die alte
+    /// Verbindung oft tot, ohne dass es jemand merkt; bis die Keepalive-Pings
+    /// das feststellen, hingen neue Aufrufe sonst bis zu 30 s darauf fest.
+    /// Laufende Streams auf der alten Verbindung brechen von selbst ab.
+    pub fn reconnect(&self) {
+        let fresh = self.endpoint.connect_lazy();
+        *self.channel.write().unwrap_or_else(|e| e.into_inner()) = fresh;
+    }
+
+    fn channel(&self) -> Channel {
+        self.channel
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     pub fn token(&self) -> &TokenHandle {
