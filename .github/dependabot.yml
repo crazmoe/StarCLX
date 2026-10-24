@@ -10,6 +10,10 @@ updates:
     groups:
       cargo:
         update-types: [minor, patch]
+    ignore:
+      # 2.6.2 kompiliert unter Linux nicht mit rust-ini 0.21.3 (ParseOption hat neue Pflichtfelder).
+      - dependency-name: tauri-plugin-deep-link
+        versions: ["2.6.2"]
 
   - package-ecosystem: npm
     directory: /apps/desktop
