@@ -89,11 +89,24 @@ pub fn has_call(app: &AppHandle, call_id: &str) -> bool {
         .any(|c| c.id == call_id)
 }
 
-/// Nach dem Aufwachen neu registrieren
+/// Nach dem Aufwachen oder einem Verbindungsabbruch: Softphone neu starten,
+/// mit frischen Zugangsdaten, frisch aufgelöster Adresse der Anlage (im Büro
+/// und über VPN oft eine andere) und neuer SIP-Verbindung. Ein einfaches
+/// Neu-Registrieren scheitert, wenn sich davon etwas geändert hat, und baresip
+/// versucht es dann erst nach immer längeren Pausen wieder. Läuft gerade ein
+/// Gespräch, nur die SIP-Verbindung neu aufbauen, damit es weiterläuft.
 pub async fn resume(app: &AppHandle) {
-    if let Some(phone) = app.state::<CallState>().phone.lock().await.as_ref() {
-        phone.resume();
+    if !settings::load(app).prefs.softphone {
+        return;
     }
+    if busy(app) {
+        if let Some(phone) = app.state::<CallState>().phone.lock().await.as_ref() {
+            phone.resume();
+        }
+        return;
+    }
+    tracing::info!("Starte das Softphone neu");
+    restart_phone(app).await;
 }
 
 /// Geänderte Softphone-Einstellungen übernehmen; während eines Gesprächs
