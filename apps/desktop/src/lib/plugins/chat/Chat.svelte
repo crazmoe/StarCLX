@@ -411,7 +411,7 @@
   .bubble { background: var(--panel-2); padding: 0.45rem 0.75rem; border-radius: 12px 12px 12px 3px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .num { display: inline; padding: 0; border: none; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
   .num:disabled { cursor: default; text-decoration: none; }
-  .msg.out .bubble { background: #7a5410; border-radius: 12px 12px 3px 12px; }
+  .msg.out .bubble { background: var(--accent-soft); border-radius: 12px 12px 3px 12px; }
   .msg small { color: var(--muted); font-size: 0.72rem; margin: 0.1rem 0.3rem; }
   .compose { display: flex; gap: 0.5rem; align-items: flex-end; padding: 0.6rem; border-top: 1px solid var(--line); }
   textarea { flex: 1; resize: none; font: inherit; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bar-2); color: inherit; }
