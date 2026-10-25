@@ -142,7 +142,7 @@
   .list { display: flex; flex-direction: column; gap: 2px; margin: 0.4rem 0; }
   .row { display: flex; align-items: center; gap: 0.6rem; text-align: left; border-radius: 0; border: 1px solid transparent; background: var(--panel-2); padding: 0.55rem 0.8rem; }
   .row.absent { background: var(--bar-2); color: var(--muted); }
-  .row.sel { border-color: var(--accent); background: #1c1e21; }
+  .row.sel { border-color: var(--accent); background: var(--accent-soft); }
   small { font-size: 0.78rem; color: var(--muted); }
   .act { margin-left: auto; color: var(--green); }
   .acts { display: flex; gap: 0.5rem; align-items: center; }
