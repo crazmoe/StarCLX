@@ -20,6 +20,8 @@ export type Call = {
   door_cam: boolean;
   /** Tür lässt sich per DTMF öffnen */
   door_open: boolean;
+  /** An einem anderen eigenen Telefon angenommen (etwa im zweiten Client) */
+  elsewhere: boolean;
 };
 export type PhoneStatus = {
   state: "off" | "starting" | "ready" | "error";

@@ -2,6 +2,17 @@
 
 ## Unveröffentlicht
 
+### Zwei Clients am selben Konto
+Liefen StarCLX und StarCMX (oder die Windows-App) gleichzeitig am selben Konto, nahm Annehmen an
+einem Client den Anruf auch am anderen ab.
+
+- Ohne das Recht „Autoprovisionierung“ nimmt StarCLX jetzt das App-Telefon der Mac-App statt das
+  der Windows-App. Das hat StarCMX, beide Clients teilten sich so ein Telefon. Beim ersten Start
+  legt die Anlage dafür ein neues App-Telefon an
+- Ein Anruf, der an einem anderen eigenen Telefon angenommen wurde, steht im Call-Manager als
+  „An einem anderen Telefon angenommen“, ohne Stummschalter. Das Headset geht dafür nicht mehr
+  ins Gespräch, und seine Taste legt dieses Gespräch nicht auf
+
 ### Verbindung nach langem Standby
 Nach einem langen Standby blieben Softphone und Verbindung zur Anlage getrennt, die Module zeigten
 Fehler. Die Neuverbindung lief los, bevor WLAN oder VPN wieder da waren, und hing dann an toten

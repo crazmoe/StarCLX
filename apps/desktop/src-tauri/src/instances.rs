@@ -670,6 +670,9 @@ pub struct ReportLine {
     /// Klingelt bei uns
     pub ringing: bool,
     pub held: bool,
+    /// An einem anderen eigenen Telefon angenommen
+    #[serde(default)]
+    pub elsewhere: bool,
 }
 
 impl From<&CallView> for ReportLine {
@@ -678,6 +681,7 @@ impl From<&CallView> for ReportLine {
             id: c.id.clone(),
             ringing: c.incoming && c.phase == CallPhase::Ringing,
             held: c.phase == CallPhase::Held,
+            elsewhere: c.elsewhere,
         }
     }
 }
@@ -689,6 +693,8 @@ pub struct DeviceLine {
     pub id: String,
     pub ringing: bool,
     pub held: bool,
+    /// An einem anderen eigenen Telefon angenommen
+    pub elsewhere: bool,
 }
 
 /// Was Headset und Busylight im Hauptclient anzeigen
@@ -750,6 +756,7 @@ impl Reports {
                     id: l.id.clone(),
                     ringing: l.ringing,
                     held: l.held,
+                    elsewhere: l.elsewhere,
                 })
             })
             .collect();
@@ -1204,6 +1211,7 @@ mod tests {
             id: id.into(),
             ringing,
             held: false,
+            elsewhere: false,
         }
     }
 
@@ -1261,6 +1269,7 @@ mod tests {
             id: "a".into(),
             ringing,
             held,
+            elsewhere: false,
         };
         let report = |lines| Report {
             ready: true,

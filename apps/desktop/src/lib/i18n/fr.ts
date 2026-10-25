@@ -3,6 +3,7 @@
 const dict: Record<string, string> = {
   "Eingehender Anruf": "Appel entrant",
   "Gehaltenes Gespräch": "Appel en attente",
+  "An einem anderen Telefon angenommen": "Pris sur un autre téléphone",
   "Aktives Gespräch": "Appel en cours",
   "Ausgehender Anruf": "Appel sortant",
   "Verbinde …": "Connexion …",
