@@ -122,6 +122,9 @@ pub struct CallView {
     pub door_cam: bool,
     /// Tür lässt sich per DTMF öffnen
     pub door_open: bool,
+    /// Eingehender Anruf, der an einem anderen eigenen Telefon angenommen
+    /// wurde (etwa in einem zweiten Client); das Softphone hier hat ihn nicht.
+    pub elsewhere: bool,
     #[serde(skip)]
     sip_call_ids: Vec<String>,
     /// Kamera-URL der Türsprechstelle; kann Zugangsdaten enthalten und
@@ -173,6 +176,8 @@ pub enum PhoneEvent {
 
 #[derive(Default)]
 struct Inner {
+    /// Ein Softphone läuft
+    softphone: bool,
     calls: BTreeMap<String, CallView>,
     /// Eingehende SIP-Anrufe, die noch klingeln
     sip_ringing: Vec<String>,
@@ -189,6 +194,34 @@ struct Inner {
 }
 
 impl Inner {
+    /// Läuft der Anruf nicht an unserem Softphone, obwohl er angenommen ist?
+    /// Solange das Softphone selbst klingelt oder spricht und die Zuordnung
+    /// fehlt, gilt er als unserer (die Anlage meldet „verbunden“ oft vor
+    /// dem eigenen SIP-Anruf).
+    fn elsewhere(&self, c: &CallView) -> bool {
+        if !self.softphone
+            || !c.incoming
+            || !matches!(c.phase, CallPhase::Connected | CallPhase::Held)
+        {
+            return false;
+        }
+        let ours = c
+            .sip_call_ids
+            .iter()
+            .any(|id| self.sip_active.contains(id) || self.sip_ringing.contains(id));
+        !ours && self.sip_active.is_empty() && self.sip_ringing.is_empty()
+    }
+
+    fn calls(&self) -> Vec<CallView> {
+        self.calls
+            .values()
+            .map(|c| CallView {
+                elsewhere: self.elsewhere(c),
+                ..c.clone()
+            })
+            .collect()
+    }
+
     fn callback_state(&self) -> &'static str {
         if !self.callback_active.is_empty() {
             "active"
@@ -330,8 +363,11 @@ impl Phone {
         Self {
             hub,
             phone_id,
+            inner: Arc::new(Mutex::new(Inner {
+                softphone: sip.is_some(),
+                ..Inner::default()
+            })),
             sip,
-            inner: Arc::new(Mutex::new(Inner::default())),
             events,
             tasks: Vec::new(),
         }
@@ -701,7 +737,7 @@ impl Phone {
     }
 
     pub fn calls(&self) -> Vec<CallView> {
-        self.inner.lock().unwrap().calls.values().cloned().collect()
+        self.inner.lock().unwrap().calls()
     }
 
     fn publish(&self) {
@@ -922,11 +958,7 @@ fn apply(inner: &mut Inner, ev: v1::call::call_event_response::CallEvent) {
 fn publish(inner: &Mutex<Inner>, events: &mpsc::UnboundedSender<PhoneEvent>) {
     let (calls, muted, callback) = {
         let inner = inner.lock().unwrap();
-        (
-            inner.calls.values().cloned().collect(),
-            inner.muted,
-            inner.callback_state(),
-        )
+        (inner.calls(), inner.muted, inner.callback_state())
     };
     let _ = events.send(PhoneEvent::Calls {
         calls,
@@ -980,6 +1012,7 @@ fn view_of(c: &v1::call::Call) -> CallView {
         connected_since: c.connected_timestamp.as_ref().map(millis),
         door_cam: false,
         door_open: false,
+        elsewhere: false,
         sip_call_ids: c.sip_call_ids.clone(),
         door_cam_url: String::new(),
         door_dtmf: String::new(),
@@ -1042,6 +1075,50 @@ mod tests {
             }),
         );
         assert!(inner.calls.is_empty());
+    }
+
+    #[test]
+    fn answered_on_other_phone_is_elsewhere() {
+        let mut inner = Inner {
+            softphone: true,
+            ..Inner::default()
+        };
+        let mut c = call("a", v1::types::CallState::Ringing);
+        c.sip_call_ids = vec!["sip-a".into()];
+        apply(
+            &mut inner,
+            E::CallCreated(v1::call::CallCreatedEvent { calls: vec![c] }),
+        );
+        inner.sip_ringing.push("sip-a".into());
+        let connect = E::CallStateChanged(v1::call::CallStateChangedEvent {
+            call_id: Some(call_id_of("a")),
+            call_state: v1::types::CallState::Connected as i32,
+            connected_timestamp: None,
+        });
+        apply(&mut inner, connect);
+        // Hier noch nicht entschieden: Das Softphone klingelt noch.
+        assert!(!inner.calls()[0].elsewhere);
+
+        // Hier angenommen
+        inner.sip_ringing.clear();
+        inner.sip_active.push("sip-a".into());
+        assert!(!inner.calls()[0].elsewhere);
+
+        // Am anderen Client angenommen: Die Anlage bricht unseren SIP-Anruf ab.
+        inner.sip_active.clear();
+        apply(
+            &mut inner,
+            E::CallMetadataChanged(v1::call::CallMetadataChangedEvent {
+                call_id: Some(call_id_of("a")),
+                sip_call_ids: vec!["sip-b".into()],
+                ..Default::default()
+            }),
+        );
+        assert!(inner.calls()[0].elsewhere);
+
+        // Ohne Softphone zeigt der Client die Anrufe des Tischtelefons wie bisher.
+        inner.softphone = false;
+        assert!(!inner.calls()[0].elsewhere);
     }
 
     #[test]

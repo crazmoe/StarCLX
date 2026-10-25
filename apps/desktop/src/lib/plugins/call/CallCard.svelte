@@ -76,13 +76,14 @@
       <strong>{who(call)}</strong>
       {#if call.remote_name && call.remote_number}<span>{call.remote_number}</span>{/if}
       {#if sub}<span class="sub">{sub}</span>{/if}
+      {#if call.elsewhere}<span class="sub">{t("An einem anderen Telefon angenommen")}</span>{/if}
       {#if ringingIn && phone.busyElsewhere}<span class="sub">{t("Gesperrt: Es wird gerade über {host} telefoniert.", { host: phone.busyElsewhere })}</span>{/if}
       {#if transfers}<span class="sub">{t("Auflegen vermittelt das gehaltene Gespräch")}</span>{/if}
       {#if call.local_number || call.local_name}
         <small><b>{call.local_number}</b> {call.local_name}</small>
       {/if}
     </div>
-    {#if connected && hasSoftphone()}
+    {#if connected && hasSoftphone() && !call.elsewhere}
       <button
         class="mute"
         class:on={phone.status.muted}

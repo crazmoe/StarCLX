@@ -33,13 +33,11 @@ pub const SIP_DEVICE_ID_MAC: &str = "E22FF5B3-38ED-4A5E-966A-80B4785A2FF7";
 
 /// Ersatz, wenn die Anlage das Linux-App-Telefon verweigert: Ohne das Recht
 /// `uci_autoprovisioning` legt sie es nicht an, die Telefone der Desktop-Apps
-/// aber schon. Genommen wird das einer App, die auf diesem System nicht
-/// offiziell läuft, damit StarCLX der offiziellen App auf demselben Rechner
-/// nicht das Telefon wegnimmt.
-#[cfg(windows)]
+/// aber schon. Genommen wird das der Mac-App: Das der Windows-App hat
+/// StarCMX (und die offizielle Windows-App). Teilen sich zwei Clients ein
+/// App-Telefon, klingeln sie gemeinsam, und Annehmen an einem nimmt auch am
+/// anderen ab.
 pub const SIP_DEVICE_ID_FALLBACK: &str = SIP_DEVICE_ID_MAC;
-#[cfg(not(windows))]
-pub const SIP_DEVICE_ID_FALLBACK: &str = SIP_DEVICE_ID_WINDOWS;
 
 fn phone_matches_sip_user(phone_name: &str, sip_user: &str) -> bool {
     phone_name.strip_prefix("SIP/").unwrap_or(phone_name) == sip_user
