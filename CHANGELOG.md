@@ -1,11 +1,15 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.5 – 2026-10-26
 
 ### Adressbuch
 - Die Detailansicht eines Kontakts zeigt neben den Rufnummern auch Nachname, Vorname, Strasse,
   PLZ, Ort, Land, E-Mail und Webseite, soweit die Anlage sie gespeichert hat. E-Mail und Webseite
   lassen sich anklicken
+
+### Oberfläche
+- Die Funktionstasten nutzen die ganze Fensterbreite: Die Spalten richten sich nur noch nach dem
+  verfügbaren Platz. Die eingestellte Spaltenzahl gilt weiter für den Editor in den Einstellungen
 
 ## 1.6.4 – 2026-10-26
 
