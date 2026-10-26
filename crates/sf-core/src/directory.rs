@@ -21,6 +21,14 @@ pub struct ContactView {
     pub company: String,
     pub numbers: Vec<Number>,
     pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub street: String,
+    pub postal_code: String,
+    pub city: String,
+    pub country: String,
+    /// Webseite
+    pub url: String,
     /// Gesetzt, wenn der Kontakt ein Benutzer der Anlage ist
     pub user_id: Option<String>,
     pub editable: bool,
@@ -172,6 +180,73 @@ pub async fn list(
     })
 }
 
+/// Ein einzelner Kontakt mit allen Angaben. Die Liste liefert je nach
+/// Anlage nicht alle Blöcke (Adresse, Webseite), daher für die Detailansicht
+/// gezielt nachladen.
+pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
+    let mut contact = hub
+        .contact()
+        .get_contact(v1::contact::GetContactRequest {
+            contact_id: Some(v1::types::ContactId { id: id.to_owned() }),
+        })
+        .await?
+        .into_inner()
+        .contact
+        .unwrap_or_default();
+    match hub.contact().get_scheme(()).await {
+        Ok(s) => {
+            let s = s.into_inner();
+            let scheme: Vec<_> = s
+                .summary_block
+                .into_iter()
+                .chain(s.phone_numbers_block)
+                .chain(s.detail_blocks)
+                .collect();
+            keys_from_scheme(&mut contact, &scheme);
+        }
+        Err(e) => tracing::debug!(error = %e, "Kontaktschema nicht gelesen"),
+    }
+    // Ohne Werte: zeigt im ausführlichen Protokoll, wie die Anlage die Felder schickt
+    tracing::debug!(
+        attrs = ?contact
+            .blocks
+            .iter()
+            .flat_map(|b| &b.attributes)
+            .map(|a| (a.display_key, &a.name, &a.i18n_display_name, !a.value.trim().is_empty()))
+            .collect::<Vec<_>>(),
+        "Kontaktfelder"
+    );
+    Ok(contact_view(&contact))
+}
+
+/// Manche Anlagen schicken die Werte eines Kontakts nur mit Attributnamen;
+/// Feldtyp und Übersetzungsschlüssel stehen dann nur im Schema. Wie das
+/// Formular ordnen wir sie über den Namen zu.
+fn keys_from_scheme(contact: &mut v1::contact::Contact, scheme: &[v1::contact::ContactBlock]) {
+    for a in contact
+        .blocks
+        .iter_mut()
+        .flat_map(|b| b.attributes.iter_mut())
+    {
+        if kind(a) != Key::Unspecified {
+            continue;
+        }
+        let Some((s, key)) = scheme
+            .iter()
+            .flat_map(|b| &b.attributes)
+            .filter(|s| s.name == a.name)
+            .map(|s| (s, kind(s)))
+            .find(|(_, k)| *k != Key::Unspecified)
+        else {
+            continue;
+        };
+        a.display_key = key as i32;
+        if a.i18n_display_name.trim().is_empty() {
+            a.i18n_display_name.clone_from(&s.i18n_display_name);
+        }
+    }
+}
+
 fn join_name(first: &str, last: &str) -> String {
     format!("{} {}", first.trim(), last.trim())
         .trim()
@@ -208,9 +283,45 @@ fn simple_view(c: v1::contact::phonenumber::SimpleContact) -> ContactView {
         company: c.company,
         numbers,
         email: String::new(),
+        first_name: c.first_name.trim().to_owned(),
+        last_name: c.last_name.trim().to_owned(),
+        street: String::new(),
+        postal_code: String::new(),
+        city: String::new(),
+        country: String::new(),
+        url: String::new(),
         user_id: None,
         editable: false,
         deletable: false,
+    }
+}
+
+/// Feldtyp eines Attributs. Manche Anlagen schicken Adressfelder ohne
+/// `display_key` (bzw. als `USER_DEFINED`); dann verraten ihn der
+/// Übersetzungsschlüssel (`…addressbook.line.label_street`) oder der
+/// Attributname.
+fn kind(a: &v1::contact::ContactAttribute) -> Key {
+    match Key::try_from(a.display_key).unwrap_or(Key::Unspecified) {
+        Key::Unspecified | Key::UserDefined => {}
+        k => return k,
+    }
+    let i18n = a.i18n_display_name.trim();
+    let token = i18n
+        .rsplit('.')
+        .next()
+        .and_then(|t| t.strip_prefix("label_"))
+        .unwrap_or(a.name.trim());
+    match token.to_lowercase().as_str() {
+        "firstname" | "givenname" => Key::Name,
+        "lastname" | "familyname" | "surname" => Key::Surname,
+        "company" => Key::Company,
+        "email" | "mail" => Key::Email,
+        "street" => Key::Street,
+        "zipcode" | "zip" | "postalcode" | "postcode" => Key::PostalCode,
+        "city" => Key::City,
+        "country" => Key::Country,
+        "www" | "url" | "homepage" | "website" => Key::Url,
+        _ => Key::Unspecified,
     }
 }
 
@@ -218,7 +329,7 @@ fn contact_view(c: &v1::contact::Contact) -> ContactView {
     let attrs = || c.blocks.iter().flat_map(|b| b.attributes.iter());
     let first = |key: Key| {
         attrs()
-            .find(|a| a.display_key == key as i32 && !a.value.trim().is_empty())
+            .find(|a| kind(a) == key && !a.value.trim().is_empty())
             .map(|a| a.value.trim().to_owned())
             .unwrap_or_default()
     };
@@ -244,7 +355,9 @@ fn contact_view(c: &v1::contact::Contact) -> ContactView {
     }
     push_number(&mut numbers, "Extern", &c.external_number);
     let company = first(Key::Company);
-    let mut name = join_name(&first(Key::Name), &first(Key::Surname));
+    let first_name = first(Key::Name);
+    let last_name = first(Key::Surname);
+    let mut name = join_name(&first_name, &last_name);
     if name.is_empty() {
         name.clone_from(&company);
     }
@@ -258,6 +371,13 @@ fn contact_view(c: &v1::contact::Contact) -> ContactView {
         company,
         numbers,
         email: first(Key::Email),
+        first_name,
+        last_name,
+        street: first(Key::Street),
+        postal_code: first(Key::PostalCode),
+        city: first(Key::City),
+        country: first(Key::Country),
+        url: first(Key::Url),
         user_id: c
             .user_id
             .as_ref()
@@ -299,6 +419,11 @@ mod tests {
                         ..attr(Key::PrivatePhoneNumber, "+41 81 000 00 00")
                     },
                     attr(Key::Email, "c@example.com"),
+                    attr(Key::Street, " Musterweg 1 "),
+                    attr(Key::PostalCode, "7000"),
+                    attr(Key::City, "Chur"),
+                    attr(Key::Country, "Schweiz"),
+                    attr(Key::Url, "https://example.com"),
                 ],
                 ..Default::default()
             }],
@@ -308,6 +433,13 @@ mod tests {
         assert_eq!(v.name, "Claude Star");
         assert_eq!(v.company, "Muster AG");
         assert_eq!(v.email, "c@example.com");
+        assert_eq!(v.first_name, "Claude");
+        assert_eq!(v.last_name, "Star");
+        assert_eq!(v.street, "Musterweg 1");
+        assert_eq!(v.postal_code, "7000");
+        assert_eq!(v.city, "Chur");
+        assert_eq!(v.country, "Schweiz");
+        assert_eq!(v.url, "https://example.com");
         // Doppelte Nummer (12) nur einmal
         assert_eq!(
             v.numbers,
@@ -326,6 +458,79 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn address_without_display_key_is_recognized() {
+        let raw = |name: &str, i18n: &str, value: &str| v1::contact::ContactAttribute {
+            display_key: Key::UserDefined as i32,
+            name: name.into(),
+            i18n_display_name: i18n.into(),
+            value: value.into(),
+            ..Default::default()
+        };
+        let p = "de.vertico.starface.addressbook.line.label_";
+        let c = v1::contact::Contact {
+            blocks: vec![v1::contact::ContactBlock {
+                attributes: vec![
+                    raw("street", &format!("{p}street"), "Musterweg 1"),
+                    raw("x1", &format!("{p}zipcode"), "7000"),
+                    raw("city", "", "Chur"),
+                    raw("country", "", "Schweiz"),
+                    raw("homepage", "", "example.com"),
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let v = contact_view(&c);
+        assert_eq!(v.street, "Musterweg 1");
+        assert_eq!(v.postal_code, "7000");
+        assert_eq!(v.city, "Chur");
+        assert_eq!(v.country, "Schweiz");
+        assert_eq!(v.url, "example.com");
+    }
+
+    #[test]
+    fn scheme_supplies_missing_keys() {
+        let plain = |name: &str, value: &str| v1::contact::ContactAttribute {
+            name: name.into(),
+            value: value.into(),
+            ..Default::default()
+        };
+        let mut c = v1::contact::Contact {
+            blocks: vec![v1::contact::ContactBlock {
+                attributes: vec![
+                    plain("adr_strasse", "2401 Bond Street"),
+                    plain("adr_ort", "University Park"),
+                    plain("adr_land", "United States"),
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let scheme = vec![v1::contact::ContactBlock {
+            attributes: vec![
+                v1::contact::ContactAttribute {
+                    name: "adr_strasse".into(),
+                    ..attr(Key::Street, "")
+                },
+                v1::contact::ContactAttribute {
+                    name: "adr_ort".into(),
+                    ..attr(Key::City, "")
+                },
+                v1::contact::ContactAttribute {
+                    name: "adr_land".into(),
+                    ..attr(Key::Country, "")
+                },
+            ],
+            ..Default::default()
+        }];
+        keys_from_scheme(&mut c, &scheme);
+        let v = contact_view(&c);
+        assert_eq!(v.street, "2401 Bond Street");
+        assert_eq!(v.city, "University Park");
+        assert_eq!(v.country, "United States");
     }
 
     #[test]

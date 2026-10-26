@@ -46,6 +46,17 @@ pub async fn contacts_list(
         .map_err(|e| e.to_string())
 }
 
+/// Ein Kontakt mit allen Angaben für die Detailansicht
+#[tauri::command]
+pub async fn contact_get(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<sf_core::directory::ContactView, String> {
+    sf_core::directory::get(&hub(&state).await?, &id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Formular für einen neuen (`id` leer) oder bestehenden Kontakt
 #[tauri::command]
 pub async fn contact_form(
