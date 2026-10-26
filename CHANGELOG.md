@@ -1,6 +1,6 @@
 # Änderungen
 
-## Unveröffentlicht
+## 1.6.4 – 2026-10-26
 
 ### Zwei Clients am selben Konto
 Liefen StarCLX und StarCMX (oder die Windows-App) gleichzeitig am selben Konto, nahm Annehmen an
@@ -29,6 +29,11 @@ Verbindungen fest; baresip versuchte die Registrierung danach erst nach bis zu 3
   dem Standby tot sind
 - Geht die Verbindung zur Anlage verloren, baut StarCLX sie sofort neu auf, statt auf die
   Keepalive-Pings zu warten
+
+### Oberfläche
+- Im hellen Erscheinungsbild sind der Auswahlbalken in den Gerätelisten und die eigenen
+  Chat-Nachrichten wieder lesbar. Beide hatten feste dunkle Farben unter dunkler Schrift und
+  folgen jetzt der Akzentfarbe.
 
 ## 1.6.3 – 2026-10-23
 
