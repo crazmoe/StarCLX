@@ -434,7 +434,7 @@
       {#if notice}<p class="banner">{notice}</p>{/if}
       {#snippet view(id: string)}
         {#if id === "journal"}
-          <Journal />
+          <Journal me={session?.display_name} />
         {:else if id === "fkeys"}
           <FunctionKeys />
         {:else if id === "voicemail"}
