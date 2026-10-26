@@ -184,7 +184,7 @@ pub async fn list(
 /// Anlage nicht alle Blöcke (Adresse, Webseite), daher für die Detailansicht
 /// gezielt nachladen.
 pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
-    let contact = hub
+    let mut contact = hub
         .contact()
         .get_contact(v1::contact::GetContactRequest {
             contact_id: Some(v1::types::ContactId { id: id.to_owned() }),
@@ -193,6 +193,19 @@ pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
         .into_inner()
         .contact
         .unwrap_or_default();
+    match hub.contact().get_scheme(()).await {
+        Ok(s) => {
+            let s = s.into_inner();
+            let scheme: Vec<_> = s
+                .summary_block
+                .into_iter()
+                .chain(s.phone_numbers_block)
+                .chain(s.detail_blocks)
+                .collect();
+            keys_from_scheme(&mut contact, &scheme);
+        }
+        Err(e) => tracing::debug!(error = %e, "Kontaktschema nicht gelesen"),
+    }
     // Ohne Werte: zeigt im ausführlichen Protokoll, wie die Anlage die Felder schickt
     tracing::debug!(
         attrs = ?contact
@@ -204,6 +217,34 @@ pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
         "Kontaktfelder"
     );
     Ok(contact_view(&contact))
+}
+
+/// Manche Anlagen schicken die Werte eines Kontakts nur mit Attributnamen;
+/// Feldtyp und Übersetzungsschlüssel stehen dann nur im Schema. Wie das
+/// Formular ordnen wir sie über den Namen zu.
+fn keys_from_scheme(contact: &mut v1::contact::Contact, scheme: &[v1::contact::ContactBlock]) {
+    for a in contact
+        .blocks
+        .iter_mut()
+        .flat_map(|b| b.attributes.iter_mut())
+    {
+        if kind(a) != Key::Unspecified {
+            continue;
+        }
+        let Some((s, key)) = scheme
+            .iter()
+            .flat_map(|b| &b.attributes)
+            .filter(|s| s.name == a.name)
+            .map(|s| (s, kind(s)))
+            .find(|(_, k)| *k != Key::Unspecified)
+        else {
+            continue;
+        };
+        a.display_key = key as i32;
+        if a.i18n_display_name.trim().is_empty() {
+            a.i18n_display_name.clone_from(&s.i18n_display_name);
+        }
+    }
 }
 
 fn join_name(first: &str, last: &str) -> String {
@@ -448,6 +489,48 @@ mod tests {
         assert_eq!(v.city, "Chur");
         assert_eq!(v.country, "Schweiz");
         assert_eq!(v.url, "example.com");
+    }
+
+    #[test]
+    fn scheme_supplies_missing_keys() {
+        let plain = |name: &str, value: &str| v1::contact::ContactAttribute {
+            name: name.into(),
+            value: value.into(),
+            ..Default::default()
+        };
+        let mut c = v1::contact::Contact {
+            blocks: vec![v1::contact::ContactBlock {
+                attributes: vec![
+                    plain("adr_strasse", "2401 Bond Street"),
+                    plain("adr_ort", "University Park"),
+                    plain("adr_land", "United States"),
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let scheme = vec![v1::contact::ContactBlock {
+            attributes: vec![
+                v1::contact::ContactAttribute {
+                    name: "adr_strasse".into(),
+                    ..attr(Key::Street, "")
+                },
+                v1::contact::ContactAttribute {
+                    name: "adr_ort".into(),
+                    ..attr(Key::City, "")
+                },
+                v1::contact::ContactAttribute {
+                    name: "adr_land".into(),
+                    ..attr(Key::Country, "")
+                },
+            ],
+            ..Default::default()
+        }];
+        keys_from_scheme(&mut c, &scheme);
+        let v = contact_view(&c);
+        assert_eq!(v.street, "2401 Bond Street");
+        assert_eq!(v.city, "University Park");
+        assert_eq!(v.country, "United States");
     }
 
     #[test]
