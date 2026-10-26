@@ -193,6 +193,16 @@ pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
         .into_inner()
         .contact
         .unwrap_or_default();
+    // Ohne Werte: zeigt im ausführlichen Protokoll, wie die Anlage die Felder schickt
+    tracing::debug!(
+        attrs = ?contact
+            .blocks
+            .iter()
+            .flat_map(|b| &b.attributes)
+            .map(|a| (a.display_key, &a.name, &a.i18n_display_name, !a.value.trim().is_empty()))
+            .collect::<Vec<_>>(),
+        "Kontaktfelder"
+    );
     Ok(contact_view(&contact))
 }
 
@@ -245,11 +255,40 @@ fn simple_view(c: v1::contact::phonenumber::SimpleContact) -> ContactView {
     }
 }
 
+/// Feldtyp eines Attributs. Manche Anlagen schicken Adressfelder ohne
+/// `display_key` (bzw. als `USER_DEFINED`); dann verraten ihn der
+/// Übersetzungsschlüssel (`…addressbook.line.label_street`) oder der
+/// Attributname.
+fn kind(a: &v1::contact::ContactAttribute) -> Key {
+    match Key::try_from(a.display_key).unwrap_or(Key::Unspecified) {
+        Key::Unspecified | Key::UserDefined => {}
+        k => return k,
+    }
+    let i18n = a.i18n_display_name.trim();
+    let token = i18n
+        .rsplit('.')
+        .next()
+        .and_then(|t| t.strip_prefix("label_"))
+        .unwrap_or(a.name.trim());
+    match token.to_lowercase().as_str() {
+        "firstname" | "givenname" => Key::Name,
+        "lastname" | "familyname" | "surname" => Key::Surname,
+        "company" => Key::Company,
+        "email" | "mail" => Key::Email,
+        "street" => Key::Street,
+        "zipcode" | "zip" | "postalcode" | "postcode" => Key::PostalCode,
+        "city" => Key::City,
+        "country" => Key::Country,
+        "www" | "url" | "homepage" | "website" => Key::Url,
+        _ => Key::Unspecified,
+    }
+}
+
 fn contact_view(c: &v1::contact::Contact) -> ContactView {
     let attrs = || c.blocks.iter().flat_map(|b| b.attributes.iter());
     let first = |key: Key| {
         attrs()
-            .find(|a| a.display_key == key as i32 && !a.value.trim().is_empty())
+            .find(|a| kind(a) == key && !a.value.trim().is_empty())
             .map(|a| a.value.trim().to_owned())
             .unwrap_or_default()
     };
@@ -378,6 +417,37 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn address_without_display_key_is_recognized() {
+        let raw = |name: &str, i18n: &str, value: &str| v1::contact::ContactAttribute {
+            display_key: Key::UserDefined as i32,
+            name: name.into(),
+            i18n_display_name: i18n.into(),
+            value: value.into(),
+            ..Default::default()
+        };
+        let p = "de.vertico.starface.addressbook.line.label_";
+        let c = v1::contact::Contact {
+            blocks: vec![v1::contact::ContactBlock {
+                attributes: vec![
+                    raw("street", &format!("{p}street"), "Musterweg 1"),
+                    raw("x1", &format!("{p}zipcode"), "7000"),
+                    raw("city", "", "Chur"),
+                    raw("country", "", "Schweiz"),
+                    raw("homepage", "", "example.com"),
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let v = contact_view(&c);
+        assert_eq!(v.street, "Musterweg 1");
+        assert_eq!(v.postal_code, "7000");
+        assert_eq!(v.city, "Chur");
+        assert_eq!(v.country, "Schweiz");
+        assert_eq!(v.url, "example.com");
     }
 
     #[test]
