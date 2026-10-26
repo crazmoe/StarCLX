@@ -21,6 +21,14 @@ pub struct ContactView {
     pub company: String,
     pub numbers: Vec<Number>,
     pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub street: String,
+    pub postal_code: String,
+    pub city: String,
+    pub country: String,
+    /// Webseite
+    pub url: String,
     /// Gesetzt, wenn der Kontakt ein Benutzer der Anlage ist
     pub user_id: Option<String>,
     pub editable: bool,
@@ -172,6 +180,22 @@ pub async fn list(
     })
 }
 
+/// Ein einzelner Kontakt mit allen Angaben. Die Liste liefert je nach
+/// Anlage nicht alle Blöcke (Adresse, Webseite), daher für die Detailansicht
+/// gezielt nachladen.
+pub async fn get(hub: &OneHub, id: &str) -> sf_onehub::Result<ContactView> {
+    let contact = hub
+        .contact()
+        .get_contact(v1::contact::GetContactRequest {
+            contact_id: Some(v1::types::ContactId { id: id.to_owned() }),
+        })
+        .await?
+        .into_inner()
+        .contact
+        .unwrap_or_default();
+    Ok(contact_view(&contact))
+}
+
 fn join_name(first: &str, last: &str) -> String {
     format!("{} {}", first.trim(), last.trim())
         .trim()
@@ -208,6 +232,13 @@ fn simple_view(c: v1::contact::phonenumber::SimpleContact) -> ContactView {
         company: c.company,
         numbers,
         email: String::new(),
+        first_name: c.first_name.trim().to_owned(),
+        last_name: c.last_name.trim().to_owned(),
+        street: String::new(),
+        postal_code: String::new(),
+        city: String::new(),
+        country: String::new(),
+        url: String::new(),
         user_id: None,
         editable: false,
         deletable: false,
@@ -244,7 +275,9 @@ fn contact_view(c: &v1::contact::Contact) -> ContactView {
     }
     push_number(&mut numbers, "Extern", &c.external_number);
     let company = first(Key::Company);
-    let mut name = join_name(&first(Key::Name), &first(Key::Surname));
+    let first_name = first(Key::Name);
+    let last_name = first(Key::Surname);
+    let mut name = join_name(&first_name, &last_name);
     if name.is_empty() {
         name.clone_from(&company);
     }
@@ -258,6 +291,13 @@ fn contact_view(c: &v1::contact::Contact) -> ContactView {
         company,
         numbers,
         email: first(Key::Email),
+        first_name,
+        last_name,
+        street: first(Key::Street),
+        postal_code: first(Key::PostalCode),
+        city: first(Key::City),
+        country: first(Key::Country),
+        url: first(Key::Url),
         user_id: c
             .user_id
             .as_ref()
@@ -299,6 +339,11 @@ mod tests {
                         ..attr(Key::PrivatePhoneNumber, "+41 81 000 00 00")
                     },
                     attr(Key::Email, "c@example.com"),
+                    attr(Key::Street, " Musterweg 1 "),
+                    attr(Key::PostalCode, "7000"),
+                    attr(Key::City, "Chur"),
+                    attr(Key::Country, "Schweiz"),
+                    attr(Key::Url, "https://example.com"),
                 ],
                 ..Default::default()
             }],
@@ -308,6 +353,13 @@ mod tests {
         assert_eq!(v.name, "Claude Star");
         assert_eq!(v.company, "Muster AG");
         assert_eq!(v.email, "c@example.com");
+        assert_eq!(v.first_name, "Claude");
+        assert_eq!(v.last_name, "Star");
+        assert_eq!(v.street, "Musterweg 1");
+        assert_eq!(v.postal_code, "7000");
+        assert_eq!(v.city, "Chur");
+        assert_eq!(v.country, "Schweiz");
+        assert_eq!(v.url, "https://example.com");
         // Doppelte Nummer (12) nur einmal
         assert_eq!(
             v.numbers,

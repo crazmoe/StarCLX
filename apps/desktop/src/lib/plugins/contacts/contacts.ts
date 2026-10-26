@@ -5,6 +5,13 @@ export type Contact = {
   company: string;
   numbers: ContactNumber[];
   email: string;
+  first_name: string;
+  last_name: string;
+  street: string;
+  postal_code: string;
+  city: string;
+  country: string;
+  url: string;
   user_id: string | null;
   editable: boolean;
   deletable: boolean;

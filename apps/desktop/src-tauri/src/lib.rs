@@ -1010,6 +1010,7 @@ pub fn run() {
             plugins::contacts::contacts_search,
             plugins::contacts::contacts_folders,
             plugins::contacts::contacts_list,
+            plugins::contacts::contact_get,
             plugins::contacts::contact_form,
             plugins::contacts::contact_save,
             plugins::contacts::contact_delete,

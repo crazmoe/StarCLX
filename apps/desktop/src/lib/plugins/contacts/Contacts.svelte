@@ -2,6 +2,7 @@
   import { connection } from "../../connection.svelte";
   import { splitter } from "../../splitter";
   import { invoke } from "@tauri-apps/api/core";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
   import Icon from "../../Icon.svelte";
@@ -52,8 +53,36 @@
     if (contactEdit.changed === seen) return;
     seen = contactEdit.changed;
     const id = selected?.id;
-    load(true).then(() => (selected = contacts.find((c) => c.id === id) ?? null));
+    load(true).then(() => select(contacts.find((c) => c.id === id) ?? null));
   });
+
+  // Die Liste bringt nicht immer alle Angaben mit (Adresse, Webseite);
+  // bis der vollständige Kontakt da ist, gilt der Listeneintrag.
+  async function select(c: Contact | null) {
+    selected = c;
+    if (!c?.id) return;
+    try {
+      const full = await invoke<Contact>("contact_get", { id: c.id });
+      if (selected?.id === c.id) selected = { ...c, ...full, numbers: full.numbers.length ? full.numbers : c.numbers };
+    } catch {
+      // Listeneintrag bleibt stehen
+    }
+  }
+
+  const details = $derived(
+    selected
+      ? [
+          { label: "Nachname", value: selected.last_name },
+          { label: "Vorname", value: selected.first_name },
+          { label: "Strasse", value: selected.street },
+          { label: "PLZ", value: selected.postal_code },
+          { label: "Ort", value: selected.city },
+          { label: "Land", value: selected.country },
+        ].filter((d) => d.value)
+      : [],
+  );
+
+  const website = (url: string) => (/^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`);
 
   function pick(id: string) {
     folder = id;
@@ -106,7 +135,7 @@
       </label>
       {#if error && connection.online}<p class="muted">{error}</p>{/if}
       {#each contacts as c (c.id)}
-        <button class="row" class:active={selected?.id === c.id} onclick={() => (selected = c)}>
+        <button class="row" class:active={selected?.id === c.id} onclick={() => select(c)}>
           <span class="av">{initials(c.name)}</span>
           <span class="txt">
             <strong>{c.name || t("Ohne Namen")}</strong>
@@ -141,8 +170,14 @@
             <button class="call" disabled={!ready} title={t("Anrufen")} onclick={() => run("phone_dial", { number: n.number })}><Icon name="call" size={18} /></button>
           </div>
         {/each}
+        {#each details as d}
+          <div class="num"><span class="lbl">{t(d.label)}</span><span class="val">{d.value}</span></div>
+        {/each}
         {#if selected.email}
-          <div class="num"><span class="lbl">{t("E-Mail")}</span><span class="val">{selected.email}</span></div>
+          <div class="num"><span class="lbl">{t("E-Mail")}</span><button class="val link" onclick={() => selected && openUrl(`mailto:${selected.email}`)}>{selected.email}</button></div>
+        {/if}
+        {#if selected.url}
+          <div class="num"><span class="lbl">{t("Webseite")}</span><button class="val link" onclick={() => selected && openUrl(website(selected.url))}>{selected.url}</button></div>
         {/if}
       {:else}
         <p class="muted">{t("Kontakt auswählen.")}</p>
@@ -182,7 +217,9 @@
   .head p { margin: 0.1rem 0 0; }
   .num { display: flex; align-items: center; gap: 0.8rem; padding: 0.45rem 0; border-top: 1px solid var(--line); }
   .lbl { flex: 0 0 6rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.9rem; }
-  .val { flex: 1; color: inherit; }
+  .val { flex: 1; min-width: 0; overflow-wrap: anywhere; color: inherit; }
+  .link { text-align: left; padding: 0; border: none; background: none; color: var(--accent-text); cursor: pointer; }
+  .link:hover { text-decoration: underline; }
   .call { width: 2.2rem; height: 2.2rem; padding: 0; border-radius: 50%; display: grid; place-items: center; background: var(--green); border: none; color: #fff; }
   .call:disabled { opacity: 0.4; }
   .muted { color: var(--muted); }

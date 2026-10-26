@@ -1,5 +1,12 @@
 # Änderungen
 
+## Unveröffentlicht
+
+### Adressbuch
+- Die Detailansicht eines Kontakts zeigt neben den Rufnummern auch Nachname, Vorname, Strasse,
+  PLZ, Ort, Land, E-Mail und Webseite, soweit die Anlage sie gespeichert hat. E-Mail und Webseite
+  lassen sich anklicken
+
 ## 1.6.4 – 2026-10-26
 
 ### Zwei Clients am selben Konto
