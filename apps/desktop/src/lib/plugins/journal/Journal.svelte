@@ -27,8 +27,29 @@
     voicemail: boolean;
   };
 
+  /** Anzeigename des angemeldeten Benutzers, um eigene Gruppenanrufe zu erkennen */
+  let { me = "" }: { me?: string } = $props();
+
   let entries = $state<Entry[]>([]);
-  let filter = $state<"all" | "missed" | "in" | "out">("all");
+  let filter = $state<"all" | "missed" | "answered" | "in" | "out">("all");
+  /** Nur eigene Anrufe: ohne Gruppenanrufe, die verpasst oder von anderen angenommen wurden */
+  const OWN = "journal:own";
+  let ownOnly = $state(load());
+  function load() {
+    try {
+      return localStorage.getItem(OWN) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function toggleOwn() {
+    ownOnly = !ownOnly;
+    try {
+      localStorage.setItem(OWN, ownOnly ? "1" : "0");
+    } catch {}
+  }
+  /** Direkt an mich, von mir gewählt oder ein Gruppenanruf, den ich angenommen habe */
+  const own = (e: Entry) => !e.group || !e.incoming || (!e.missed && (!e.answered_by || e.answered_by === me));
   let term = $state("");
   let error = $state("");
   /** Ausgewählter Eintrag, dessen Details aufgeklappt sind */
@@ -51,7 +72,9 @@
 
   const shown = $derived(
     entries.map((e) => (e.name || !known[e.number] ? e : { ...e, name: known[e.number] })).filter((e) => {
+      if (ownOnly && !own(e)) return false;
       if (filter === "missed" && !(e.missed && e.incoming)) return false;
+      if (filter === "answered" && !(e.incoming && !e.missed)) return false;
       if (filter === "in" && !e.incoming) return false;
       if (filter === "out" && e.incoming) return false;
       const q = term.trim().toLowerCase();
@@ -164,6 +187,7 @@
   const filters = $derived([
     { id: "all", label: t("Alle") },
     { id: "missed", label: t("Verpasst") },
+    { id: "answered", label: t("Angenommen") },
     { id: "in", label: t("Eingehend") },
     { id: "out", label: t("Ausgehend") },
   ] as const);
@@ -174,6 +198,9 @@
     {#each filters as f}
       <button class="chip" class:active={filter === f.id} onclick={() => (filter = f.id)}>{f.label}</button>
     {/each}
+    <button class="chip own" class:active={ownOnly} aria-pressed={ownOnly} title={t("Gruppenanrufe ausblenden, die verpasst oder von anderen angenommen wurden")} onclick={toggleOwn}>
+      <Icon name="person" size={16} />{t("Eigene")}
+    </button>
     <label class="filter">
       <Icon name="search" size={18} />
       <input bind:value={term} placeholder={t("Name oder Nummer")} />
@@ -297,6 +324,8 @@
   .bar { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; min-height: 2.4rem; }
   .chip { padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.9rem; background: var(--panel); }
   .chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  /* Eigener Schalter neben den Status-Filtern, lässt sich mit ihnen kombinieren */
+  .chip.own { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.4rem; }
   .filter { margin-left: auto; min-width: 0; display: flex; align-items: center; gap: 0.4rem; padding: 0 0.6rem; background: var(--bar-2); border: 1px solid var(--line); border-radius: 999px; }
   .filter input { border: none; background: none; outline: none; padding: 0.4rem 0; width: 12rem; min-width: 0; text-overflow: ellipsis; }
   .list { flex: 1; overflow: auto; border-radius: 4px; padding: 0.2rem 0.8rem 0.8rem; }

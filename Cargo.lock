@@ -4804,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "sf-audio"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "hound",
  "libpulse-binding",
@@ -4816,7 +4816,7 @@ dependencies = [
 
 [[package]]
 name = "sf-auth"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "base64 0.23.1",
  "getrandom 0.4.3",
@@ -4835,18 +4835,18 @@ dependencies = [
 
 [[package]]
 name = "sf-backoff"
-version = "1.6.5"
+version = "1.6.6"
 
 [[package]]
 name = "sf-busylight"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "tracing",
 ]
 
 [[package]]
 name = "sf-chat"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -4865,7 +4865,7 @@ dependencies = [
 
 [[package]]
 name = "sf-core"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "keyring-core",
  "prost-types",
@@ -4885,7 +4885,7 @@ dependencies = [
 
 [[package]]
 name = "sf-doorcam"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "percent-encoding",
  "reqwest",
@@ -4897,14 +4897,14 @@ dependencies = [
 
 [[package]]
 name = "sf-headset"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "tracing",
 ]
 
 [[package]]
 name = "sf-onehub"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "sf-backoff",
  "sf-proto",
@@ -4915,7 +4915,7 @@ dependencies = [
 
 [[package]]
 name = "sf-proto"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "prost",
  "prost-types",
@@ -4927,7 +4927,7 @@ dependencies = [
 
 [[package]]
 name = "sf-sip"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "cmake",
  "pkg-config",
@@ -4940,7 +4940,7 @@ dependencies = [
 
 [[package]]
 name = "sf-tls"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "rcgen",
  "rustls",
@@ -4954,7 +4954,7 @@ dependencies = [
 
 [[package]]
 name = "sfctl"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -5159,7 +5159,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "starclx"
-version = "1.6.5"
+version = "1.6.6"
 dependencies = [
  "arboard",
  "base64 0.23.1",
