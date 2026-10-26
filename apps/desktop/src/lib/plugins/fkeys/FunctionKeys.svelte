@@ -5,12 +5,10 @@
   import FkeyTile from "./FkeyTile.svelte";
   import { fkeys, keyAt, keyTitle, loadFkeys, press, programRedirect, typeInfo } from "./fkeys.svelte";
   import { portal } from "../../portal";
-  import { prefs } from "../../prefs.svelte";
   import { t } from "../../i18n.svelte";
   import { can } from "../../permissions.svelte";
 
   onMount(() => { loadFkeys(); });
-  const columns = $derived(prefs.value?.fkey_columns ?? 3);
   // Freie Plätze aus der Anordnung zählen nicht: die Tasten stehen dicht in
   // ihrer Reihenfolge. Abstand schafft nur eine „Leere Taste“. Tasten nur für
   // Tischtelefone (Telefonmenü, DTMF …) zeigt der Client wie die STARFACE-App
@@ -28,7 +26,7 @@
 <div class="fk">
   {#if fkeys.error && connection.online}<p class="error">{t(fkeys.error)}</p>{/if}
   {#if fkeys.notice && connection.online}<p class="error">{fkeys.notice}</p>{/if}
-  <div class="grid" style="--cols: {columns}">
+  <div class="grid">
     {#each shown as k (k.id)}
       <FkeyTile key={k} onclick={() => press(k)} />
     {/each}
@@ -61,12 +59,9 @@
 
 <style>
   .fk { height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 0.5rem; }
-  /* Höchstens die eingestellte Spaltenzahl; wird eine Taste schmaler als
-     10rem, rücken die Tasten in weniger Spalten zusammen */
-  .grid {
-    display: grid; gap: 0.5rem; max-width: 60rem;
-    grid-template-columns: repeat(auto-fill, minmax(max(10rem, (100% - (var(--cols) - 1) * 0.5rem) / var(--cols)), 1fr));
-  }
+  /* So viele Spalten, wie die Breite hergibt (Taste mindestens 10rem);
+     die Tasten laufen zeilenweise in ihrer Reihenfolge */
+  .grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
   .muted { color: var(--muted); }
   .error { color: var(--accent-text); margin: 0; }
   .small { font-size: 0.85rem; margin: 0; }
