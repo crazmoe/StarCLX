@@ -616,5 +616,14 @@ const dict: Record<string, string> = {
   "an {who}": "a {who}",
   "Keine Treffer.": "Nessun risultato.",
   "Keine Aufzeichnungen vorhanden.": "Nessuna registrazione.",
+  "Übersicht": "Panoramica",
+  "Ansichten": "Viste",
+  "Name und Symbol ändern": "Modifica nome e icona",
+  "Ansicht bearbeiten": "Modifica vista",
+  "Ansicht löschen": "Elimina vista",
+  "Neue Ansicht": "Nuova vista",
+  "Ansicht {n}": "Vista {n}",
+  "Über die Leiste oben blendest du Kacheln in dieser Ansicht ein.": "Usa la barra in alto per mostrare i riquadri in questa vista.",
+  "Diese Ansicht ist leer. Mit dem Stift oben rechts fügst du Kacheln hinzu.": "Questa vista è vuota. Usa la matita in alto a destra per aggiungere riquadri.",
 };
 export default dict;

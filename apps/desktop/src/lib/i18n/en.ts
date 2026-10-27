@@ -616,5 +616,14 @@ const dict: Record<string, string> = {
   "an {who}": "to {who}",
   "Keine Treffer.": "No matches.",
   "Keine Aufzeichnungen vorhanden.": "No recordings.",
+  "Übersicht": "Overview",
+  "Ansichten": "Views",
+  "Name und Symbol ändern": "Change name and icon",
+  "Ansicht bearbeiten": "Edit view",
+  "Ansicht löschen": "Delete view",
+  "Neue Ansicht": "New view",
+  "Ansicht {n}": "View {n}",
+  "Über die Leiste oben blendest du Kacheln in dieser Ansicht ein.": "Use the bar above to show tiles in this view.",
+  "Diese Ansicht ist leer. Mit dem Stift oben rechts fügst du Kacheln hinzu.": "This view is empty. Use the pencil at the top right to add tiles.",
 };
 export default dict;

@@ -54,12 +54,19 @@ export type Prefs = {
   fkey_columns: number;
   workspace: "tabs" | "free";
   workspace_tiles: Tile[] | null;
+  /** Ansichten des freien Arbeitsbereichs; null = nur die bisherige Anordnung */
+  workspace_views: View[] | null;
+  /** Zuletzt gewählte Ansicht */
+  workspace_view: string;
   /** Ausführliches Protokoll (Anruf- und Verbindungsdetails) */
   verbose_log: boolean;
 };
 
 /** Kachel im freien Arbeitsbereich: Lage in Rasterzellen (12 Spalten) */
 export type Tile = { id: string; x: number; y: number; w: number; h: number; visible: boolean };
+
+/** Ansicht im freien Arbeitsbereich: eigene Kacheln; leerer Name heisst „Übersicht“ */
+export type View = { id: string; name: string; icon: string; tiles: Tile[] };
 
 /** URL oder Programm bei Anruf (Plugin src-tauri/src/plugins/callactions) */
 export type CallAction = {

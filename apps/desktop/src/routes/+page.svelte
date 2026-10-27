@@ -4,7 +4,7 @@
   import { contactEdit } from "#lib/plugins/contacts/contactform.svelte.ts";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import CallManager from "#lib/plugins/call/CallManager.svelte";
   import Contacts from "#lib/plugins/contacts/Contacts.svelte";
   import DialSearch from "#lib/DialSearch.svelte";
@@ -28,8 +28,9 @@
   import { avatarOf, fkeys, ownChat, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import ChatBubble from "#lib/ChatBubble.svelte";
   import { canDial, initPhone, phone, run, isRingingIn } from "#lib/plugins/call/phone.svelte.ts";
-  import { loadPrefs, prefs, savePrefs, type Tile } from "#lib/prefs.svelte.ts";
-  import Workspace, { tilesOf } from "#lib/Workspace.svelte";
+  import { loadPrefs, prefs, savePrefs, type View } from "#lib/prefs.svelte.ts";
+  import Workspace, { newView, tilesOf, viewsOf } from "#lib/Workspace.svelte";
+  import ViewRail from "#lib/ViewRail.svelte";
   import { t } from "#lib/i18n.svelte.ts";
   import { connection, initConnection } from "#lib/connection.svelte.ts";
   import { can, initPermissions, loadPermissions, permissions, type Permission } from "#lib/permissions.svelte.ts";
@@ -306,17 +307,20 @@
 
   const meta = $derived(Object.fromEntries(allTabs.map((x) => [x.id, x])));
   const free = $derived(prefs.value?.workspace === "free");
-  let tiles = $state<Tile[]>([]);
+  /** Ansichten des freien Arbeitsbereichs, jede mit eigenen Kacheln */
+  let views = $state<View[]>([]);
+  let viewId = $state("");
+  const cur = $derived(views.find((v) => v.id === viewId) ?? views[0]);
   /** Zähler, die sonst am Reiter stehen, für die Kachel-Titelleiste */
   const badge = (id: string) => (id === "chat" ? unreadTotal() : id === "voicemail" ? unheard() : id === "conference" ? activeConferences() : id === "queue" ? waitingCalls() : 0);
 
   /** Anordnung entsperrt; beim Start immer fixiert */
   let editing = $state(false);
   /** Stand vor dem Bearbeiten, für "Abbrechen" */
-  let before: Tile[] = [];
+  let before: { views: View[]; viewId: string } = { views: [], viewId: "" };
 
   function editStart() {
-    before = $state.snapshot(tiles);
+    before = { views: $state.snapshot(views) as View[], viewId };
     editing = true;
   }
   function editDone() {
@@ -324,21 +328,42 @@
     saveLayout();
   }
   function editCancel() {
-    tiles = before.map((t) => ({ ...t }));
+    views = viewsOf(before.views, null);
+    viewId = before.viewId;
     editing = false;
   }
   $effect(() => {
-    tiles = tilesOf(prefs.value?.workspace_tiles);
+    const list = viewsOf(prefs.value?.workspace_views, prefs.value?.workspace_tiles);
+    const want = untrack(() => viewId) || prefs.value?.workspace_view;
+    views = list;
+    viewId = list.some((v) => v.id === want) ? want! : list[0].id;
   });
 
-  /** Anordnung der Kacheln sichern */
+  /** Ansichten und die gewählte sichern */
   function saveLayout() {
-    if (prefs.value) savePrefs({ ...$state.snapshot(prefs.value), workspace_tiles: $state.snapshot(tiles) }).catch(() => {});
+    if (prefs.value) savePrefs({ ...$state.snapshot(prefs.value), workspace_views: $state.snapshot(views) as View[], workspace_view: viewId }).catch(() => {});
   }
+
+  /** Ansicht wählen; ausserhalb des Bearbeitens gleich merken */
+  function selectView(id: string) {
+    viewId = id;
+    if (!editing && prefs.value && prefs.value.workspace_view !== id) savePrefs({ ...$state.snapshot(prefs.value), workspace_view: id }).catch(() => {});
+  }
+
+  /** Neue, leere Ansicht anlegen und gleich bearbeiten */
+  function addView() {
+    if (!editing) editStart();
+    const v = newView(t("Ansicht {n}", { n: views.length + 1 }));
+    views.push(v);
+    viewId = v.id;
+  }
+
+  /** Summe der Zähler der sichtbaren Kacheln einer Ansicht */
+  const viewBadge = (v: View) => v.tiles.reduce((n, x) => n + (x.visible && !tabOff(x.id as Tab) ? badge(x.id) : 0), 0);
 
   function tabClick(id: Tab) {
     if (!free) return void (tab = id);
-    const tile = tiles.find((x) => x.id === id);
+    const tile = cur?.tiles.find((x) => x.id === id);
     if (tile) tile.visible = !tile.visible;
   }
 
@@ -399,7 +424,7 @@
       {#each tabs as tb}
         <button
           class="tab"
-          class:active={free ? tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
+          class:active={free ? cur?.tiles.find((x) => x.id === tb.id)?.visible : tab === tb.id}
           class:current={!free && tab === tb.id}
           title={free && editing ? t("Kachel ein- oder ausblenden") : tabsCompact ? tb.label : undefined}
           onclick={() => tabClick(tb.id)}
@@ -414,7 +439,7 @@
       {#if free}
         <span class="spacer"></span>
         {#if editing}
-          <button class="tab keep" title={t("Standardanordnung")} onclick={() => (tiles = tilesOf(null))}><span>{t("Standard")}</span></button>
+          <button class="tab keep" title={t("Standardanordnung")} onclick={() => cur && (cur.tiles = tilesOf(null))}><span>{t("Standard")}</span></button>
           <button class="tab keep" title={t("Änderungen verwerfen")} onclick={editCancel}><Icon name="close" size={20} /><span>{t("Abbrechen")}</span></button>
           <button class="tab keep lock on" title={t("Anordnung speichern und fixieren")} onclick={editDone}><Icon name="check" size={20} /><span>{t("Fertig")}</span></button>
         {/if}
@@ -422,6 +447,10 @@
     </nav>
     {/if}
 
+    <div class="mid">
+    {#if free && views.length}
+      <ViewRail bind:views current={cur?.id ?? ""} {editing} badge={viewBadge} onselect={selectView} onadd={addView} />
+    {/if}
     <main class="work">
       {#if !connection.online}
         <p class="banner offline" role="status">
@@ -454,11 +483,19 @@
         {/if}
       {/snippet}
       {#if free}
-        <Workspace bind:tiles {editing} {meta} {badge} body={view} hidden={(id) => tabOff(id as Tab)} />
+        {#if cur}
+          {#if !cur.tiles.some((x) => x.visible && !tabOff(x.id as Tab))}
+            <p class="muted empty">{editing ? t("Über die Leiste oben blendest du Kacheln in dieser Ansicht ein.") : t("Diese Ansicht ist leer. Mit dem Stift oben rechts fügst du Kacheln hinzu.")}</p>
+          {/if}
+          {#key cur.id}
+            <Workspace bind:tiles={cur.tiles} {editing} {meta} {badge} body={view} hidden={(id) => tabOff(id as Tab)} />
+          {/key}
+        {/if}
       {:else}
         {@render view(tab)}
       {/if}
     </main>
+    </div>
   </div>
   {#if contactEdit.open}
     {#key contactEdit.id + contactEdit.number}<ContactForm />{/key}
@@ -583,7 +620,9 @@
   .banner { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.4rem; padding: 0.5rem 0.8rem; background: var(--panel); border-left: 3px solid var(--accent); }
   .banner.offline { border-left-color: var(--red); }
   .banner .reg { flex: none; }
-  .work { overflow: auto; padding: 0.5rem; display: flex; flex-direction: column; min-height: 0; }
+  .mid { grid-row: 3; display: flex; min-height: 0; min-width: 0; }
+  .empty { margin: 1.5rem auto; text-align: center; }
+  .work { flex: 1; min-width: 0; overflow: auto; padding: 0.5rem; display: flex; flex-direction: column; min-height: 0; }
   .state { display: flex; align-items: center; gap: 0.5rem; }
   .muted { color: var(--muted); }
   .notice { color: var(--accent-text); }

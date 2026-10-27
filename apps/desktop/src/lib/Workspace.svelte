@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { Tile } from "./prefs.svelte";
+  import type { Tile, View } from "./prefs.svelte";
 
   /** Rasterspalten der Fläche; Zeilen sind ROW Pixel hoch */
   export const COLS = 12;
@@ -51,6 +51,19 @@
     const list = (saved ?? []).filter((t) => DEFAULT_TILES.some((d) => d.id === t.id));
     for (const d of DEFAULT_TILES) if (!list.some((t) => t.id === d.id)) list.push({ ...d });
     return list.map((t) => ({ ...t }));
+  }
+
+  /** Gespeicherte Ansichten; ohne welche wird die bisherige Anordnung zur „Übersicht“ */
+  export function viewsOf(saved: View[] | null | undefined, legacy: Tile[] | null | undefined): View[] {
+    const list = (saved ?? []).filter((v) => v && typeof v.id === "string");
+    if (!list.length) return [{ id: "main", name: "", icon: "workspace", tiles: tilesOf(legacy) }];
+    return list.map((v) => ({ id: v.id, name: v.name ?? "", icon: v.icon || "workspace", tiles: tilesOf(v.tiles) }));
+  }
+
+  /** Neue, leere Ansicht: alle Kacheln da, aber ausgeblendet */
+  export function newView(name: string, icon = "overview"): View {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    return { id, name, icon, tiles: tilesOf(null).map((t) => ({ ...t, visible: false })) };
   }
 </script>
 
