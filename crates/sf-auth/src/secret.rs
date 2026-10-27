@@ -41,6 +41,20 @@ pub fn load_refresh_token(server: &str) -> Result<Option<String>> {
     }
 }
 
+/// Beliebiges Geheimnis unter eigenem Schlüssel (z. B. das App-Passwort
+/// einer Nextcloud)
+pub fn save_secret(key: &str, value: &str) -> Result<()> {
+    save_refresh_token(key, value)
+}
+
+pub fn load_secret(key: &str) -> Result<Option<String>> {
+    load_refresh_token(key)
+}
+
+pub fn delete_secret(key: &str) -> Result<()> {
+    delete_refresh_token(key)
+}
+
 pub fn delete_refresh_token(server: &str) -> Result<()> {
     match entry(server)?.delete_credential() {
         Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),

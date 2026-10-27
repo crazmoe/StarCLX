@@ -24,6 +24,7 @@ Not affiliated with STARFACE GmbH. "STARFACE" is used for descriptive purposes o
   for the system's groups and ad-hoc group chats like in the STARFACE app
 - **Voicemail**: listen to and manage messages
 - **Recordings**: listen to, save and delete call recordings stored on the PBX
+- **Nextcloud**: contacts from Nextcloud address books (read and write, caller names), share recordings and call notes as links
 - **Scheduled conferences**: create, edit, delete and start them (date, recurrence, participants)
 - **Door intercoms**: camera image in the Call Manager as soon as the door calls, with "Open door";
   additional cameras as tiles (RTSP, Motion JPEG, still image)
@@ -238,6 +239,7 @@ tag `v<version>` by hand does the same.
 | `crates/sf-auth` | OAuth2 login (authorization code + PKCE, refresh), keyring |
 | `crates/sf-onehub` | Connection to the OneHub API (port 9092) with bearer token |
 | `crates/sf-tls` | TLS configuration including confirmed certificates |
+| `crates/sf-nextcloud` | Nextcloud: Login Flow v2, WebDAV upload and share links, CardDAV, vCard |
 | `crates/sf-core` | Session, address book, call list, function keys, reachability, voicemail, recordings |
 | `crates/sf-sip` | Softphone based on libbaresip |
 | `crates/sf-audio` | Audio devices, ringtones, test tone (PulseAudio/PipeWire) |

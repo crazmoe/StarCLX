@@ -305,6 +305,7 @@ async fn save_prefs(
         relabel(&app, state.session.lock().await.as_ref());
     }
     log::set_verbose(prefs.verbose_log);
+    plugins::nextcloud::apply_prefs(&app, &prefs);
     bus::publish(&app, Event::PrefsSaved);
     desktop::apply_window(&app, &prefs);
     // Links, Autostart und Tastenkürzel gehören dem Hauptclient
@@ -850,6 +851,7 @@ pub fn run() {
         .manage(plugins::doorcam::DoorCamState::default())
         .manage(plugins::journal::JournalState::default())
         .manage(plugins::recordings::RecordingsState::default())
+        .manage(plugins::nextcloud::NextcloudState::default())
         .manage(busylight::BusylightState::default())
         .manage(plugins::headset::HeadsetState::default())
         .manage(AppState {
@@ -1079,6 +1081,15 @@ pub fn run() {
             plugins::recordings::recording_audio,
             plugins::recordings::recording_save,
             plugins::recordings::recording_delete,
+            plugins::nextcloud::nextcloud_status,
+            plugins::nextcloud::nextcloud_check_certificate,
+            plugins::nextcloud::nextcloud_connect,
+            plugins::nextcloud::nextcloud_cancel,
+            plugins::nextcloud::nextcloud_disconnect,
+            plugins::nextcloud::nextcloud_sync,
+            plugins::nextcloud::nextcloud_set_book,
+            plugins::nextcloud::nextcloud_share_recording,
+            plugins::nextcloud::nextcloud_share_text,
             plugins::queue::queues,
             plugins::queue::queue_login,
             plugins::queue::queue_grab,

@@ -21,6 +21,7 @@
   import { activeConferences, conferenceEdit, conferences, initConferences, loadConferences } from "#lib/plugins/conference/conference.svelte.ts";
   import { initVoicemail, loadVoicemails, unheard, voicemail } from "#lib/plugins/voicemail/voicemail.svelte.ts";
   import { initRecordings, loadRecordings, recordings } from "#lib/plugins/recordings/recordings.svelte.ts";
+  import { initNextcloud } from "#lib/plugins/nextcloud/nextcloud.svelte.ts";
   import { initChat, unreadTotal } from "#lib/plugins/chat/chat.svelte.ts";
   import Icon, { type IconName } from "#lib/Icon.svelte";
   import Settings from "#lib/Settings.svelte";
@@ -133,6 +134,7 @@
     initChat();
     initVoicemail();
     initRecordings();
+    initNextcloud();
     initPermissions();
     initConferences();
     initQueues();

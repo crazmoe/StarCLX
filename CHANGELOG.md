@@ -1,5 +1,23 @@
 # Änderungen
 
+## 1.8.0 – 2026-10-27
+
+### Nextcloud
+- Neu unter Einstellungen → Personalisierung → **Nextcloud**: Die Verbindung läuft über die
+  Anmeldung im Browser (auch mit Zwei-Faktor). StarCLX bekommt nur ein App-Passwort und legt es
+  im Schlüsselbund ab. „Trennen“ widerruft es. Im Instanzenbetrieb hat jede Anlage ihre eigene
+  Nextcloud (oder keine)
+- **Kontakte:** Die Nextcloud-Adressbücher erscheinen im Adressbuch als weitere Ordner und in
+  der Suche. Kontakte darin lassen sich anlegen, bearbeiten und löschen, wobei unbekannte Angaben
+  (Fotos, weitere Nummern) erhalten bleiben. Abgleich beim Start, alle 15 Minuten und auf Knopfdruck. Welche
+  Adressbücher mitmachen, lässt sich einzeln wählen
+- Liefert die Anlage keinen Namen für einen Anrufer, ergänzt StarCLX ihn aus den
+  Nextcloud-Kontakten (abschaltbar), auch in der Rufliste
+- **Teilen:** Aufzeichnungen (Wolken-Knopf) und Anrufnotizen („Anruf weitergeben“ →
+  „Nextcloud-Link …“) werden in Nextcloud abgelegt, dazu entsteht ein Link zum Kopieren. Ordner,
+  Ablauf des Links (Standard 7 Tage) und Passwortschutz sind einstellbar
+- Der Ordner „Gesprächsnotizen“ ist für spätere Zusammenfassungen von Gesprächen vorbereitet
+
 ## 1.7.1 – 2026-10-27
 
 ### Arbeitsbereich

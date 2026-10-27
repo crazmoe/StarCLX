@@ -15,11 +15,14 @@
   let confirmDelete = $state(false);
 
   const isNew = !contactEdit.id;
+  const isCloud = (id: string) => id.startsWith("nc:");
+  let formCloud = $state(false);
   const groups = $derived([...new Set(fields.map((f) => f.group))]);
 
   (async () => {
     try {
-      fields = await invoke<ContactField[]>("contact_form", { id: contactEdit.id });
+      fields = await invoke<ContactField[]>("contact_form", { id: contactEdit.id, folder: contactEdit.folder });
+      formCloud = isNew && isCloud(contactEdit.folder);
       if (isNew) {
         folders = (await invoke<Folder[]>("contacts_folders")).filter((f) => f.writable);
         folder = (folders.find((f) => f.id === contactEdit.folder) ?? folders.find((f) => f.private) ?? folders[0])?.id ?? "";
@@ -34,6 +37,22 @@
       loading = false;
     }
   })();
+
+  /** Neuer Kontakt: Nextcloud-Adressbücher haben eigene Felder. Beim
+   *  Wechsel neu laden und Eingaben über den Feldschlüssel mitnehmen. */
+  $effect(() => {
+    if (!isNew || loading || isCloud(folder) === formCloud) return;
+    const target = folder;
+    const old = $state.snapshot(fields);
+    formCloud = isCloud(target);
+    invoke<ContactField[]>("contact_form", { id: "", folder: target }).then(
+      (next) => {
+        for (const f of next) f.value = old.find((o) => o.key === f.key && o.value)?.value ?? f.value;
+        fields = next;
+      },
+      (e) => (error = String(e)),
+    );
+  });
 
   const SURNAME = 2;
   /** Cursor gleich in den Nachnamen, z. B. bei Übernahme aus der Rufliste */

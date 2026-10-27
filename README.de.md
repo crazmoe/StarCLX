@@ -24,6 +24,7 @@ Nicht mit der STARFACE GmbH verbunden. „STARFACE“ wird nur beschreibend verw
   der Anlagen-Gruppen und spontane Gruppenchats wie in der STARFACE-App
 - **Voicemail** abhören und verwalten
 - **Aufzeichnungen**: auf der Anlage gespeicherte Gesprächsaufnahmen anhören, speichern, löschen
+- **Nextcloud**: Kontakte aus Nextcloud-Adressbüchern (lesen und schreiben, Anrufernamen), Aufzeichnungen und Anrufnotizen per Link teilen
 - **Geplante Konferenzen** anlegen, ändern, löschen und starten (Termin, Wiederholung, Teilnehmer)
 - **Türsprechstellen**: Kamerabild im Call Manager, sobald die Tür anruft, mit „Tür öffnen“;
   weitere Kameras als Kachel (RTSP, Motion JPEG, Einzelbild)
@@ -236,6 +237,7 @@ Tag `v<Version>` von Hand bewirkt dasselbe.
 | `crates/sf-auth` | OAuth2-Login (Authorization Code + PKCE, Refresh), Schlüsselbund |
 | `crates/sf-onehub` | Verbindung zur OneHub-API (Port 9092) mit Bearer-Token |
 | `crates/sf-tls` | TLS-Konfiguration inkl. bestätigter Zertifikate |
+| `crates/sf-nextcloud` | Nextcloud: Login Flow v2, WebDAV-Upload und Freigabelinks, CardDAV, vCard |
 | `crates/sf-core` | Sitzung, Adressbuch, Rufliste, Funktionstasten, Erreichbarkeit, Voicemail, Aufzeichnungen |
 | `crates/sf-sip` | Softphone auf Basis von libbaresip |
 | `crates/sf-audio` | Audiogeräte, Klingeltöne, Testton (PulseAudio/PipeWire) |
