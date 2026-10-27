@@ -1,6 +1,6 @@
 <script lang="ts">
   // Ansichten des freien Arbeitsbereichs als Leiste links. Ein Klick wählt
-  // eine Ansicht, „+“ legt eine neue an. Im Bearbeiten-Modus öffnet ein Klick
+  // eine Ansicht, „+“ legt im Bearbeiten-Modus eine neue an. Im Bearbeiten-Modus öffnet ein Klick
   // auf die gewählte Ansicht Name, Symbol und Löschen; Ziehen ändert die
   // Reihenfolge (Zeigerereignisse, HTML5-Drag&Drop geht im Linux-Fenster nicht).
   import type { View } from "./prefs.svelte";
@@ -118,7 +118,9 @@
       {/if}
     </div>
   {/each}
-  <button class="view add" title={t("Neue Ansicht")} onclick={onadd}><Icon name="plus" size={22} /></button>
+  {#if editing}
+    <button class="view add" title={t("Neue Ansicht")} onclick={onadd}><Icon name="plus" size={22} /></button>
+  {/if}
 </nav>
 
 <style>

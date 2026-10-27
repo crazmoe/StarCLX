@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.7.1 – 2026-10-27
+
+### Arbeitsbereich
+- Das **+** für eine neue Ansicht erscheint nur noch im Bearbeiten-Modus (Stift oben)
+
 ## 1.7.0 – 2026-10-27
 
 ### Arbeitsbereich

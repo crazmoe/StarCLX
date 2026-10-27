@@ -85,6 +85,13 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.7.1" date="2026-10-27">
+      <description>
+        <ul>
+          <li>The + for a new view only shows while editing the layout</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.7.0" date="2026-10-27">
       <description>
         <ul>
