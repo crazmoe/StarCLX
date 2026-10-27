@@ -616,5 +616,14 @@ const dict: Record<string, string> = {
   "an {who}": "à {who}",
   "Keine Treffer.": "Aucun résultat.",
   "Keine Aufzeichnungen vorhanden.": "Aucun enregistrement.",
+  "Übersicht": "Vue d’ensemble",
+  "Ansichten": "Vues",
+  "Name und Symbol ändern": "Modifier le nom et l’icône",
+  "Ansicht bearbeiten": "Modifier la vue",
+  "Ansicht löschen": "Supprimer la vue",
+  "Neue Ansicht": "Nouvelle vue",
+  "Ansicht {n}": "Vue {n}",
+  "Über die Leiste oben blendest du Kacheln in dieser Ansicht ein.": "Utilisez la barre ci-dessus pour afficher des tuiles dans cette vue.",
+  "Diese Ansicht ist leer. Mit dem Stift oben rechts fügst du Kacheln hinzu.": "Cette vue est vide. Utilisez le crayon en haut à droite pour ajouter des tuiles.",
 };
 export default dict;

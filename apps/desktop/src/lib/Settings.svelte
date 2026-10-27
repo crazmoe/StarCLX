@@ -567,7 +567,7 @@
           </label>
           {#if draft.workspace === "free"}
             <p class="small muted">{t("Kacheln an der Titelleiste verschieben und an der Ecke unten rechts in der Grösse ändern. Über die Leiste oben blendest du Kacheln ein und aus.")}</p>
-            <button class="add" onclick={() => draft && (draft.workspace_tiles = null)}>{t("Anordnung zurücksetzen")}</button>
+            <button class="add" onclick={() => draft && ((draft.workspace_tiles = null), (draft.workspace_views = null), (draft.workspace_view = ""))}>{t("Anordnung zurücksetzen")}</button>
           {/if}
           <hr />
           <Toggle bind:checked={draft.autostart} disabled={lk("autostart")} label={t("Beim Anmelden am Rechner starten")} />
