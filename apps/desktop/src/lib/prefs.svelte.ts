@@ -50,6 +50,9 @@ export type Prefs = {
   default_country_code: string;
   minimize_to_tray: boolean;
   always_on_top: boolean;
+  /** Schnellwahl am Bildschirmrand andocken (nur Windows): "left", "right" oder "" */
+  quick_dock: "" | "left" | "right";
+  quick_dock_autohide: boolean;
   hotkeys: Hotkeys;
   fkey_columns: number;
   workspace: "tabs" | "free";

@@ -658,5 +658,11 @@ const dict: Record<string, string> = {
   "In Nextcloud teilen": "Condividi tramite Nextcloud",
   "Aufzeichnung teilen": "Condividi registrazione",
   "Adresse": "Indirizzo",
+  "Schnellwahl am Bildschirmrand": "Selezione rapida al bordo dello schermo",
+  "Nicht angedockt": "Non ancorata",
+  "Links": "A sinistra",
+  "Rechts": "A destra",
+  "Einfahren und erst bei Mausberührung am Rand zeigen": "Nascondi e mostra solo quando il mouse tocca il bordo",
+  "Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).": "Con Wayland l'ancoraggio richiede gtk-layer-shell (pacchetto libgtk-layer-shell0, ad es. con KDE, Sway, Hyprland).",
 };
 export default dict;

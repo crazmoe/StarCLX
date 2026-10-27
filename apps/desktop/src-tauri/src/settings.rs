@@ -199,6 +199,10 @@ pub struct Prefs {
     /// Beim Minimieren nur noch im Tray anzeigen
     pub minimize_to_tray: bool,
     pub always_on_top: bool,
+    /// Schnellwahl am Bildschirmrand andocken: "left", "right" oder leer (nur Windows)
+    pub quick_dock: String,
+    /// Angedockte Schnellwahl einfahren, bis die Maus den Rand berührt
+    pub quick_dock_autohide: bool,
     pub hotkeys: crate::desktop::Hotkeys,
     /// Spalten im Funktionstasten-Raster (lokal, wie in Windows)
     pub fkey_columns: u8,
@@ -266,6 +270,8 @@ impl Default for Prefs {
             default_country_code: "41".into(),
             minimize_to_tray: false,
             always_on_top: false,
+            quick_dock: String::new(),
+            quick_dock_autohide: false,
             hotkeys: crate::desktop::Hotkeys::default(),
             fkey_columns: 3,
             workspace: "tabs".into(),

@@ -1,5 +1,16 @@
 # Änderungen
 
+## 1.10.0 – 2026-10-27
+
+### Schnellwahl am Bildschirmrand
+- Neu unter Einstellungen → Personalisierung → **Schnellwahl am Bildschirmrand**: Die Schnellwahl
+  dockt links oder rechts an, randlos, immer im Vordergrund und so hoch wie der Bildschirm. Andere
+  Fenster machen ihr Platz wie bei einem Panel
+- Wahlweise **einfahren**: Nur ein schmaler Streifen bleibt am Rand; berührt die Maus ihn, fährt
+  die Leiste aus und danach wieder ein
+- Unter X11 auf jedem Desktop; unter Wayland mit gtk-layer-shell (KDE, Sway, Hyprland u. a.).
+  GNOME unter Wayland unterstützt das nicht, dort fehlt die Einstellung
+
 ## 1.9.0 – 2026-10-27
 
 ### Schnellwahl

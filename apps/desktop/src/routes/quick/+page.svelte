@@ -10,7 +10,7 @@
   import DialSearch from "#lib/DialSearch.svelte";
   import CallCard from "#lib/plugins/call/CallCard.svelte";
   import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
-  import { fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
+  import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs } from "#lib/prefs.svelte.ts";
   import { t } from "#lib/i18n.svelte.ts";
@@ -37,6 +37,21 @@
     };
   });
 
+  // Eingefahrene Leiste am Rand: Maus drauf fährt aus, Maus weg wieder ein
+  // (nicht während ein Gespräch gezogen wird). Ob die Leiste angedockt und
+  // eingefahren ist, weiss nur das Programm; sonst bleibt der Aufruf wirkungslos.
+  let collapse: ReturnType<typeof setTimeout> | undefined;
+  function enter() {
+    clearTimeout(collapse);
+    invoke("quick_dock_expand", { open: true });
+  }
+  function leave() {
+    clearTimeout(collapse);
+    collapse = setTimeout(() => {
+      if (!callDrag.call) invoke("quick_dock_expand", { open: false });
+    }, 700);
+  }
+
   function onkeydown(e: KeyboardEvent) {
     if (e.key === "Escape") invoke("quick_hide");
   }
@@ -44,7 +59,7 @@
 
 <svelte:window {onkeydown} />
 
-<main class="quick">
+<main class="quick" onpointerenter={enter} onpointerleave={leave}>
   <DialSearch />
   {#if !connection.online}<p class="notice">{t("Keine Verbindung zur Anlage")}</p>
   {:else if phone.notice}<p class="notice">{phone.notice}</p>{/if}
