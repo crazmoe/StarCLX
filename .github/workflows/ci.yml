@@ -45,10 +45,11 @@ jobs:
             cmake libssl-dev zlib1g-dev libspandsp-dev libpipewire-0.3-dev \
             libpulse-dev libasound2-dev
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          toolchain: stable
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           # Eigener Cache je Ubuntu-Version: Mit 24.04 gebaute C-Teile
           # (aws-lc-sys) verweisen auf glibc-2.38-Symbole und linken auf
@@ -109,8 +110,10 @@ jobs:
             cmake libssl-dev zlib1g-dev libspandsp-dev libpipewire-0.3-dev \
             libpulse-dev libasound2-dev
 
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           key: ubuntu-22.04
           save-if: ${{ github.ref == 'refs/heads/main' }}
