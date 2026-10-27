@@ -1,5 +1,13 @@
 # Änderungen
 
+## 1.9.0 – 2026-10-27
+
+### Schnellwahl
+- Das Schnellwahl-Fenster zeigt neben den Besetztlampenfeldern auch die **Direktwahltasten**
+- Laufende Gespräche erscheinen oben im Schnellwahl-Fenster. Eine Gesprächskarte lässt sich auf
+  ein Besetztlampenfeld oder eine Direktwahltaste ziehen: Das startet die Rückfrage, Auflegen
+  vermittelt. Direktwahltasten sind jetzt auch im Hauptfenster Vermittlungsziel
+
 ## 1.8.0 – 2026-10-27
 
 ### Nextcloud

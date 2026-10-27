@@ -1,18 +1,21 @@
 <script lang="ts">
   import { connection, initConnection } from "#lib/connection.svelte.ts";
   // Schnellwahl aus dem Tray: Rufnummernfeld mit Adressbuchsuche und nur die
-  // Besetztlampenfelder. Klick ruft an bzw. holt einen klingelnden Anruf heran.
+  // Besetztlampenfelder und Direktwahltasten. Klick ruft an bzw. holt einen klingelnden Anruf heran.
+  // Laufende Gespräche stehen oben und lassen sich auf ein Feld ziehen, um zu
+  // vermitteln (Ziehen zwischen Fenstern geht nicht, daher hier selbst).
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
   import DialSearch from "#lib/DialSearch.svelte";
+  import CallCard from "#lib/plugins/call/CallCard.svelte";
   import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
-  import { fkeys, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
+  import { fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs } from "#lib/prefs.svelte.ts";
   import { t } from "#lib/i18n.svelte.ts";
 
-  const blfs = $derived(fkeys.keys.filter((k) => k.functionKeyType === "BUSYLAMPFIELD"));
+  const blfs = $derived(fkeys.keys.filter(isTransferKey));
 
   onMount(() => {
     initPhone();
@@ -45,6 +48,11 @@
   <DialSearch />
   {#if !connection.online}<p class="notice">{t("Keine Verbindung zur Anlage")}</p>
   {:else if phone.notice}<p class="notice">{phone.notice}</p>{/if}
+  {#if phone.status.calls.length}
+    <div class="calls">
+      {#each phone.status.calls as call (call.id)}<CallCard {call} />{/each}
+    </div>
+  {/if}
   {#if fkeys.notice && connection.online}<p class="notice">{fkeys.notice}</p>{/if}
   <div class="list">
     {#each blfs as k (k.id)}
@@ -58,6 +66,7 @@
 <style>
   :global(body) { margin: 0; background: var(--bg); }
   .quick { height: 100vh; box-sizing: border-box; padding: 0.7rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .calls { display: flex; flex-direction: column; gap: 0.4rem; max-height: 50vh; overflow: auto; }
   .list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 0.4rem; }
   .muted { color: var(--muted); }
   .notice { color: var(--accent-text); margin: 0; font-size: 0.85rem; }
