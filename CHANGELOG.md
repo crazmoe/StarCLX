@@ -8,6 +8,7 @@
   Fenster machen ihr Platz wie bei einem Panel
 - Wahlweise **einfahren**: Nur ein schmaler Streifen bleibt am Rand; berührt die Maus ihn, fährt
   die Leiste aus und danach wieder ein
+- Angedockt fehlt „Schnellwahl“ im Menü des Infobereichs
 - Unter X11 auf jedem Desktop; unter Wayland mit gtk-layer-shell (KDE, Sway, Hyprland u. a.).
   GNOME unter Wayland unterstützt das nicht, dort fehlt die Einstellung
 

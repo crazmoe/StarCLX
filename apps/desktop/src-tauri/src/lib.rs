@@ -315,6 +315,9 @@ async fn save_prefs(
     plugins::nextcloud::apply_prefs(&app, &prefs);
     bus::publish(&app, Event::PrefsSaved);
     desktop::apply_window(&app, &prefs);
+    if old.quick_dock != prefs.quick_dock {
+        relabel(&app, state.session.lock().await.as_ref());
+    }
     // Links, Autostart und Tastenkürzel gehören dem Hauptclient
     if !instances::is_main() {
         return plugins::call::apply_prefs(&app, &old, &prefs).await;
@@ -693,8 +696,15 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .enumerate()
         .filter(|(_, a)| server_allowed(&a.server))
         .collect();
+    // Angedockt steht die Schnellwahl ohnehin am Bildschirmrand.
+    let without_quick = |menu: Menu<tauri::Wry>| -> tauri::Result<Menu<tauri::Wry>> {
+        if dock::docked() {
+            menu.remove(&quick)?;
+        }
+        Ok(menu)
+    };
     if accounts.len() < 2 {
-        return Menu::with_items(
+        return without_quick(Menu::with_items(
             app,
             &[
                 &header,
@@ -705,7 +715,7 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
                 &logout_item,
                 &quit,
             ],
-        );
+        )?);
     }
     let items = accounts
         .iter()
@@ -726,7 +736,7 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .map(|i| i as &dyn tauri::menu::IsMenuItem<tauri::Wry>)
         .collect();
     let switch = Submenu::with_items(app, t("Konto wechseln"), true, &refs)?;
-    Menu::with_items(
+    without_quick(Menu::with_items(
         app,
         &[
             &header,
@@ -738,7 +748,7 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
             &logout_item,
             &quit,
         ],
-    )
+    )?)
 }
 
 /// Rechnername der Anlage, sonst die Adresse, wie sie ist

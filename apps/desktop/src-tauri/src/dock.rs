@@ -83,6 +83,59 @@ mod imp {
 
     /// Fenster ist schon eine layer-shell-Fläche
     static LAYER: AtomicBool = AtomicBool::new(false);
+    /// X11: Lage der Leiste in GDK-Koordinaten (x, y, Breite, Höhe) und ob ausgefahren
+    static LAST: std::sync::Mutex<((i32, i32, i32, i32), bool)> =
+        std::sync::Mutex::new(((0, 0, 0, 0), false));
+    static WATCHING: AtomicBool = AtomicBool::new(false);
+
+    /// X11: Mausposition am Rand selbst prüfen; die Webansicht im schmalen
+    /// Streifen meldet das Überfahren nicht zuverlässig (wie unter Windows).
+    fn watch(app: &AppHandle) {
+        if WATCHING.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        let app = app.clone();
+        let mut outside_since: Option<std::time::Instant> = None;
+        gtk::glib::timeout_add_local(std::time::Duration::from_millis(120), move || {
+            let (edge, autohide) = super::STATE.lock().unwrap().clone();
+            let Some(w) = app.get_webview_window("quick") else {
+                return gtk::glib::ControlFlow::Continue;
+            };
+            if edge.is_empty() || !autohide {
+                outside_since = None;
+                return gtk::glib::ControlFlow::Continue;
+            }
+            let Some(display) = gtk::gdk::Display::default() else {
+                return gtk::glib::ControlFlow::Continue;
+            };
+            let (Some(pointer), Some(root)) = (
+                display.default_seat().and_then(|s| s.pointer()),
+                display.default_screen().root_window(),
+            ) else {
+                return gtk::glib::ControlFlow::Continue;
+            };
+            let (_, px, py, mask) = root.device_position(&pointer);
+            let ((x, y, wd, ht), open) = *LAST.lock().unwrap();
+            let inside = px >= x && px < x + wd && py >= y && py < y + ht;
+            let left = edge == "left";
+            if !open {
+                if inside {
+                    dock_x11(&w, left, true, WIDTH);
+                }
+            } else if inside || mask.contains(gtk::gdk::ModifierType::BUTTON1_MASK) {
+                // Nicht einfahren, solange die Maustaste gedrückt ist (Gespräch ziehen)
+                outside_since = None;
+            } else if outside_since
+                .get_or_insert_with(std::time::Instant::now)
+                .elapsed()
+                > std::time::Duration::from_millis(700)
+            {
+                outside_since = None;
+                dock_x11(&w, left, true, STRIP);
+            }
+            gtk::glib::ControlFlow::Continue
+        });
+    }
 
     fn wayland() -> bool {
         std::env::var("XDG_SESSION_TYPE").is_ok_and(|t| t == "wayland")
@@ -195,6 +248,19 @@ mod imp {
         let _ = w.set_size(PhysicalSize::new(px as u32, area.size.height));
         let _ = w.set_position(PhysicalPosition::new(x, area.position.y));
         let _ = w.show();
+        let lg = |v: i32| (v as f64 / scale).round() as i32;
+        *LAST.lock().unwrap() = (
+            (
+                lg(x),
+                lg(area.position.y),
+                lg(px),
+                lg(area.size.height as i32),
+            ),
+            width == WIDTH,
+        );
+        if autohide {
+            watch(w.app_handle());
+        }
 
         // Platz freihalten wie ein Panel (Koordinaten relativ zum ganzen Bildschirm)
         let Ok(gw) = w.gtk_window() else {
