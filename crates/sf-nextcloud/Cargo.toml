@@ -1,0 +1,18 @@
+[package]
+name = "sf-nextcloud"
+description = "Nextcloud: Anmeldung (Login Flow v2), Dateien hochladen und freigeben, Kontakte über CardDAV"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+sf-tls.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true
+roxmltree = "0.21"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }

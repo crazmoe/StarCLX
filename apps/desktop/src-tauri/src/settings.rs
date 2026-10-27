@@ -32,6 +32,9 @@ pub struct Settings {
     primary_before: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     fkey_redirects: Option<crate::plugins::fkeys::FkeyRedirects>,
+    /// Verbundene Nextcloud; das App-Passwort liegt im Schlüsselbund
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nextcloud: Option<crate::plugins::nextcloud::Account>,
 }
 
 /// Ein gespeichertes Konto: Anlage und Benutzer. Das Refresh-Token liegt im
@@ -209,6 +212,15 @@ pub struct Prefs {
     pub workspace_view: String,
     /// Ausführliches Protokoll (Anruf- und Verbindungsdetails)
     pub verbose_log: bool,
+    /// Ordner in Nextcloud für geteilte Dateien (darunter Aufnahmen,
+    /// Notizen, Gesprächsnotizen)
+    pub nextcloud_folder: String,
+    /// Links laufen nach so vielen Tagen ab; 0 = nie
+    pub nextcloud_link_days: u32,
+    /// Links mit Passwort schützen
+    pub nextcloud_link_password: bool,
+    /// Namen unbekannter Anrufer aus Nextcloud-Kontakten ergänzen
+    pub nextcloud_caller_names: bool,
 }
 
 impl Default for Prefs {
@@ -261,6 +273,10 @@ impl Default for Prefs {
             workspace_views: serde_json::Value::Null,
             workspace_view: String::new(),
             verbose_log: false,
+            nextcloud_folder: "StarCLX".into(),
+            nextcloud_link_days: 7,
+            nextcloud_link_password: false,
+            nextcloud_caller_names: true,
         }
     }
 }

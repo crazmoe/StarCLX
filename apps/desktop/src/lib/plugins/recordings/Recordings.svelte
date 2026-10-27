@@ -6,6 +6,8 @@
   import { run, canDial } from "../call/phone.svelte";
   import { loadRecordings, mimeOf, recordings, type Recording } from "./recordings.svelte";
   import { locale, t } from "../../i18n.svelte";
+  import ShareLink from "../nextcloud/ShareLink.svelte";
+  import { nextcloud, shareRecording, stamp } from "../nextcloud/nextcloud.svelte";
 
   let term = $state("");
   let notice = $state("");
@@ -56,9 +58,7 @@
   }
 
   async function save(r: Recording) {
-    const d = new Date(r.start);
-    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
-    const name = `${t("Aufzeichnung")}_${(r.caller || r.number || t("Unbekannt")).replace(/[^\p{L}\d+-]+/gu, "_")}_${stamp}`;
+    const name = fileName(r);
     notice = "";
     try {
       if (await invoke<boolean>("recording_save", { id: r.id, name })) notice = t("Gespeichert.");
@@ -66,6 +66,12 @@
       notice = String(e);
     }
   }
+
+  /** In Nextcloud teilen: Datei samt Link */
+  let sharing = $state<Recording | null>(null);
+  /** Dateiname beim Speichern und Teilen */
+  const fileName = (r: Recording) =>
+    `${t("Aufzeichnung")}_${(r.caller || r.number || t("Unbekannt")).replace(/[^\p{L}\d+-]+/gu, "_")}_${stamp(r.start)}`;
 
   async function remove(r: Recording) {
     notice = "";
@@ -118,6 +124,9 @@
         <span class="when">{when(r.start)}<small>{dur(r.duration_secs)}</small></span>
         <div class="acts">
           <button class="icon" title={t("Als Datei speichern")} onclick={() => save(r)}><Icon name="down" size={18} /></button>
+          {#if nextcloud.status.connected}
+            <button class="icon" title={t("In Nextcloud teilen")} onclick={() => (sharing = r)}><Icon name="cloud" size={18} /></button>
+          {/if}
           <button
             class="icon"
             class:warn={confirmDelete === r.id}
@@ -136,6 +145,11 @@
   </div>
   {/if}
 </div>
+
+{#if sharing}
+  {@const r = sharing}
+  <ShareLink title={t("Aufzeichnung teilen")} run={() => shareRecording(r.id, fileName(r))} onclose={() => (sharing = null)} />
+{/if}
 
 <style>
   .rec { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 0.5rem; }

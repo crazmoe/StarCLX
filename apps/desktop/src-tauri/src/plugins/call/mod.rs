@@ -150,6 +150,15 @@ fn update_phone_status(app: &AppHandle, f: impl FnOnce(&mut PhoneStatus)) {
         let state = app.state::<CallState>();
         let mut status = state.status.lock().unwrap();
         f(&mut status);
+        if crate::plugins::nextcloud::caller_names_enabled(app) {
+            for c in status.calls.iter_mut().filter(|c| c.remote_name.is_empty()) {
+                if let Some(name) =
+                    crate::plugins::nextcloud::contacts::caller_name(app, &c.remote_number)
+                {
+                    c.remote_name = name;
+                }
+            }
+        }
         if status.state.is_empty() {
             status.state = "off".into();
         }

@@ -721,6 +721,83 @@ const TEXTS: &[(&str, [&str; 3])] = &[
             "Nessun telefono disponibile per rispondere.",
         ],
     ),
+    // Nextcloud
+    (
+        "Nextcloud lehnt die Anmeldung ab. Bitte in den Einstellungen neu verbinden.",
+        [
+            "Nextcloud rejected the login. Please reconnect in the settings.",
+            "Nextcloud refuse la connexion. Veuillez vous reconnecter dans les paramètres.",
+            "Nextcloud rifiuta l’accesso. Riconnetti nelle impostazioni.",
+        ],
+    ),
+    (
+        "App-Passwort nicht im Schlüsselbund. Bitte neu verbinden.",
+        [
+            "App password not found in the keyring. Please reconnect.",
+            "Mot de passe d’application absent du trousseau. Veuillez vous reconnecter.",
+            "Password per app non trovata nel portachiavi. Riconnetti.",
+        ],
+    ),
+    (
+        "Keine Nextcloud verbunden",
+        [
+            "No Nextcloud connected",
+            "Aucun Nextcloud connecté",
+            "Nessun Nextcloud connesso",
+        ],
+    ),
+    (
+        "Nextcloud nicht erreichbar: {e}",
+        [
+            "Nextcloud not reachable: {e}",
+            "Nextcloud injoignable : {e}",
+            "Nextcloud non raggiungibile: {e}",
+        ],
+    ),
+    (
+        "Anmeldung abgelaufen. Bitte nochmals verbinden.",
+        [
+            "Login expired. Please connect again.",
+            "Connexion expirée. Veuillez vous reconnecter.",
+            "Accesso scaduto. Connetti di nuovo.",
+        ],
+    ),
+    (
+        "App-Passwort nicht gespeichert: {e}",
+        [
+            "App password not saved: {e}",
+            "Mot de passe d’application non enregistré : {e}",
+            "Password per app non salvata: {e}",
+        ],
+    ),
+    (
+        "Nicht hochgeladen: {e}",
+        ["Not uploaded: {e}", "Non envoyé : {e}", "Non caricato: {e}"],
+    ),
+    (
+        "Hochgeladen, aber kein Link erstellt: {e}",
+        [
+            "Uploaded, but no link created: {e}",
+            "Envoyé, mais aucun lien créé : {e}",
+            "Caricato, ma nessun link creato: {e}",
+        ],
+    ),
+    (
+        "Kontakt nicht gefunden",
+        [
+            "Contact not found",
+            "Contact introuvable",
+            "Contatto non trovato",
+        ],
+    ),
+    (
+        "Kontakt nicht lesbar",
+        [
+            "Contact cannot be read",
+            "Contact illisible",
+            "Contatto non leggibile",
+        ],
+    ),
 ];
 
 /// Sprache setzen ("de", "en", "fr", "it"); Unbekanntes heisst Deutsch.

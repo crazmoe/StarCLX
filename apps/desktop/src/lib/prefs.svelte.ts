@@ -60,6 +60,13 @@ export type Prefs = {
   workspace_view: string;
   /** Ausführliches Protokoll (Anruf- und Verbindungsdetails) */
   verbose_log: boolean;
+  /** Ordner in Nextcloud für geteilte Dateien */
+  nextcloud_folder: string;
+  /** Ablauf der Links in Tagen; 0 = nie */
+  nextcloud_link_days: number;
+  nextcloud_link_password: boolean;
+  /** Namen unbekannter Anrufer aus Nextcloud-Kontakten */
+  nextcloud_caller_names: boolean;
 };
 
 /** Kachel im freien Arbeitsbereich: Lage in Rasterzellen (12 Spalten) */

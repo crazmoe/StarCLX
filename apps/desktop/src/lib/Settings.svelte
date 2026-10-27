@@ -10,6 +10,7 @@
   import Reach from "./plugins/reach/Reach.svelte";
   import Toggle from "./Toggle.svelte";
   import BusylightSettings from "./plugins/busylight/Settings.svelte";
+  import NextcloudSettings from "./plugins/nextcloud/Settings.svelte";
   import HeadsetSettings from "./plugins/headset/Settings.svelte";
   import CallActionsSettings from "./plugins/callactions/Settings.svelte";
   import DoorCamSettings from "./plugins/doorcam/Settings.svelte";
@@ -72,6 +73,7 @@
     { id: "fkeys", icon: "dialpad", label: t("Funktionstasten") },
     { id: "hotkeys", icon: "dialpad", label: t("Hotkeys") },
     { id: "integration", icon: "call", label: t("Desktop-Integration") },
+    { id: "nextcloud", icon: "cloud", label: "Nextcloud" },
   ] as Item[]).filter((s) => s.id !== "fkeys" || !fkeys.forbidden));
   const accountSections: { id: string; icon: IconName; label: string }[] = $derived([
     { id: "account", icon: "account", label: t("Konto") },
@@ -628,6 +630,8 @@
           <p class="small muted">{t("Ein Klick auf eine Rufnummer im Browser oder Mailprogramm wählt sie mit dem Softphone.")}</p>
         </div>
       </section>
+
+      <NextcloudSettings bind:draft />
 
       </div>
 

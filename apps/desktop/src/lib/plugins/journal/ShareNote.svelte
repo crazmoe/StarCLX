@@ -1,12 +1,15 @@
 <script lang="ts">
   import { portal } from "../../portal";
   // Anruf mit Notiz an einen Kollegen weitergeben: per Chat direkt an einen
-  // STARFACE-Benutzer oder per E-Mail über das Mailprogramm.
+  // STARFACE-Benutzer, per E-Mail über das Mailprogramm oder als Datei mit
+  // Link über Nextcloud.
   import { invoke } from "@tauri-apps/api/core";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { untrack } from "svelte";
   import { chat } from "../chat/chat.svelte";
   import { t } from "../../i18n.svelte";
+  import ShareLink from "../nextcloud/ShareLink.svelte";
+  import { nextcloud, shareText, stamp } from "../nextcloud/nextcloud.svelte";
 
   let { text: initial, subject, onclose }: { text: string; subject: string; onclose: () => void } = $props();
 
@@ -15,6 +18,7 @@
   let filter = $state("");
   let busy = $state(false);
   let error = $state("");
+  let cloud = $state(false);
 
   const people = $derived(
     chat.status.contacts
@@ -69,12 +73,19 @@
   {#if error}<p class="notice">{error}</p>{/if}
   <div class="actions">
     <button onclick={sendMail}>{t("Per E-Mail …")}</button>
+    {#if nextcloud.status.connected}
+      <button disabled={!text.trim()} onclick={() => (cloud = true)}>{t("Nextcloud-Link …")}</button>
+    {/if}
     <span class="spacer"></span>
     <button onclick={onclose}>{t("Abbrechen")}</button>
     <button class="primary" disabled={busy || !peer || !text.trim()} onclick={sendChat}>{t("Per Chat senden")}</button>
   </div>
 </div>
 </div>
+
+{#if cloud}
+  <ShareLink title={t("Notiz über Nextcloud teilen")} run={() => shareText("note", `${subject}_${stamp(Date.now())}`, text)} onclose={() => (cloud = false)} />
+{/if}
 
 <style>
   .scrim { position: fixed; inset: 0; background: #0007; z-index: 40; }
