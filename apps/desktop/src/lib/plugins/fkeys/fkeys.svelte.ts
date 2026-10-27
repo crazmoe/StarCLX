@@ -551,11 +551,14 @@ const blfTransfers = $state<Record<string, boolean>>({});
 
 let pending: { call: Call; x: number; y: number } | null = null;
 
-/** BLF-Taste unter dem Zeiger (Elemente mit data-fkey) */
+/** Tasten, auf die sich ein Gespräch zum Vermitteln ziehen lässt */
+export const isTransferKey = (k: FunctionKey) => k.functionKeyType === "BUSYLAMPFIELD" || k.functionKeyType === "QUICKDIAL";
+
+/** BLF- oder Direktwahltaste unter dem Zeiger (Elemente mit data-fkey) */
 function blfAt(x: number, y: number) {
   const id = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-fkey]")?.dataset.fkey;
   const k = fkeys.keys.find((k) => k.id === id);
-  return k?.functionKeyType === "BUSYLAMPFIELD" ? k : undefined;
+  return k && isTransferKey(k) ? k : undefined;
 }
 
 function onMove(e: PointerEvent) {
@@ -597,11 +600,11 @@ export function startCallDrag(e: PointerEvent, call: Call) {
   window.addEventListener("pointercancel", stopCallDrag);
 }
 
-/** Rückfrage zum Kollegen der Taste; Auflegen vermittelt danach */
+/** Rückfrage zum Ziel der Taste; Auflegen vermittelt danach */
 async function transferTo(call: Call, k: FunctionKey) {
-  const a = account(k);
-  if (!a?.number) return void (phone.notice = t("Für diese Taste ist keine Rufnummer bekannt."));
-  if (await action("consult", call.id, a.number)) blfTransfers[call.id] = true;
+  const number = k.functionKeyType === "QUICKDIAL" ? k.directCallTargetnumber : account(k)?.number;
+  if (!number) return void (phone.notice = t("Für diese Taste ist keine Rufnummer bekannt."));
+  if (await action("consult", call.id, number)) blfTransfers[call.id] = true;
 }
 
 /** Soll Auflegen dieses Gesprächs vermitteln? */
