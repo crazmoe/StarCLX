@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.11.0 – 2026-10-28
+
+### Schnellwahl am Bildschirmrand
+- Bei mehreren Bildschirmen lässt sich wählen, an welchem die Schnellwahl andockt
+  (Einstellungen → Personalisierung → Bildschirm)
+
 ## 1.10.0 – 2026-10-27
 
 ### Schnellwahl am Bildschirmrand

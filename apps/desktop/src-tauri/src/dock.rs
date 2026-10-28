@@ -17,6 +17,27 @@ use tauri::AppHandle;
 /// Gewählter Rand ("left"/"right", leer = nicht angedockt) und Einfahren
 static STATE: Mutex<(String, bool)> = Mutex::new((String::new(), false));
 
+/// Gewählter Bildschirm (Name wie von Tauri gemeldet; leer = Hauptbildschirm)
+static MONITOR: Mutex<String> = Mutex::new(String::new());
+
+/// Bildschirm zum Andocken: der gewählte, sonst der Hauptbildschirm
+fn pick_monitor(w: &tauri::WebviewWindow) -> Option<tauri::Monitor> {
+    let name = MONITOR.lock().unwrap().clone();
+    if !name.is_empty()
+        && let Some(m) = w
+            .available_monitors()
+            .unwrap_or_default()
+            .into_iter()
+            .find(|m| m.name().is_some_and(|n| *n == name))
+    {
+        return Some(m);
+    }
+    w.primary_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| w.current_monitor().ok().flatten())
+}
+
 /// Angedockt?
 pub fn docked() -> bool {
     !STATE.lock().unwrap().0.is_empty()
@@ -29,6 +50,7 @@ pub fn apply(app: &AppHandle, prefs: &Prefs) {
         _ => String::new(),
     };
     let next = (edge, prefs.quick_dock_autohide);
+    *MONITOR.lock().unwrap() = prefs.quick_dock_monitor.clone();
     let changed = {
         let mut s = STATE.lock().unwrap();
         let changed = *s != next;
@@ -230,7 +252,7 @@ mod imp {
     }
 
     fn dock_x11(w: &WebviewWindow, left: bool, autohide: bool, width: i32) {
-        let Ok(Some(mon)) = w.current_monitor().or_else(|_| w.primary_monitor()) else {
+        let Some(mon) = super::pick_monitor(w) else {
             return;
         };
         let scale = mon.scale_factor();
