@@ -579,6 +579,23 @@
           {#if desktop.wayland && draft.always_on_top}
             <p class="small muted">{t("Unter Wayland bestimmt der Desktop, ob ein Fenster oben bleibt. Bei GNOME geht es über Alt+Leertaste → „Immer im Vordergrund“.")}</p>
           {/if}
+          <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->
+          {#if !(desktop.wayland && desktop.gnome)}
+            <label class="field">
+              <span>{t("Schnellwahl am Bildschirmrand")}</span>
+              <select bind:value={draft.quick_dock} disabled={lk("quick_dock")}>
+                <option value="">{t("Nicht angedockt")}</option>
+                <option value="left">{t("Links")}</option>
+                <option value="right">{t("Rechts")}</option>
+              </select>
+            </label>
+            {#if draft.quick_dock}
+              <Toggle bind:checked={draft.quick_dock_autohide} disabled={lk("quick_dock_autohide")} label={t("Einfahren und erst bei Mausberührung am Rand zeigen")} />
+              {#if desktop.wayland}
+                <p class="small muted">{t("Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).")}</p>
+              {/if}
+            {/if}
+          {/if}
         </div>
       </section>
 

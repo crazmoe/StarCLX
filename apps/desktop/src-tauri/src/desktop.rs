@@ -141,6 +141,7 @@ pub fn desktop_info() -> DesktopInfo {
 
 /// Wendet Fenster-Einstellungen an (beim Start und nach dem Speichern).
 pub fn apply_window(app: &AppHandle, prefs: &Prefs) {
+    crate::dock::apply(app, prefs);
     let Some(w) = app.get_webview_window("main") else {
         return;
     };
