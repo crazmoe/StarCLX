@@ -12,10 +12,32 @@
 
 use crate::settings::Prefs;
 use std::sync::Mutex;
-use tauri::AppHandle;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{AppHandle, Manager};
 
 /// Gewählter Rand ("left"/"right", leer = nicht angedockt) und Einfahren
 static STATE: Mutex<(String, bool)> = Mutex::new((String::new(), false));
+
+/// Gewählter Bildschirm (Name wie von Tauri gemeldet; leer = Hauptbildschirm)
+static MONITOR: Mutex<String> = Mutex::new(String::new());
+
+/// Bildschirm zum Andocken: der gewählte, sonst der Hauptbildschirm
+fn pick_monitor(w: &tauri::WebviewWindow) -> Option<tauri::Monitor> {
+    let name = MONITOR.lock().unwrap().clone();
+    if !name.is_empty()
+        && let Some(m) = w
+            .available_monitors()
+            .unwrap_or_default()
+            .into_iter()
+            .find(|m| m.name().is_some_and(|n| *n == name))
+    {
+        return Some(m);
+    }
+    w.primary_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| w.current_monitor().ok().flatten())
+}
 
 /// Angedockt?
 pub fn docked() -> bool {
@@ -29,6 +51,7 @@ pub fn apply(app: &AppHandle, prefs: &Prefs) {
         _ => String::new(),
     };
     let next = (edge, prefs.quick_dock_autohide);
+    *MONITOR.lock().unwrap() = prefs.quick_dock_monitor.clone();
     let changed = {
         let mut s = STATE.lock().unwrap();
         let changed = *s != next;
@@ -47,7 +70,38 @@ pub fn place(app: &AppHandle) {
     let (edge, autohide) = STATE.lock().unwrap().clone();
     if !edge.is_empty() {
         imp::dock(app, &edge, autohide, !autohide);
+        watch_monitors(app);
     }
+}
+
+/// Bildschirm an- oder abgesteckt (z. B. Laptop abgedockt): Leiste neu an
+/// den gewählten Bildschirm legen, sonst an den Hauptbildschirm.
+fn watch_monitors(app: &AppHandle) {
+    static WATCHING: AtomicBool = AtomicBool::new(false);
+    if WATCHING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let mut last = None;
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(2));
+            let Some(w) = app.get_webview_window("quick").filter(|_| docked()) else {
+                last = None;
+                continue;
+            };
+            let now: Vec<_> = w
+                .available_monitors()
+                .unwrap_or_default()
+                .iter()
+                .map(|m| (m.name().cloned(), *m.position(), *m.size()))
+                .collect();
+            if last.as_ref().is_some_and(|l| *l != now) {
+                place(&app);
+            }
+            last = Some(now);
+        }
+    });
 }
 
 /// Eingefahrene Leiste aus- oder wieder einfahren
@@ -230,7 +284,7 @@ mod imp {
     }
 
     fn dock_x11(w: &WebviewWindow, left: bool, autohide: bool, width: i32) {
-        let Ok(Some(mon)) = w.current_monitor().or_else(|_| w.primary_monitor()) else {
+        let Some(mon) = super::pick_monitor(w) else {
             return;
         };
         let scale = mon.scale_factor();

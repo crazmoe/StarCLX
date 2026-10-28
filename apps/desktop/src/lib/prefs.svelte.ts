@@ -53,6 +53,8 @@ export type Prefs = {
   /** Schnellwahl am Bildschirmrand andocken (nur Windows): "left", "right" oder "" */
   quick_dock: "" | "left" | "right";
   quick_dock_autohide: boolean;
+  /** Bildschirm der angedockten Schnellwahl (Name); "" = Hauptbildschirm */
+  quick_dock_monitor: string;
   hotkeys: Hotkeys;
   fkey_columns: number;
   workspace: "tabs" | "free";

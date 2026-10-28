@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getVersion } from "@tauri-apps/api/app";
   import { listen } from "@tauri-apps/api/event";
+  import { availableMonitors, primaryMonitor } from "@tauri-apps/api/window";
   import { onMount } from "svelte";
   import DeviceList, { DEFAULT, findDevice, mergeOrder, type Device } from "./DeviceList.svelte";
   import Icon, { type IconName } from "./Icon.svelte";
@@ -26,6 +27,14 @@
   } = $props();
 
   let draft = $state<Prefs | null>(null);
+  /** Angeschlossene Bildschirme für die angedockte Schnellwahl */
+  let monitors = $state<{ name: string; size: string; primary: boolean }[]>([]);
+  async function loadMonitors() {
+    const [all, main] = await Promise.all([availableMonitors(), primaryMonitor()]);
+    monitors = all
+      .filter((m) => m.name)
+      .map((m) => ({ name: m.name!, size: `${m.size.width}×${m.size.height}`, primary: m.name === main?.name }));
+  }
   /** Vom System gesperrt, nicht änderbar */
   const lk = (key: keyof Prefs) => locked.keys.includes(key);
   let numbers = $state<SignalingNumber[]>([]);
@@ -139,6 +148,7 @@
   onMount(() => {
     const off = listen<number>("mic-level", (e) => (micLevel = e.payload));
     init();
+    loadMonitors().catch(() => {});
     return () => {
       invoke("audio_stop");
       off.then((f) => f());
@@ -590,6 +600,17 @@
               </select>
             </label>
             {#if draft.quick_dock}
+              {#if monitors.length > 1}
+                <label class="field">
+                  <span>{t("Bildschirm")}</span>
+                  <select bind:value={draft.quick_dock_monitor} disabled={lk("quick_dock_monitor")}>
+                    <option value="">{t("Hauptbildschirm")}</option>
+                    {#each monitors as m, i (m.name)}
+                      <option value={m.name}>{t("Bildschirm {n}", { n: i + 1 })} ({m.size}){m.primary ? ` – ${t("Hauptbildschirm")}` : ""}</option>
+                    {/each}
+                  </select>
+                </label>
+              {/if}
               <Toggle bind:checked={draft.quick_dock_autohide} disabled={lk("quick_dock_autohide")} label={t("Einfahren und erst bei Mausberührung am Rand zeigen")} />
               {#if desktop.wayland}
                 <p class="small muted">{t("Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).")}</p>

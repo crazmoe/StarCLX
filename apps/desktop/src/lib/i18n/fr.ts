@@ -664,5 +664,8 @@ const dict: Record<string, string> = {
   "Rechts": "À droite",
   "Einfahren und erst bei Mausberührung am Rand zeigen": "Masquer et afficher seulement quand la souris touche le bord",
   "Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).": "Sous Wayland, l'ancrage nécessite gtk-layer-shell (paquet libgtk-layer-shell0, p. ex. sous KDE, Sway, Hyprland).",
+  "Bildschirm": "Écran",
+  "Hauptbildschirm": "Écran principal",
+  "Bildschirm {n}": "Écran {n}",
 };
 export default dict;
