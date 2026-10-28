@@ -87,6 +87,8 @@ mod imp {
     static LAST: std::sync::Mutex<((i32, i32, i32, i32), bool)> =
         std::sync::Mutex::new(((0, 0, 0, 0), false));
     static WATCHING: AtomicBool = AtomicBool::new(false);
+    /// X11: Fenster ist als Dock gemeldet
+    static DOCK_HINT: AtomicBool = AtomicBool::new(false);
 
     /// X11: Mausposition am Rand selbst prüfen; die Webansicht im schmalen
     /// Streifen meldet das Überfahren nicht zuverlässig (wie unter Windows).
@@ -236,9 +238,19 @@ mod imp {
         let _ = w.set_decorations(false);
         let _ = w.set_skip_taskbar(true);
         let _ = w.set_always_on_top(true);
-        let _ = w.set_resizable(false);
+        // Nicht set_resizable(false): GTK hält ein solches Fenster auf der
+        // Grösse seines Inhalts, der Streifen liesse sich nicht einfahren.
         let _ = w.set_min_size(None::<PhysicalSize<u32>>);
         let _ = w.set_visible_on_all_workspaces(true);
+        // Als Dock melden, sonst schiebt der Fenstermanager die Leiste aus dem
+        // eigenen freigehaltenen Platz. Geht nur, solange sie nicht sichtbar ist.
+        if let Ok(gw) = w.gtk_window()
+            && !DOCK_HINT.swap(true, Ordering::SeqCst)
+        {
+            gw.hide();
+            gw.set_type_hint(gtk::gdk::WindowTypeHint::Dock);
+            gw.show_all();
+        }
         // Waagrecht der ganze Bildschirm (der eigene Streifen zählt nicht),
         // senkrecht ohne Panels oben und unten
         let m = *mon.position();
@@ -309,6 +321,7 @@ mod imp {
     pub fn undock(app: &AppHandle) {
         if let Some(w) = app.get_webview_window("quick") {
             LAYER.store(false, Ordering::SeqCst);
+            DOCK_HINT.store(false, Ordering::SeqCst);
             let _ = w.destroy();
         }
     }
