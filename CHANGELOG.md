@@ -5,6 +5,8 @@
 ### Schnellwahl am Bildschirmrand
 - Bei mehreren Bildschirmen lässt sich wählen, an welchem die Schnellwahl andockt
   (Einstellungen → Personalisierung → Bildschirm)
+- Wird ein Bildschirm an- oder abgesteckt (z. B. Laptop ab- oder angedockt), wechselt die Leiste
+  von selbst an den Hauptbildschirm und wieder zurück an den gewählten Bildschirm
 
 ## 1.10.0 – 2026-10-27
 
