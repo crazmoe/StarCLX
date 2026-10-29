@@ -10,11 +10,11 @@
 //! Ausgangsstand. Darum wird alles als Zustand angewandt und nur ein
 //! geänderter Stand weitergegeben.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sf_onehub::OneHub;
 use sf_onehub::sf_proto::v1;
 use tokio::sync::mpsc;
@@ -75,6 +75,143 @@ pub struct Queue {
     /// Nach Platz in der Schlange sortiert
     pub calls: Vec<Call>,
     pub stats: Stats,
+}
+
+/// Ein beendeter Anruf einer Queue. Die Anlage liefert keinen Verlauf, der
+/// Client schreibt ihn aus den Live-Ereignissen mit, solange er läuft.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Done {
+    pub queue: String,
+    pub caller_name: String,
+    pub caller_number: String,
+    /// Eingang, Annahme (0 = nicht angenommen) und Ende in Millisekunden
+    pub incoming: i64,
+    pub connected: i64,
+    pub ended: i64,
+    /// Agenten, die angenommen haben („Nachname, Vorname“)
+    pub answered_by: Vec<String>,
+    /// Agenten, bei denen es geklingelt hat, ohne dass sie angenommen haben
+    pub rang: Vec<String>,
+}
+
+/// Höchstzahl gemerkter Einträge, älteste fallen weg
+pub const HISTORY_MAX: usize = 500;
+
+/// Leitet aus zwei aufeinanderfolgenden Ständen den Verlauf ab: Ein Anruf,
+/// der aus einer Queue verschwindet, wurde angenommen, wenn er zuletzt
+/// verbunden war, sonst verpasst (aufgelegt oder Zeit abgelaufen, das sagt
+/// die Anlage nicht).
+#[derive(Debug, Default)]
+pub struct History {
+    /// Älteste zuerst
+    pub entries: Vec<Done>,
+    /// Anruf-ID → Agenten, bei denen es bisher geklingelt hat
+    rang: HashMap<String, Vec<String>>,
+}
+
+impl History {
+    pub fn new(entries: Vec<Done>) -> Self {
+        Self {
+            entries,
+            rang: HashMap::new(),
+        }
+    }
+
+    /// Übernimmt den neuen Stand; `true`, wenn der Verlauf sich geändert hat.
+    pub fn observe(&mut self, before: &[Queue], after: &[Queue], now: i64) -> bool {
+        let name = |q: &Queue, id: &str| {
+            q.agents
+                .iter()
+                .find(|a| a.user_id == id)
+                .map_or_else(|| id.to_owned(), |a| a.name.clone())
+        };
+        for q in after {
+            for c in q.calls.iter().filter(|c| c.state == "ringing") {
+                let rang = self.rang.entry(c.id.clone()).or_default();
+                for a in &c.agents {
+                    let n = name(q, a);
+                    if !rang.contains(&n) {
+                        rang.push(n);
+                    }
+                }
+            }
+        }
+        let mut changed = false;
+        // Nur Queues, die es noch gibt: beim Austritt aus einer Queue
+        // verschwinden ihre Anrufe, ohne beendet zu sein.
+        for old in before {
+            let Some(new) = after.iter().find(|q| q.id == old.id) else {
+                continue;
+            };
+            for c in &old.calls {
+                if new.calls.iter().any(|x| x.id == c.id) {
+                    continue;
+                }
+                let rang = self.rang.remove(&c.id).unwrap_or_default();
+                let answered = c.state == "connected";
+                let answered_by: Vec<String> = if answered {
+                    c.agents.iter().map(|a| name(old, a)).collect()
+                } else {
+                    Vec::new()
+                };
+                if answered && self.resume(&old.id, c, &answered_by, now) {
+                    changed = true;
+                    continue;
+                }
+                self.entries.push(Done {
+                    queue: old.id.clone(),
+                    caller_name: c.caller_name.clone(),
+                    caller_number: c.caller_number.clone(),
+                    incoming: c.incoming,
+                    connected: if answered {
+                        c.connected.max(c.incoming)
+                    } else {
+                        0
+                    },
+                    ended: now,
+                    rang: rang
+                        .into_iter()
+                        .filter(|n| !answered_by.contains(n))
+                        .collect(),
+                    answered_by,
+                });
+                changed = true;
+            }
+        }
+        let known: Vec<&str> = after
+            .iter()
+            .flat_map(|q| q.calls.iter().map(|c| c.id.as_str()))
+            .collect();
+        self.rang.retain(|id, _| known.contains(&id.as_str()));
+        if self.entries.len() > HISTORY_MAX {
+            let n = self.entries.len() - HISTORY_MAX;
+            self.entries.drain(..n);
+        }
+        changed
+    }
+
+    /// Nach dem Halten meldet die Anlage einen neuen Queue-Anruf, der sofort
+    /// verbunden ist (Annahme = Eingang). Er setzt das vorige Gespräch
+    /// desselben Anrufers fort statt einen eigenen Eintrag zu bekommen.
+    fn resume(&mut self, queue: &str, c: &Call, answered_by: &[String], now: i64) -> bool {
+        if c.caller_number.is_empty() || c.connected > c.incoming + 1000 {
+            return false;
+        }
+        let Some(prev) =
+            self.entries.iter_mut().rev().take(20).find(|e| {
+                e.queue == queue && e.caller_number == c.caller_number && e.connected != 0
+            })
+        else {
+            return false;
+        };
+        prev.ended = now;
+        for n in answered_by {
+            if !prev.answered_by.contains(n) {
+                prev.answered_by.push(n.clone());
+            }
+        }
+        true
+    }
 }
 
 fn queue_id(id: &str) -> Option<v1::types::QueueId> {
@@ -726,5 +863,85 @@ mod tests {
         sort_calls(&mut calls);
         let ids: Vec<_> = calls.iter().map(|c| c.id.as_str()).collect();
         assert_eq!(ids, ["first", "second", "new", "conn"]);
+    }
+
+    fn snapshot(calls: Vec<Call>) -> Vec<Queue> {
+        let mut list = queue();
+        list[0].agents.push(Agent {
+            user_id: "other".into(),
+            name: "Beispiel, Eva".into(),
+            logged_in: true,
+            paused: false,
+        });
+        list[0].calls = calls;
+        list
+    }
+
+    fn qcall(id: &str, state: &'static str, agents: &[&str]) -> Call {
+        Call {
+            id: id.into(),
+            caller_name: "Anrufer".into(),
+            caller_number: "0311234567".into(),
+            state,
+            incoming: 1_000,
+            connected: if state == "connected" { 5_000 } else { 0 },
+            agents: agents.iter().map(|a| (*a).to_owned()).collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn history_answered_and_missed() {
+        let mut h = History::default();
+        let empty = snapshot(vec![]);
+        let ringing = snapshot(vec![
+            qcall("a", "ringing", &["other"]),
+            qcall("b", "ringing", &["me"]),
+        ]);
+        assert!(!h.observe(&empty, &ringing, 2_000));
+        let ringing2 = snapshot(vec![
+            qcall("a", "ringing", &["me"]),
+            qcall("b", "ringing", &["me"]),
+        ]);
+        h.observe(&ringing, &ringing2, 3_000);
+        let connected = snapshot(vec![qcall("a", "connected", &["me"])]);
+        assert!(h.observe(&ringing2, &connected, 4_000));
+        assert!(h.observe(&connected, &empty, 9_000));
+
+        let [missed, answered] = h.entries.as_slice() else {
+            panic!("zwei Einträge erwartet: {:?}", h.entries);
+        };
+        assert_eq!(missed.connected, 0);
+        assert_eq!(missed.rang, ["Muster, Max"]);
+        assert!(missed.answered_by.is_empty());
+        assert_eq!(answered.connected, 5_000);
+        assert_eq!(answered.ended, 9_000);
+        assert_eq!(answered.answered_by, ["Muster, Max"]);
+        assert_eq!(answered.rang, ["Beispiel, Eva"]);
+    }
+
+    #[test]
+    fn history_hold_continues_entry() {
+        let mut h = History::default();
+        let empty = snapshot(vec![]);
+        let first = snapshot(vec![qcall("a", "connected", &["me"])]);
+        h.observe(&empty, &first, 2_000);
+        h.observe(&first, &empty, 3_000);
+        let mut resumed = qcall("b", "connected", &["me"]);
+        resumed.incoming = 4_000;
+        resumed.connected = 4_000;
+        let second = snapshot(vec![resumed]);
+        h.observe(&empty, &second, 4_000);
+        h.observe(&second, &empty, 8_000);
+        assert_eq!(h.entries.len(), 1);
+        assert_eq!(h.entries[0].ended, 8_000);
+    }
+
+    #[test]
+    fn history_ignores_left_queue() {
+        let mut h = History::default();
+        let ringing = snapshot(vec![qcall("a", "ringing", &["me"])]);
+        assert!(!h.observe(&ringing, &[], 2_000));
+        assert!(h.entries.is_empty());
     }
 }

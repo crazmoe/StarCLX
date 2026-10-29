@@ -1111,6 +1111,7 @@ pub fn run() {
             plugins::queue::queues,
             plugins::queue::queue_login,
             plugins::queue::queue_grab,
+            plugins::queue::queue_history_clear,
             plugins::conference::conferences,
             plugins::conference::conference_save,
             plugins::conference::conference_delete,

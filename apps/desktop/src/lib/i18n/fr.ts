@@ -667,5 +667,15 @@ const dict: Record<string, string> = {
   "Bildschirm": "Écran",
   "Hauptbildschirm": "Écran principal",
   "Bildschirm {n}": "Écran {n}",
+  "Mitgeschrieben, solange das Programm läuft": "Enregistré pendant que l’application tourne",
+  "Verlauf": "Historique",
+  "Verlauf leeren": "Effacer l’historique",
+  "angenommen": "pris",
+  "{time} gewartet": "attente {time}",
+  "Dauer {time}": "durée {time}",
+  "nicht angenommen, {time} gewartet": "non pris, attente {time}",
+  "klingelte bei {name}": "a sonné chez {name}",
+  "Noch keine beendeten Anrufe.": "Aucun appel terminé pour l’instant.",
+  "Mehr anzeigen": "Afficher plus",
 };
 export default dict;

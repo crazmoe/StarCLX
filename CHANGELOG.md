@@ -1,5 +1,15 @@
 # Änderungen
 
+## 1.12.0 – 2026-10-29
+
+### Warteschlangen
+- Neuer **Verlauf** je Warteschlange: welcher Anrufer von wem angenommen wurde (mit Wartezeit und
+  Gesprächsdauer) und welche Anrufer nicht angenommen wurden (mit Wartezeit und bei wem es
+  geklingelt hat). Filter Alle/Angenommen/Verpasst, Rückruf per Knopf, Verlauf leeren
+- Die Anlage liefert keinen Verlauf. Das Programm schreibt ihn selbst mit, solange es läuft, und
+  merkt sich die letzten 500 Anrufe. Ob ein Anrufer aufgelegt hat oder die Wartezeit abgelaufen
+  ist, meldet die Anlage nicht; beides erscheint als „nicht angenommen“
+
 ## 1.11.0 – 2026-10-28
 
 ### Schnellwahl am Bildschirmrand

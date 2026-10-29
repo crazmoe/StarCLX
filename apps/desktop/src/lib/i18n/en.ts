@@ -667,5 +667,15 @@ const dict: Record<string, string> = {
   "Bildschirm": "Screen",
   "Hauptbildschirm": "Main screen",
   "Bildschirm {n}": "Screen {n}",
+  "Mitgeschrieben, solange das Programm läuft": "Recorded while the app is running",
+  "Verlauf": "History",
+  "Verlauf leeren": "Clear history",
+  "angenommen": "answered",
+  "{time} gewartet": "waited {time}",
+  "Dauer {time}": "duration {time}",
+  "nicht angenommen, {time} gewartet": "not answered, waited {time}",
+  "klingelte bei {name}": "rang at {name}",
+  "Noch keine beendeten Anrufe.": "No finished calls yet.",
+  "Mehr anzeigen": "Show more",
 };
 export default dict;

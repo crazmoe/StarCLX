@@ -4,7 +4,7 @@
   import { connection } from "../../connection.svelte";
   import { t } from "../../i18n.svelte";
   import { canDial, phone, type Call } from "../call/phone.svelte";
-  import { myAgent, queues, type Agent, type Queue, type QueueCall } from "./queue.svelte";
+  import { myAgent, queues, type Agent, type Done, type Queue, type QueueCall } from "./queue.svelte";
 
   let notice = $state("");
   let busy = $state<string | null>(null);
@@ -71,6 +71,35 @@
     return t("wartet");
   }
 
+  // Verlauf: Filter und Länge je Queue
+  let filter = $state<Record<string, "all" | "answered" | "missed">>({});
+  let shown = $state<Record<string, number>>({});
+  const PAGE = 30;
+
+  function historyOf(q: Queue): Done[] {
+    const f = filter[q.id] ?? "all";
+    return queues.history
+      .filter((e) => e.queue === q.id && (f === "all" || (f === "answered") === e.connected > 0))
+      .reverse();
+  }
+
+  const secs = (from: number, to: number) => mmss(Math.max(0, Math.round((to - from) / 1000)));
+  const names = (l: string[]) => l.map(shortName).join(", ");
+
+  function clock(ms: number) {
+    const d = new Date(ms);
+    const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString([], { day: "2-digit", month: "2-digit" })} ${time}`;
+  }
+
+  function outcome(e: Done) {
+    if (e.connected > 0) {
+      const by = e.answered_by.length ? t("angenommen von {name}", { name: names(e.answered_by) }) : t("angenommen");
+      return `${by} · ${t("{time} gewartet", { time: secs(e.incoming, e.connected) })} · ${t("Dauer {time}", { time: secs(e.connected, e.ended) })}`;
+    }
+    return t("nicht angenommen, {time} gewartet", { time: secs(e.incoming, e.ended) });
+  }
+
   /** Zustand eines Agenten aus Queue-Daten: abgemeldet, Nachbearbeitung, Gespräch, klingelt, frei */
   function agentState(q: Queue, a: Agent): { cls: string; text: string } {
     if (!a.logged_in) return { cls: "off", text: t("abgemeldet") };
@@ -86,6 +115,7 @@
   {#if notice && connection.online}<p class="error">{notice}</p>{/if}
   {#each queues.queues as q (q.id)}
     {@const me = myAgent(q)}
+    {@const all = historyOf(q)}
     <section class="queue">
       <header>
         <strong class="name">{q.name}</strong>
@@ -149,6 +179,38 @@
           <span class="agent {s.cls}" title={s.text}><span class="lamp"></span>{shortName(a.name)}</span>
         {/each}
       </div>
+
+      <details class="history">
+        <summary title={t("Mitgeschrieben, solange das Programm läuft")}>{t("Verlauf")} ({queues.history.filter((e) => e.queue === q.id).length})</summary>
+        <div class="filter">
+          {#each [["all", t("Alle")], ["answered", t("Angenommen")], ["missed", t("Verpasst")]] as [key, label]}
+            <button class:on={(filter[q.id] ?? "all") === key} onclick={() => (filter[q.id] = key as "all" | "answered" | "missed")}>{label}</button>
+          {/each}
+          <span class="spacer"></span>
+          {#if all.length}
+            <button class="clear" onclick={() => act(`clear-${q.id}`, "queue_history_clear", { queue: q.id })}>{t("Verlauf leeren")}</button>
+          {/if}
+        </div>
+        {#each all.slice(0, shown[q.id] ?? PAGE) as e (`${e.incoming}-${e.ended}-${e.caller_number}`)}
+          <div class="done" class:missed={!e.connected}>
+            <span class="at">{clock(e.incoming)}</span>
+            <div class="who">
+              <strong>{e.caller_name || e.caller_number || t("Unbekannt")}</strong>
+              <small>{[e.caller_name && e.caller_number, outcome(e)].filter(Boolean).join(" · ")}</small>
+              {#if e.rang.length}<small>{t("klingelte bei {name}", { name: names(e.rang) })}</small>{/if}
+            </div>
+            {#if !e.connected && e.caller_number}
+              <button class="grab" title={t("Zurückrufen")} disabled={!ready} onclick={() => act(`dial-${e.ended}`, "phone_dial", { number: e.caller_number })}
+              ><Icon name="call" size={18} /></button>
+            {/if}
+          </div>
+        {:else}
+          <p class="muted">{t("Noch keine beendeten Anrufe.")}</p>
+        {/each}
+        {#if all.length > (shown[q.id] ?? PAGE)}
+          <button class="more" onclick={() => (shown[q.id] = (shown[q.id] ?? PAGE) + PAGE)}>{t("Mehr anzeigen")}</button>
+        {/if}
+      </details>
     </section>
   {:else}
     <p class="muted">{t("Du bist in keiner Warteschlange als Agent eingetragen.")}</p>
@@ -190,6 +252,15 @@
   .wrapup .lamp { background: var(--accent); }
   .off .lamp { background: transparent; border: 1px solid var(--muted); }
   .off { color: var(--muted); }
+  .history summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+  .filter { display: flex; gap: 0.3rem; flex-wrap: wrap; margin: 0.4rem 0 0.2rem; }
+  .filter button { padding: 0.15rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
+  .filter button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .filter .spacer { flex: 1; }
+  .done { display: flex; align-items: center; gap: 0.7rem; padding: 0.35rem 0.2rem; border-top: 1px solid var(--line); }
+  .done .at { width: 3.2rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .done.missed strong { color: var(--accent-text); }
+  .more { align-self: flex-start; margin-top: 0.3rem; }
   .muted { color: var(--muted); margin: 0.3rem 0; }
   .error { color: var(--accent-text); margin: 0; }
   @keyframes blink { to { opacity: 0.2; } }
