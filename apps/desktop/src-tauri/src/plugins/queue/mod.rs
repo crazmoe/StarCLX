@@ -109,14 +109,15 @@ pub async fn queues(state: State<'_, QueueState>) -> Result<QueueView, String> {
     Ok(state.view.lock().await.clone())
 }
 
-/// Angenommene bzw. verpasste Anrufe einer Queue, neueste zuerst
+/// Angenommene bzw. verpasste Anrufe einer Queue ab `from` (ms), neueste zuerst
 #[tauri::command]
 pub async fn queue_journal(
     state: State<'_, AppState>,
     queue: String,
     missed: bool,
+    from: i64,
 ) -> Result<Vec<sf_core::journal::Entry>, String> {
-    sf_core::journal::group(&hub(&state).await?, &queue, missed, 100)
+    sf_core::journal::group(&hub(&state).await?, &queue, missed, from, 500)
         .await
         .map_err(|e| {
             tracing::warn!(error = %e, queue, "Rufliste der Warteschlange nicht geladen");

@@ -127,11 +127,13 @@ impl Drop for Journal {
 
 /// Rufliste einer Gruppe bzw. Queue (Queue-ID = Gruppen-ID), neueste zuerst:
 /// alle Anrufe an die Gruppe, auch die von Kollegen angenommenen. So zeigt
-/// auch der Windows-Client den Verlauf im iQueue-Widget.
+/// auch der Windows-Client den Verlauf im iQueue-Widget. `from`: nur Anrufe
+/// ab diesem Zeitpunkt (Millisekunden seit 1970), 0 = ohne Grenze.
 pub async fn group(
     hub: &OneHub,
     group_id: &str,
     missed: bool,
+    from: i64,
     limit: i32,
 ) -> sf_onehub::Result<Vec<Entry>> {
     let answer = if missed {
@@ -145,6 +147,10 @@ pub async fn group(
                 id: group_id.to_owned(),
             }),
             answer_type_filter: answer as i32,
+            filter_from: (from > 0).then(|| prost_types::Timestamp {
+                seconds: from.div_euclid(1000),
+                nanos: (from.rem_euclid(1000) * 1_000_000) as i32,
+            }),
             ..Default::default()
         }),
         journal_entry_order_by: v1::journal::JournalEntryOrderBy::StartTime as i32,
