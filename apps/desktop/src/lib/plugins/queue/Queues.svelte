@@ -1,10 +1,11 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { untrack } from "svelte";
   import Icon from "../../Icon.svelte";
   import { connection } from "../../connection.svelte";
   import { t } from "../../i18n.svelte";
   import { canDial, phone, type Call } from "../call/phone.svelte";
-  import { myAgent, queues, type Agent, type Done, type Queue, type QueueCall } from "./queue.svelte";
+  import { myAgent, queues, type Agent, type Queue, type QueueCall } from "./queue.svelte";
 
   let notice = $state("");
   let busy = $state<string | null>(null);
@@ -71,33 +72,47 @@
     return t("wartet");
   }
 
-  // Verlauf: Filter und Länge je Queue
-  let filter = $state<Record<string, "all" | "answered" | "missed">>({});
-  let shown = $state<Record<string, number>>({});
-  const PAGE = 30;
+  // Reiter je Queue: Live-Stand oder Rufliste der Anlage (wie im Windows-Client)
+  type Tab = "live" | "answered" | "missed";
+  type JournalEntry = {
+    id: string;
+    name: string;
+    number: string;
+    start: number;
+    duration_secs: number;
+    answered_by: string;
+    comment: string;
+    called_back: boolean;
+  };
+  let tab = $state<Record<string, Tab>>({});
+  let journal = $state<Record<string, JournalEntry[]>>({});
 
-  function historyOf(q: Queue): Done[] {
-    const f = filter[q.id] ?? "all";
-    return queues.history
-      .filter((e) => e.queue === q.id && (f === "all" || (f === "answered") === e.connected > 0))
-      .reverse();
+  async function loadJournal(queue: string, which: Tab) {
+    try {
+      journal[`${queue}:${which}`] = await invoke<JournalEntry[]>("queue_journal", { queue, missed: which === "missed" });
+    } catch (e) {
+      notice = String(e);
+    }
   }
 
-  const secs = (from: number, to: number) => mmss(Math.max(0, Math.round((to - from) / 1000)));
-  const names = (l: string[]) => l.map(shortName).join(", ");
+  // Beim Öffnen laden, nach jedem beendeten Anruf (Statistik ändert sich) neu
+  $effect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const q of queues.queues) {
+      const which = tab[q.id] ?? "live";
+      if (which === "live") continue;
+      void (q.stats.total + q.stats.missed + q.stats.unanswered + q.calls.length);
+      const loaded = untrack(() => `${q.id}:${which}` in journal);
+      // Die Anlage schreibt das Journal kurz nach dem Auflegen
+      timers.push(setTimeout(() => loadJournal(q.id, which), loaded ? 2000 : 0));
+    }
+    return () => timers.forEach(clearTimeout);
+  });
 
-  function clock(ms: number) {
+  function stamp(ms: number) {
     const d = new Date(ms);
     const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString([], { day: "2-digit", month: "2-digit" })} ${time}`;
-  }
-
-  function outcome(e: Done) {
-    if (e.connected > 0) {
-      const by = e.answered_by.length ? t("angenommen von {name}", { name: names(e.answered_by) }) : t("angenommen");
-      return `${by} · ${t("{time} gewartet", { time: secs(e.incoming, e.connected) })} · ${t("Dauer {time}", { time: secs(e.connected, e.ended) })}`;
-    }
-    return t("nicht angenommen, {time} gewartet", { time: secs(e.incoming, e.ended) });
   }
 
   /** Zustand eines Agenten aus Queue-Daten: abgemeldet, Nachbearbeitung, Gespräch, klingelt, frei */
@@ -115,7 +130,7 @@
   {#if notice && connection.online}<p class="error">{notice}</p>{/if}
   {#each queues.queues as q (q.id)}
     {@const me = myAgent(q)}
-    {@const all = historyOf(q)}
+    {@const which = tab[q.id] ?? "live"}
     <section class="queue">
       <header>
         <strong class="name">{q.name}</strong>
@@ -139,6 +154,40 @@
         <span class:warn={q.stats.missed > 0} title={t("Verpasste Anrufe")}><b>{q.stats.missed}</b> {t("verpasst")}</span>
       </div>
 
+      <div class="tabs">
+        {#each [["live", t("Warteschlange")], ["answered", t("Angenommen")], ["missed", t("Verpasst")]] as [key, label]}
+          <button class:on={which === key} onclick={() => (tab[q.id] = key as Tab)}>{label}</button>
+        {/each}
+      </div>
+
+      {#if which !== "live"}
+        {@const list = journal[`${q.id}:${which}`]}
+        <div class="calls">
+          {#each list ?? [] as e (e.id)}
+            <div class="call" class:missed={which === "missed"}>
+              <span class="at">{stamp(e.start)}</span>
+              <div class="who">
+                <strong>{e.name || e.number || t("Unbekannt")}</strong>
+                <small>
+                  {[
+                    e.name && e.number,
+                    which === "answered" && e.answered_by && t("angenommen von {name}", { name: e.answered_by }),
+                    which === "answered" && e.duration_secs > 0 && mmss(e.duration_secs),
+                    e.called_back && t("zurückgerufen"),
+                  ].filter(Boolean).join(" · ")}
+                </small>
+                {#if e.comment}<small class="note" title={e.comment}>✎ {e.comment}</small>{/if}
+              </div>
+              {#if which === "missed" && e.number}
+                <button class="grab" title={t("Zurückrufen")} disabled={!ready || busy === e.id} onclick={() => act(e.id, "phone_dial", { number: e.number })}
+                ><Icon name="call" size={18} /></button>
+              {/if}
+            </div>
+          {:else}
+            <p class="muted">{list ? t("Keine Anrufe.") : t("Wird geladen …")}</p>
+          {/each}
+        </div>
+      {:else}
       <div class="calls">
         {#each q.calls as c (c.id)}
           <div class="call {c.state}">
@@ -172,6 +221,7 @@
           <p class="muted">{t("Niemand in der Warteschlange.")}</p>
         {/each}
       </div>
+      {/if}
 
       <div class="agents">
         {#each q.agents as a (a.user_id)}
@@ -179,38 +229,6 @@
           <span class="agent {s.cls}" title={s.text}><span class="lamp"></span>{shortName(a.name)}</span>
         {/each}
       </div>
-
-      <details class="history">
-        <summary title={t("Mitgeschrieben, solange das Programm läuft")}>{t("Verlauf")} ({queues.history.filter((e) => e.queue === q.id).length})</summary>
-        <div class="filter">
-          {#each [["all", t("Alle")], ["answered", t("Angenommen")], ["missed", t("Verpasst")]] as [key, label]}
-            <button class:on={(filter[q.id] ?? "all") === key} onclick={() => (filter[q.id] = key as "all" | "answered" | "missed")}>{label}</button>
-          {/each}
-          <span class="spacer"></span>
-          {#if all.length}
-            <button class="clear" onclick={() => act(`clear-${q.id}`, "queue_history_clear", { queue: q.id })}>{t("Verlauf leeren")}</button>
-          {/if}
-        </div>
-        {#each all.slice(0, shown[q.id] ?? PAGE) as e (`${e.incoming}-${e.ended}-${e.caller_number}`)}
-          <div class="done" class:missed={!e.connected}>
-            <span class="at">{clock(e.incoming)}</span>
-            <div class="who">
-              <strong>{e.caller_name || e.caller_number || t("Unbekannt")}</strong>
-              <small>{[e.caller_name && e.caller_number, outcome(e)].filter(Boolean).join(" · ")}</small>
-              {#if e.rang.length}<small>{t("klingelte bei {name}", { name: names(e.rang) })}</small>{/if}
-            </div>
-            {#if !e.connected && e.caller_number}
-              <button class="grab" title={t("Zurückrufen")} disabled={!ready} onclick={() => act(`dial-${e.ended}`, "phone_dial", { number: e.caller_number })}
-              ><Icon name="call" size={18} /></button>
-            {/if}
-          </div>
-        {:else}
-          <p class="muted">{t("Noch keine beendeten Anrufe.")}</p>
-        {/each}
-        {#if all.length > (shown[q.id] ?? PAGE)}
-          <button class="more" onclick={() => (shown[q.id] = (shown[q.id] ?? PAGE) + PAGE)}>{t("Mehr anzeigen")}</button>
-        {/if}
-      </details>
     </section>
   {:else}
     <p class="muted">{t("Du bist in keiner Warteschlange als Agent eingetragen.")}</p>
@@ -252,15 +270,12 @@
   .wrapup .lamp { background: var(--accent); }
   .off .lamp { background: transparent; border: 1px solid var(--muted); }
   .off { color: var(--muted); }
-  .history summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
-  .filter { display: flex; gap: 0.3rem; flex-wrap: wrap; margin: 0.4rem 0 0.2rem; }
-  .filter button { padding: 0.15rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
-  .filter button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-  .filter .spacer { flex: 1; }
-  .done { display: flex; align-items: center; gap: 0.7rem; padding: 0.35rem 0.2rem; border-top: 1px solid var(--line); }
-  .done .at { width: 3.2rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
-  .done.missed strong { color: var(--accent-text); }
-  .more { align-self: flex-start; margin-top: 0.3rem; }
+  .tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .tabs button { padding: 0.15rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
+  .tabs button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .at { width: 3.4rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .call.missed strong { color: var(--accent-text); }
+  .note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .muted { color: var(--muted); margin: 0.3rem 0; }
   .error { color: var(--accent-text); margin: 0; }
   @keyframes blink { to { opacity: 0.2; } }

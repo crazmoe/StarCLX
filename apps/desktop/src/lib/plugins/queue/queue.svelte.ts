@@ -22,21 +22,9 @@ export type Stats = { callers: number; free_agents: number; missed: number; unan
 
 export type Queue = { id: string; name: string; agents: Agent[]; calls: QueueCall[]; stats: Stats };
 
-/** Beendeter Anruf, vom Client mitgeschrieben; connected 0 = nicht angenommen */
-export type Done = {
-  queue: string;
-  caller_name: string;
-  caller_number: string;
-  incoming: number;
-  connected: number;
-  ended: number;
-  answered_by: string[];
-  rang: string[];
-};
+type View = { me: string; queues: Queue[] };
 
-type View = { me: string; queues: Queue[]; history: Done[] };
-
-export const queues = $state<View>({ me: "", queues: [], history: [] });
+export const queues = $state<View>({ me: "", queues: [] });
 
 let started = false;
 
