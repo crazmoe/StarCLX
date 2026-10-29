@@ -671,5 +671,6 @@ const dict: Record<string, string> = {
   "zurückgerufen": "called back",
   "Keine Anrufe.": "No calls.",
   "Wird geladen …": "Loading …",
+  "7 Tage": "7 days",
 };
 export default dict;

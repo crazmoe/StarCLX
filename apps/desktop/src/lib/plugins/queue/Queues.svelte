@@ -87,9 +87,40 @@
   let tab = $state<Record<string, Tab>>({});
   let journal = $state<Record<string, JournalEntry[]>>({});
 
-  async function loadJournal(queue: string, which: Tab) {
+  // Zeitraum der Rufliste: heute oder die letzten 7 Tage (pro Gerät gemerkt)
+  type Period = "day" | "week";
+  const PERIOD_KEY = "queue-journal-period";
+  let period = $state<Period>(
+    (() => {
+      try {
+        return localStorage.getItem(PERIOD_KEY) === "week" ? "week" : "day";
+      } catch {
+        return "day";
+      }
+    })(),
+  );
+  function setPeriod(p: Period) {
+    period = p;
     try {
-      journal[`${queue}:${which}`] = await invoke<JournalEntry[]>("queue_journal", { queue, missed: which === "missed" });
+      localStorage.setItem(PERIOD_KEY, p);
+    } catch {
+      /* ohne Speicher gilt die Wahl nur bis zum Neustart */
+    }
+  }
+  function periodStart(p: Period) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    if (p === "week") d.setDate(d.getDate() - 6);
+    return d.getTime();
+  }
+
+  async function loadJournal(queue: string, which: Tab, p: Period) {
+    try {
+      journal[`${queue}:${which}:${p}`] = await invoke<JournalEntry[]>("queue_journal", {
+        queue,
+        missed: which === "missed",
+        from: periodStart(p),
+      });
     } catch (e) {
       notice = String(e);
     }
@@ -102,9 +133,10 @@
       const which = tab[q.id] ?? "live";
       if (which === "live") continue;
       void (q.stats.total + q.stats.missed + q.stats.unanswered + q.calls.length);
-      const loaded = untrack(() => `${q.id}:${which}` in journal);
+      const p = period;
+      const loaded = untrack(() => `${q.id}:${which}:${p}` in journal);
       // Die Anlage schreibt das Journal kurz nach dem Auflegen
-      timers.push(setTimeout(() => loadJournal(q.id, which), loaded ? 2000 : 0));
+      timers.push(setTimeout(() => loadJournal(q.id, which, p), loaded ? 2000 : 0));
     }
     return () => timers.forEach(clearTimeout);
   });
@@ -154,14 +186,27 @@
         <span class:warn={q.stats.missed > 0} title={t("Verpasste Anrufe")}><b>{q.stats.missed}</b> {t("verpasst")}</span>
       </div>
 
+      <div class="agents">
+        {#each q.agents as a (a.user_id)}
+          {@const s = agentState(q, a)}
+          <span class="agent {s.cls}" title={s.text}><span class="lamp"></span>{shortName(a.name)}</span>
+        {/each}
+      </div>
+
       <div class="tabs">
         {#each [["live", t("Warteschlange")], ["answered", t("Angenommen")], ["missed", t("Verpasst")]] as [key, label]}
           <button class:on={which === key} onclick={() => (tab[q.id] = key as Tab)}>{label}</button>
         {/each}
+        {#if which !== "live"}
+          <span class="spacer"></span>
+          {#each [["day", t("Heute")], ["week", t("7 Tage")]] as [key, label]}
+            <button class:on={period === key} onclick={() => setPeriod(key as Period)}>{label}</button>
+          {/each}
+        {/if}
       </div>
 
       {#if which !== "live"}
-        {@const list = journal[`${q.id}:${which}`]}
+        {@const list = journal[`${q.id}:${which}:${period}`]}
         <div class="calls">
           {#each list ?? [] as e (e.id)}
             <div class="call" class:missed={which === "missed"}>
@@ -223,12 +268,6 @@
       </div>
       {/if}
 
-      <div class="agents">
-        {#each q.agents as a (a.user_id)}
-          {@const s = agentState(q, a)}
-          <span class="agent {s.cls}" title={s.text}><span class="lamp"></span>{shortName(a.name)}</span>
-        {/each}
-      </div>
     </section>
   {:else}
     <p class="muted">{t("Du bist in keiner Warteschlange als Agent eingetragen.")}</p>
@@ -272,6 +311,7 @@
   .off { color: var(--muted); }
   .tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .tabs button { padding: 0.15rem 0.7rem; border-radius: 999px; font-size: 0.85rem; }
+  .tabs .spacer { flex: 1; }
   .tabs button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .at { width: 3.4rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
   .call.missed strong { color: var(--accent-text); }
