@@ -125,6 +125,37 @@ impl Drop for Journal {
     }
 }
 
+/// Rufliste einer Gruppe bzw. Queue (Queue-ID = Gruppen-ID), neueste zuerst:
+/// alle Anrufe an die Gruppe, auch die von Kollegen angenommenen. So zeigt
+/// auch der Windows-Client den Verlauf im iQueue-Widget.
+pub async fn group(
+    hub: &OneHub,
+    group_id: &str,
+    missed: bool,
+    limit: i32,
+) -> sf_onehub::Result<Vec<Entry>> {
+    let answer = if missed {
+        v1::journal::AnswerType::Missed
+    } else {
+        v1::journal::AnswerType::Answered
+    };
+    let req = v1::journal::GetJournalRequest {
+        journal_filter: Some(v1::journal::JournalFilter {
+            group_id: Some(v1::types::GroupId {
+                id: group_id.to_owned(),
+            }),
+            answer_type_filter: answer as i32,
+            ..Default::default()
+        }),
+        journal_entry_order_by: v1::journal::JournalEntryOrderBy::StartTime as i32,
+        order_direction: v1::types::OrderDirection::Descending as i32,
+        limit,
+        offset: 0,
+    };
+    let list = hub.journal().get_journal(req).await?.into_inner();
+    Ok(list.journal_entries.iter().map(view_of).collect())
+}
+
 fn entry_id(id: &str) -> v1::journal::JournalEntryId {
     v1::journal::JournalEntryId { id: id.to_owned() }
 }

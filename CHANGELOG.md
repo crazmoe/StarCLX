@@ -1,5 +1,14 @@
 # Änderungen
 
+## 1.12.1 – 2026-10-29
+
+### Warteschlangen
+- Der Verlauf kommt jetzt wie im Windows-Client aus der Rufliste der Anlage: Reiter
+  **Warteschlange**, **Angenommen** (mit „angenommen von“ und Dauer) und **Verpasst** (mit Rückruf).
+  Er enthält damit auch Anrufe, während das Programm nicht lief, und die Notizen und
+  Rückruf-Markierungen aus der Rufliste
+- Der selbst mitgeschriebene Verlauf aus der Vorversion entfällt
+
 ## 1.12.0 – 2026-10-29
 
 ### Warteschlangen
