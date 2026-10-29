@@ -1,0 +1,57 @@
+Package: starclx
+Architecture: amd64
+Version: 1.12.0
+Priority: optional
+Maintainer: crazmoe
+Installed-Size: 53666
+Depends: libpipewire-0.3-0t64 | libpipewire-0.3-0, libpulse0, libasound2t64 | libasound2, libssl3t64 | libssl3, zlib1g, libdbus-1-3, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Recommends: pipewire-pulse | pulseaudio, gnome-keyring | org.freedesktop.secrets, ffmpeg, libgtk-layer-shell0
+Conflicts: starface-linuxclient
+Replaces: starface-linuxclient
+Filename: pool/main/starclx_1.12.0_amd64.deb
+Size: 16625802
+MD5sum: f4ab81c7c02194aad36b65047871573f
+SHA1: 9aeed19be6cc223e0be7de179cb97043f4aaf8f3
+SHA256: aee2bc142b005f37f4cfbc65e1dce2cc33d55e01e4aa3da2fd54dba850a91cfd
+SHA512: d157a7b19f8bb9407e08191f4fa305b118f2fed16d63a1a17af648db9525145902e410794f7a541dd2384cd732a8f83eef41c9187d3f481ffe38dd6dcc62ce0e
+Description: StarCLX – freier Client für STARFACE-Telefonanlagen
+ (none)
+
+Package: starclx
+Architecture: amd64
+Version: 1.12.1
+Priority: optional
+Maintainer: crazmoe
+Installed-Size: 53649
+Depends: libpipewire-0.3-0t64 | libpipewire-0.3-0, libpulse0, libasound2t64 | libasound2, libssl3t64 | libssl3, zlib1g, libdbus-1-3, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Recommends: pipewire-pulse | pulseaudio, gnome-keyring | org.freedesktop.secrets, ffmpeg, libgtk-layer-shell0
+Conflicts: starface-linuxclient
+Replaces: starface-linuxclient
+Filename: pool/main/starclx_1.12.1_amd64.deb
+Size: 16617080
+MD5sum: eaedf326cca76f3844ef6b1d5751d16d
+SHA1: fb8163fe58065d2c8df61b2eb2175870b0e6cc3e
+SHA256: 453c66a3f46cef95c045442f4a04d6e07c923a4cfa46b41882cd7ec90ec5c54e
+SHA512: b41d5f4c406621fd149ad9d9430c1b8ef45bdee4826c9708e4ddc145c6720ad1f0cf4e985ade1f2e37e130c0c09f77803a73819dd4a083cf0b6885dda81b2c5e
+Description: StarCLX – freier Client für STARFACE-Telefonanlagen
+ (none)
+
+Package: starclx
+Architecture: amd64
+Version: 1.13.0
+Priority: optional
+Maintainer: crazmoe
+Installed-Size: 53660
+Depends: libpipewire-0.3-0t64 | libpipewire-0.3-0, libpulse0, libasound2t64 | libasound2, libssl3t64 | libssl3, zlib1g, libdbus-1-3, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Recommends: pipewire-pulse | pulseaudio, gnome-keyring | org.freedesktop.secrets, ffmpeg, libgtk-layer-shell0
+Conflicts: starface-linuxclient
+Replaces: starface-linuxclient
+Filename: pool/main/starclx_1.13.0_amd64.deb
+Size: 16624060
+MD5sum: 281d583107f26016da1bfc0f4a5e3370
+SHA1: eea6f8fb434f13fc292d25ace05c4f8f2484be0b
+SHA256: bf1783341af38f9fa0078e43daba9afd20e90c4d7dc3fd4ac12e9f12cda3ab72
+SHA512: ae6f1727114ed83f2f889e5db31649419f23b0c2113cc8806a0cd6da4ef0febf95d709ed2cfc12982e26faa24943e43e26a16346857cfb66fda32f99328c7418
+Description: StarCLX – freier Client für STARFACE-Telefonanlagen
+ (none)
+
