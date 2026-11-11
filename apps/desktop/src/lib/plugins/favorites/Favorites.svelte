@@ -101,11 +101,12 @@
     if (a.mode === "number") {
       if (!a.number.trim()) return;
       add = null;
-      await createFavorite(a.category, a.name, { kind: "number", number: a.number });
+      // Ohne eigenen Namen den des Ziels mitschicken; die Anlage zeigt sonst einen leeren Namen
+      await createFavorite(a.category, a.name.trim() || a.number.trim(), { kind: "number", number: a.number });
     } else {
       if (!a.pick) return;
       add = null;
-      await createFavorite(a.category, a.name, { kind: a.pick.kind, id: a.pick.id });
+      await createFavorite(a.category, a.name.trim() || a.pick.name, { kind: a.pick.kind, id: a.pick.id });
     }
   }
 
