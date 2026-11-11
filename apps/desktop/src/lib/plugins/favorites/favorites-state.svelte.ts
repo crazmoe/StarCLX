@@ -101,13 +101,17 @@ async function edit(cmd: string, args: Record<string, unknown>) {
   return ok;
 }
 
-export const createCategory = (name: string) => edit("favorite_category_create", { name, position: favorites.list.length });
+/** Position hinter dem letzten Eintrag. Die Anlage zählt nicht zwingend ab 0
+ *  (bei STARFACE ab 1), daher immer von den gemeldeten Positionen ausgehen. */
+export const nextPosition = (list: { position: number }[]) => (list.length ? Math.max(...list.map((x) => x.position)) + 1 : 0);
+
+export const createCategory = (name: string) => edit("favorite_category_create", { name, position: nextPosition(favorites.list) });
 export const renameCategory = (id: string, name: string) => edit("favorite_category_rename", { id, name });
 export const deleteCategory = (id: string) => edit("favorite_category_delete", { id });
 export const moveCategory = (id: string, position: number) => edit("favorite_category_move", { id, position });
 
 export function createFavorite(category: string, name: string, target: NewTarget) {
-  const position = favorites.list.find((c) => c.id === category)?.favorites.length ?? 0;
+  const position = nextPosition(favorites.list.find((c) => c.id === category)?.favorites ?? []);
   return edit("favorite_create", { category, name, position, target });
 }
 export const renameFavorite = (id: string, name: string) => edit("favorite_rename", { id, name });

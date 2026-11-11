@@ -13,7 +13,7 @@
   import type { FlowStep } from "../../prefs.svelte";
   import {
     createCategory, createFavorite, deleteCategory, deleteFavorite, favName, favorites, flowOf, hasOwnFlow, loadFavorites,
-    moveCategory, moveFavorite, possible, press, renameCategory, renameFavorite, runStep, saveFlow, searchTargets, stepTypes,
+    moveCategory, moveFavorite, nextPosition, possible, press, renameCategory, renameFavorite, runStep, saveFlow, searchTargets, stepTypes,
     type Candidate, type Category, type Favorite,
   } from "./favorites-state.svelte";
 
@@ -121,7 +121,7 @@
   /** Favorit in eine andere Kategorie, ans Ende */
   function toCategory(f: Favorite, id: string) {
     const target = favorites.list.find((c) => c.id === id);
-    if (target) moveFavorite(f.id, id, target.favorites.length);
+    if (target) moveFavorite(f.id, id, nextPosition(target.favorites));
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -164,8 +164,8 @@
         {#if editing}
           <button class="icon" title={t("Favorit hinzufügen")} aria-label={t("Favorit hinzufügen")} onclick={() => (add = { category: c.id, mode: "search", term: "", number: "", name: "", hits: [], pick: null })}><Icon name="plus" size={16} /></button>
           <button class="icon" title={t("Umbenennen")} aria-label={t("Umbenennen")} onclick={() => (rename = { kind: "cat", id: c.id, name: c.name })}><Icon name="edit" size={16} /></button>
-          <button class="icon" title={t("Nach oben")} aria-label={t("Nach oben")} disabled={ci === 0} onclick={() => moveCategory(c.id, ci - 1)}><Icon name="up" size={16} /></button>
-          <button class="icon" title={t("Nach unten")} aria-label={t("Nach unten")} disabled={ci === favorites.list.length - 1} onclick={() => moveCategory(c.id, ci + 1)}><Icon name="down" size={16} /></button>
+          <button class="icon" title={t("Nach oben")} aria-label={t("Nach oben")} disabled={ci === 0} onclick={() => moveCategory(c.id, favorites.list[ci - 1].position)}><Icon name="up" size={16} /></button>
+          <button class="icon" title={t("Nach unten")} aria-label={t("Nach unten")} disabled={ci === favorites.list.length - 1} onclick={() => moveCategory(c.id, favorites.list[ci + 1].position)}><Icon name="down" size={16} /></button>
           <button class="icon" title={t("Löschen")} aria-label={t("Löschen")} onclick={() => removeCategory(c)}><Icon name="trash" size={16} /></button>
         {/if}
       </header>
@@ -177,8 +177,8 @@
                 <span class="ename">{favName(f)}{#if f.name && f.target_name && f.name !== f.target_name}<small> · {f.target_name}</small>{/if}<small> · {f.number}</small></span>
                 <button class="icon" title={t("Umbenennen")} aria-label={t("Umbenennen")} onclick={() => (rename = { kind: "fav", id: f.id, name: f.name || f.target_name })}><Icon name="edit" size={16} /></button>
                 <button class="icon" class:on={hasOwnFlow(f)} title={t("Ablauf beim Klick")} aria-label={t("Ablauf beim Klick")} onclick={() => editFlow(f)}><Icon name="play" size={16} /></button>
-                <button class="icon" title={t("Nach oben")} aria-label={t("Nach oben")} disabled={fi === 0} onclick={() => moveFavorite(f.id, null, fi - 1)}><Icon name="up" size={16} /></button>
-                <button class="icon" title={t("Nach unten")} aria-label={t("Nach unten")} disabled={fi === c.favorites.length - 1} onclick={() => moveFavorite(f.id, null, fi + 1)}><Icon name="down" size={16} /></button>
+                <button class="icon" title={t("Nach oben")} aria-label={t("Nach oben")} disabled={fi === 0} onclick={() => moveFavorite(f.id, null, c.favorites[fi - 1].position)}><Icon name="up" size={16} /></button>
+                <button class="icon" title={t("Nach unten")} aria-label={t("Nach unten")} disabled={fi === c.favorites.length - 1} onclick={() => moveFavorite(f.id, null, c.favorites[fi + 1].position)}><Icon name="down" size={16} /></button>
                 {#if favorites.list.length > 1}
                   <select title={t("In Kategorie verschieben")} aria-label={t("In Kategorie verschieben")} value={c.id} onchange={(e) => toCategory(f, (e.target as HTMLSelectElement).value)}>
                     {#each favorites.list as o (o.id)}<option value={o.id}>{o.name || t("Favoriten")}</option>{/each}

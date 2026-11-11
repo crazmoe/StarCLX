@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.14.3 – 2026-11-11
+
+### Favoriten
+- Sortieren mit den Pfeilen geht wieder richtig: Die Anlage zählt die Positionen ab 1, „Nach oben“ sprang deshalb zwei Plätze und „Nach unten“ tat nichts
+
 ## 1.14.2 – 2026-11-11
 
 ### Favoriten
