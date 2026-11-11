@@ -1,7 +1,7 @@
 <script lang="ts">
   import { connection, initConnection } from "#lib/connection.svelte.ts";
   // Schnellwahl aus dem Tray: Rufnummernfeld mit Adressbuchsuche und nur die
-  // Besetztlampenfelder und Direktwahltasten. Klick ruft an bzw. holt einen klingelnden Anruf heran.
+  // Besetztlampenfelder und Direktwahltasten, darunter die Favoriten. Klick ruft an bzw. holt einen klingelnden Anruf heran.
   // Laufende Gespräche stehen oben und lassen sich auf ein Feld ziehen, um zu
   // vermitteln (Ziehen zwischen Fenstern geht nicht, daher hier selbst).
   import { invoke } from "@tauri-apps/api/core";
@@ -10,6 +10,8 @@
   import DialSearch from "#lib/DialSearch.svelte";
   import CallCard from "#lib/plugins/call/CallCard.svelte";
   import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
+  import Favorites from "#lib/plugins/favorites/Favorites.svelte";
+  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites.svelte.ts";
   import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs } from "#lib/prefs.svelte.ts";
@@ -26,11 +28,13 @@
     const reload = () => {
       if (document.visibilityState !== "visible") return;
       loadFkeys();
+      loadFavorites();
       loadPrefs().catch(() => {});
     };
     document.addEventListener("visibilitychange", reload);
     // Kontowechsel: Tasten des alten Kontos weg, die des neuen laden
-    const offs = [listen("switching", resetFkeys), listen("logged-out", resetFkeys), listen("session", () => loadFkeys())];
+    const reset = () => { resetFkeys(); resetFavorites(); };
+    const offs = [listen("switching", reset), listen("logged-out", reset), listen("session", () => { loadFkeys(); loadFavorites(); })];
     return () => {
       document.removeEventListener("visibilitychange", reload);
       offs.forEach((p) => p.then((off) => off()));
@@ -73,8 +77,11 @@
     {#each blfs as k (k.id)}
       <FkeyTile key={k} onclick={() => press(k)} />
     {:else}
-      <p class="muted">{fkeys.error || (fkeys.loaded ? t("Keine Besetztlampenfelder eingerichtet.") : t("Lade …"))}</p>
+      {#if !favorites.list.length}
+        <p class="muted">{fkeys.error || (fkeys.loaded ? t("Keine Besetztlampenfelder eingerichtet.") : t("Lade …"))}</p>
+      {/if}
     {/each}
+    {#if favorites.list.length}<Favorites compact />{/if}
   </div>
 </main>
 

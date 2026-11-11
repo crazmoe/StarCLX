@@ -561,6 +561,12 @@ function blfAt(x: number, y: number) {
   return k && isTransferKey(k) ? k : undefined;
 }
 
+/** Favorit unter dem Zeiger (Elemente mit data-fav und data-fav-number) */
+function favAt(x: number, y: number) {
+  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-fav]");
+  return el?.dataset.favNumber ? { id: el.dataset.fav ?? "", number: el.dataset.favNumber } : undefined;
+}
+
 function onMove(e: PointerEvent) {
   if (!pending) return;
   if (!callDrag.call) {
@@ -569,13 +575,16 @@ function onMove(e: PointerEvent) {
   }
   callDrag.x = e.clientX;
   callDrag.y = e.clientY;
-  callDrag.over = blfAt(e.clientX, e.clientY)?.id ?? "";
+  const fav = favAt(e.clientX, e.clientY);
+  callDrag.over = fav ? `fav:${fav.id}` : (blfAt(e.clientX, e.clientY)?.id ?? "");
 }
 
 function onUp(e: PointerEvent) {
   const call = callDrag.call;
   stopCallDrag();
   if (!call) return;
+  const fav = favAt(e.clientX, e.clientY);
+  if (fav) return void consultAndTransfer(call, fav.number);
   const k = blfAt(e.clientX, e.clientY);
   if (k) transferTo(call, k);
 }
@@ -604,6 +613,11 @@ export function startCallDrag(e: PointerEvent, call: Call) {
 async function transferTo(call: Call, k: FunctionKey) {
   const number = k.functionKeyType === "QUICKDIAL" ? k.directCallTargetnumber : account(k)?.number;
   if (!number) return void (phone.notice = t("Für diese Taste ist keine Rufnummer bekannt."));
+  await consultAndTransfer(call, number);
+}
+
+/** Rückfrage zu `number`; legt man sie auf, wird das erste Gespräch dorthin vermittelt */
+export async function consultAndTransfer(call: Call, number: string) {
   if (await action("consult", call.id, number)) blfTransfers[call.id] = true;
 }
 

@@ -26,6 +26,68 @@ pub struct FkeyState {
     module_list: std::sync::Mutex<Vec<Module>>,
     /// Benutzerbilder als data:-URL je User-ID; `None` = keins hinterlegt
     avatars: std::sync::Mutex<HashMap<String, Option<String>>>,
+    /// Wessen Präsenz verfolgt wird
+    watched: std::sync::Mutex<Watched>,
+}
+
+/// User und Gruppen, deren Präsenz verfolgt wird: aus den Tasten und aus den
+/// Favoriten
+#[derive(Default)]
+struct Watched {
+    me: String,
+    key_users: Vec<String>,
+    key_groups: Vec<String>,
+    fav_users: Vec<String>,
+    fav_groups: Vec<String>,
+}
+
+/// Präsenz für alle verfolgten User und Gruppen (neu) starten
+async fn restart_presence(app: &AppHandle, hub: sf_onehub::OneHub) {
+    let fk = app.state::<FkeyState>();
+    let (me, users, groups) = {
+        let w = fk.watched.lock().unwrap();
+        let mut users: Vec<String> = w.key_users.iter().chain(&w.fav_users).cloned().collect();
+        if !w.me.is_empty() {
+            users.push(w.me.clone());
+        }
+        users.sort();
+        users.dedup();
+        let mut groups: Vec<String> = w.key_groups.iter().chain(&w.fav_groups).cloned().collect();
+        groups.sort();
+        groups.dedup();
+        (w.me.clone(), users, groups)
+    };
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    *fk.presence.lock().await = Some(Presence::start(hub, users, groups, tx));
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(states) = rx.recv().await {
+            if let Some(own) = states.get(&me) {
+                crate::plugins::chat::sync_own(&app, own);
+            }
+            *app.state::<FkeyState>().states.lock().unwrap() = states.clone();
+            let _ = app.emit("fkey-presence", states);
+        }
+    });
+}
+
+/// Die Favoriten haben sich geändert: deren Kollegen und Gruppen mitverfolgen
+pub async fn watch_favorites(
+    app: &AppHandle,
+    hub: sf_onehub::OneHub,
+    users: Vec<String>,
+    groups: Vec<String>,
+) {
+    {
+        let fk = app.state::<FkeyState>();
+        let mut w = fk.watched.lock().unwrap();
+        if w.fav_users == users && w.fav_groups == groups {
+            return;
+        }
+        w.fav_users = users;
+        w.fav_groups = groups;
+    }
+    restart_presence(app, hub).await;
 }
 
 /// Beim Abmelden die Präsenz beenden.
@@ -39,6 +101,7 @@ pub async fn session_ended(app: &AppHandle) {
     state.me_events.lock().await.take();
     state.module_list.lock().unwrap().clear();
     state.avatars.lock().unwrap().clear();
+    *state.watched.lock().unwrap() = Watched::default();
 }
 
 pub(crate) async fn rest(state: &AppState) -> Result<(Rest, sf_onehub::OneHub, String), String> {
@@ -121,7 +184,7 @@ pub async fn fkeys_load(
             Err(e) => tracing::warn!(error = %e, "Gruppen für Funktionstasten nicht ermittelt"),
         }
     }
-    let mut users: Vec<String> = keys
+    let users: Vec<String> = keys
         .keys
         .iter()
         .filter_map(|k| k.blf_account_id)
@@ -129,24 +192,13 @@ pub async fn fkeys_load(
         .filter(|a| !a.group)
         .flat_map(|a| a.user_ids.iter().cloned())
         .collect();
-    users.push(me.clone());
-    users.sort();
-    users.dedup();
-    let (tx, mut rx) = mpsc::unbounded_channel();
-    *fk.presence.lock().await = Some(Presence::start(hub.clone(), users, groups, tx));
     {
-        let app = app.clone();
-        let me = me.clone();
-        tauri::async_runtime::spawn(async move {
-            while let Some(states) = rx.recv().await {
-                if let Some(own) = states.get(&me) {
-                    crate::plugins::chat::sync_own(&app, own);
-                }
-                *app.state::<FkeyState>().states.lock().unwrap() = states.clone();
-                let _ = app.emit("fkey-presence", states);
-            }
-        });
+        let mut w = fk.watched.lock().unwrap();
+        w.me.clone_from(&me);
+        w.key_users = users;
+        w.key_groups = groups;
     }
+    restart_presence(&app, hub.clone()).await;
     // Gruppen nur verfolgen, wenn es eine Taste dafür gibt
     // Eigene Einstellungen (Rufnummer, Telefon, Bild, Rechte) live nachziehen
     {

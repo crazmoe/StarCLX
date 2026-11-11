@@ -12,6 +12,15 @@ static CURRENT: AtomicUsize = AtomicUsize::new(0);
 
 /// Deutsch → Englisch, Französisch, Italienisch
 const TEXTS: &[(&str, [&str; 3])] = &[
+    // Favoriten
+    (
+        "Dir fehlt auf der Anlage das Recht für Favoriten.",
+        [
+            "You lack the permission for favorites on the PBX.",
+            "Vous n'avez pas le droit d'utiliser les favoris sur l'installation.",
+            "Non hai il permesso per i preferiti sul centralino.",
+        ],
+    ),
     // Module
     (
         "Modul nicht gefunden oder nicht freigegeben",

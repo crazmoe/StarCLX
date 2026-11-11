@@ -23,7 +23,7 @@
     onadd: () => void;
   } = $props();
 
-  const ICONS: IconName[] = ["workspace", "overview", "call", "chat", "contacts", "list", "voicemail", "groups", "person", "headset", "meetings", "bell", "folder", "settings", "videocam", "light"];
+  const ICONS: IconName[] = ["workspace", "overview", "star", "call", "chat", "contacts", "list", "voicemail", "groups", "person", "headset", "meetings", "bell", "folder", "settings", "videocam", "light"];
 
   /** Ansicht, deren Name und Symbol gerade offen sind */
   let open = $state<string | null>(null);

@@ -44,6 +44,8 @@
     { id: "doorcam", x: 0, y: 16, w: 4, h: 7, visible: false },
     // Nur mit Aufnahmen auf der Anlage sinnvoll, daher anfangs ausgeblendet
     { id: "recordings", x: 0, y: 23, w: 6, h: 7, visible: false },
+    // Favoriten der Anlage (wie in den STARFACE-Apps)
+    { id: "favorites", x: 0, y: 30, w: 12, h: 7, visible: true },
   ];
 
   /** Gespeicherte Kacheln, ergänzt um neue und ohne unbekannte */

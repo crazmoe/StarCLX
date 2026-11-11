@@ -12,6 +12,7 @@ pub mod account;
 pub mod conference;
 pub mod contact_form;
 pub mod directory;
+pub mod favorite;
 pub mod fkeys;
 pub mod group;
 pub mod journal;
