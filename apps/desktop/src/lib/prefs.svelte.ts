@@ -2,6 +2,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { setLanguage } from "./i18n.svelte";
 
+/** Ein Schritt im Ablauf eines Favoriten (siehe plugins/favorites) */
+export type FlowStep = { kind: string; text?: string };
+
 export type Prefs = {
   softphone: boolean;
   primary_on_login: boolean;
@@ -63,6 +66,8 @@ export type Prefs = {
   workspace_views: View[] | null;
   /** Zuletzt gewählte Ansicht */
   workspace_view: string;
+  /** Abläufe beim Klick auf einen Favoriten, je Favoriten-ID (lokal) */
+  favorite_flows: Record<string, FlowStep[]> | null;
   /** Ausführliches Protokoll (Anruf- und Verbindungsdetails) */
   verbose_log: boolean;
   /** Ordner in Nextcloud für geteilte Dateien */

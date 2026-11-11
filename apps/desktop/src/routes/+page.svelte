@@ -11,6 +11,8 @@
   import Journal from "#lib/plugins/journal/Journal.svelte";
   import Chat from "#lib/plugins/chat/Chat.svelte";
   import Voicemail from "#lib/plugins/voicemail/Voicemail.svelte";
+  import Favorites from "#lib/plugins/favorites/Favorites.svelte";
+  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
   import Recordings from "#lib/plugins/recordings/Recordings.svelte";
   import FunctionKeys from "#lib/plugins/fkeys/FunctionKeys.svelte";
   import DoorCams from "#lib/plugins/doorcam/DoorCams.svelte";
@@ -63,6 +65,7 @@
     conferences.list = [];
     conferenceEdit.id = null;
     resetFkeys();
+    resetFavorites();
     menuOpen = false;
     settingsOpen = false;
   }
@@ -115,7 +118,7 @@
 
   onMount(() => {
     const offs = [
-      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); }),
+      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); loadFavorites(); }),
       listen<string>("login-error", (e) => { notice = e.payload; phase = "login"; }),
       listen<string>("logged-out", (e) => showLogin(e.payload)),
       // Kontowechsel: erst trennen, dann das andere Konto verbinden
@@ -140,7 +143,16 @@
     initQueues();
     loadPrefs().catch(() => {});
     restore();
-    return () => offs.forEach((p) => p.then((off) => off()));
+    // Ein Plugin möchte einen Reiter zeigen (z. B. Chat aus einem Favoriten)
+    const showTab = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail as Tab;
+      if (tabs.some((x) => x.id === id)) tab = id;
+    };
+    window.addEventListener("show-tab", showTab);
+    return () => {
+      window.removeEventListener("show-tab", showTab);
+      offs.forEach((p) => p.then((off) => off()));
+    };
   });
 
   /** Tastenkürzel aus GNOME (`starclx --action …`) */
@@ -202,7 +214,7 @@
     serverLocked = (await invoke<string[]>("locked_prefs").catch((): string[] => [])).includes("server");
     try {
       const info = await invoke<SessionInfo | null>("restore_session");
-      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); return; }
+      if (info) { session = info; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); loadFavorites(); return; }
     } catch (e) {
       notice = t("Automatische Anmeldung fehlgeschlagen: {e}", { e: String(e) });
     }
@@ -244,9 +256,10 @@
 
   let menuOpen = $state(false);
   let settingsOpen = $state(false);
-  type Tab = "journal" | "voicemail" | "recordings" | "contacts" | "chat" | "fkeys" | "conference" | "queue" | "doorcam";
+  type Tab = "favorites" | "journal" | "voicemail" | "recordings" | "contacts" | "chat" | "fkeys" | "conference" | "queue" | "doorcam";
   let tab = $state<Tab>("journal");
   const allTabs: { id: Tab; icon: IconName; label: string }[] = $derived([
+    { id: "favorites", icon: "star", label: t("Favoriten") },
     { id: "journal", icon: "history", label: t("Rufliste") },
     { id: "voicemail", icon: "voicemail", label: "Voicemail" },
     { id: "recordings", icon: "record", label: t("Aufzeichnungen") },
@@ -271,7 +284,7 @@
   /** Ohne Recht wird der Reiter bzw. die Kachel gar nicht angezeigt */
   const tabOff = (id: Tab) => {
     const p = tabPermission[id];
-    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "recordings" && recordings.disabled) || (id === "fkeys" && fkeys.forbidden);
+    return (p !== undefined && !can(p)) || (id === "voicemail" && voicemail.disabled) || (id === "recordings" && recordings.disabled) || (id === "fkeys" && fkeys.forbidden) || (id === "favorites" && favorites.forbidden);
   };
   /** Warteschlangen nur für Agenten einer iQueue */
   const hasQueues = $derived(queues.queues.length > 0);
@@ -466,6 +479,8 @@
       {#snippet view(id: string)}
         {#if id === "journal"}
           <Journal me={session?.display_name} />
+        {:else if id === "favorites"}
+          <Favorites />
         {:else if id === "fkeys"}
           <FunctionKeys />
         {:else if id === "voicemail"}

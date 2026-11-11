@@ -304,6 +304,10 @@ impl OneHub {
         v1::ccbs::call_back_on_busy_service_client::CallBackOnBusyServiceClient
     );
     service!(
+        favorite,
+        v1::favorite::favorite_service_client::FavoriteServiceClient
+    );
+    service!(
         module,
         v1::module::module_service_client::ModuleServiceClient
     );

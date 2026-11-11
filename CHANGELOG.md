@@ -1,5 +1,21 @@
 # Änderungen
 
+## 1.14.0 – 2026-11-11
+
+### Favoriten
+- Neuer Reiter bzw. neue Kachel **Favoriten**: dieselben Favoriten wie in den STARFACE-Apps
+  (Windows, Mac, iPhone, Android), auf der Anlage gespeichert, mit Kategorien, Kollegen
+  (mit Status wie im Besetztlampenfeld), Gruppen und Rufnummern. Änderungen aus anderen Apps
+  erscheinen sofort
+- Mit dem Stift: Kategorien und Favoriten anlegen, umbenennen, verschieben (auch in eine
+  andere Kategorie) und löschen
+- Klick ruft an bzw. holt einen klingelnden Anruf heran; ⋯ oder Rechtsklick zeigt alle Aktionen
+  (Anrufen, Heranholen, Rückfrage, Weiterleiten, Chat, E-Mail, Nummer kopieren)
+- **Ablauf beim Klick** je Favorit: mehrere Schritte nacheinander, z. B. Chat-Nachricht senden
+  und dann anrufen, oder eine URL bzw. ein Programm öffnen (gilt nur auf diesem Rechner)
+- Die Favoriten stehen auch in der Schnellwahlleiste; ein Gespräch lässt sich zum Vermitteln
+  auf einen Favoriten ziehen
+
 ## 1.13.0 – 2026-10-29
 
 ### Warteschlangen

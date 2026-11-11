@@ -214,6 +214,8 @@ pub struct Prefs {
     pub workspace_tiles: serde_json::Value,
     /// Ansichten des freien Arbeitsbereichs (Name, Symbol, Kacheln); gehört der Oberfläche
     pub workspace_views: serde_json::Value,
+    /// Abläufe beim Klick auf einen Favoriten, je Favoriten-ID; gehört der Oberfläche
+    pub favorite_flows: serde_json::Value,
     /// Zuletzt gewählte Ansicht
     pub workspace_view: String,
     /// Ausführliches Protokoll (Anruf- und Verbindungsdetails)
@@ -281,6 +283,7 @@ impl Default for Prefs {
             workspace_tiles: serde_json::Value::Null,
             workspace_views: serde_json::Value::Null,
             workspace_view: String::new(),
+            favorite_flows: serde_json::Value::Null,
             verbose_log: false,
             nextcloud_folder: "StarCLX".into(),
             nextcloud_link_days: 7,
