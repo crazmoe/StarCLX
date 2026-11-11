@@ -11,7 +11,7 @@
   import CallCard from "#lib/plugins/call/CallCard.svelte";
   import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
   import Favorites from "#lib/plugins/favorites/Favorites.svelte";
-  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites.svelte.ts";
+  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
   import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs } from "#lib/prefs.svelte.ts";

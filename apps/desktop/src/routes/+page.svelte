@@ -12,7 +12,7 @@
   import Chat from "#lib/plugins/chat/Chat.svelte";
   import Voicemail from "#lib/plugins/voicemail/Voicemail.svelte";
   import Favorites from "#lib/plugins/favorites/Favorites.svelte";
-  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites.svelte.ts";
+  import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
   import Recordings from "#lib/plugins/recordings/Recordings.svelte";
   import FunctionKeys from "#lib/plugins/fkeys/FunctionKeys.svelte";
   import DoorCams from "#lib/plugins/doorcam/DoorCams.svelte";

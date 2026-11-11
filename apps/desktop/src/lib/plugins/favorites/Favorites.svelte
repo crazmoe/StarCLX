@@ -15,7 +15,7 @@
     createCategory, createFavorite, deleteCategory, deleteFavorite, favName, favorites, flowOf, hasOwnFlow, loadFavorites,
     moveCategory, moveFavorite, possible, press, renameCategory, renameFavorite, runStep, saveFlow, searchTargets, stepTypes,
     type Candidate, type Category, type Favorite,
-  } from "./favorites.svelte";
+  } from "./favorites-state.svelte";
 
   /** Schmal (Schnellwahlleiste): eine Spalte, ohne Bearbeiten */
   let { compact = false }: { compact?: boolean } = $props();

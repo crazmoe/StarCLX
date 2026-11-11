@@ -6,7 +6,7 @@
   import ChatBubble from "../../ChatBubble.svelte";
   import Icon from "../../Icon.svelte";
   import { t } from "../../i18n.svelte";
-  import { favColor, favName, favState, hasOwnFlow, type Favorite } from "./favorites.svelte";
+  import { favColor, favName, favState, hasOwnFlow, type Favorite } from "./favorites-state.svelte";
 
   let { fav, onclick, onmenu }: { fav: Favorite; onclick: () => void; onmenu: (e: MouseEvent) => void } = $props();
 
