@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.14.1 – 2026-11-11
+
+### Favoriten
+- Stift und Haken stehen nicht mehr unter dem Rollbalken, wenn die Liste scrollt
+
 ## 1.14.0 – 2026-11-11
 
 ### Favoriten

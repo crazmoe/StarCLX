@@ -315,7 +315,8 @@
 {/if}
 
 <style>
-  .favs { height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 0.6rem; }
+  /* Platz für den Rollbalken, damit er Stift und Haken nicht überdeckt */
+  .favs { height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 0.6rem; scrollbar-gutter: stable; padding-right: 0.4rem; box-sizing: border-box; }
   .bar { display: flex; align-items: center; gap: 0.4rem; }
   .bar button { display: inline-flex; align-items: center; gap: 0.3rem; }
   .spacer { flex: 1; }
@@ -331,7 +332,7 @@
   .chev { display: grid; transition: transform 0.15s; color: var(--muted); }
   .chev.closed { transform: rotate(-90deg); }
   .grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
-  .compact { height: auto; overflow: visible; }
+  .compact { height: auto; overflow: visible; padding-right: 0; }
   .compact .grid { grid-template-columns: 1fr; gap: 0.4rem; }
   .edit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
   .edit li { display: flex; align-items: center; gap: 0.2rem; padding: 0.25rem 0.4rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; }
