@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.14.2 – 2026-11-11
+
+### Favoriten
+- Neue Favoriten bekommen ohne eigenen Namen den Namen des Kollegen bzw. die Nummer; auf der Anlage und in den STARFACE-Apps war der Anzeigename sonst leer
+
 ## 1.14.1 – 2026-11-11
 
 ### Favoriten
