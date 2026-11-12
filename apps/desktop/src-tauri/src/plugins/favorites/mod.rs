@@ -185,3 +185,48 @@ pub async fn favorite_chat_jid(
         .await
         .map_err(|e| e.to_string())
 }
+
+/// Gruppen, in denen der Benutzer Mitglied ist, für Ablauf-Schritte
+#[tauri::command]
+pub async fn favorite_groups(
+    state: State<'_, AppState>,
+) -> Result<Vec<sf_core::group::Membership>, String> {
+    sf_core::group::memberships(&hub(&state).await?)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// In Gruppen an- (`on` = true) oder abmelden (false); ohne `on` umschalten
+/// wie die Funktionstaste: ist man in einer angemeldet, wird abgemeldet.
+/// Liefert den neuen Zustand.
+#[tauri::command]
+pub async fn favorite_group_login(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+    on: Option<bool>,
+) -> Result<bool, String> {
+    let hub = hub(&state).await?;
+    let list = sf_core::group::memberships(&hub)
+        .await
+        .map_err(|e| e.to_string())?;
+    let targets: Vec<_> = list
+        .into_iter()
+        .filter(|m| ids.iter().any(|i| *i == m.id || *i == m.logon_id))
+        .collect();
+    if targets.is_empty() {
+        return Err(crate::i18n::t("Gruppe nicht gefunden oder kein Mitglied").into());
+    }
+    let on = on.unwrap_or_else(|| !targets.iter().any(|m| m.logged_on));
+    for m in targets.iter().filter(|m| m.logged_on != on) {
+        if m.read_only {
+            return Err(crate::i18n::tf(
+                "Die Anmeldung in „{name}“ lässt sich nicht ändern",
+                &[("name", &m.name)],
+            ));
+        }
+        sf_core::group::set_logged_on(&hub, &m.id, on)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(on)
+}

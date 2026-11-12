@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.15.0 – 2026-11-12
+
+### Favoriten
+- Neue Schritte im Ablauf beim Klick: „In Gruppen anmelden“, „Aus Gruppen abmelden“ und „Gruppen an-/abmelden“ (wie die Funktionstaste); die Gruppen werden im Ablauf angehakt, bei einem Gruppen-Favoriten gilt ohne Auswahl dessen Gruppe
+- Bei Gruppen-Favoriten stehen die drei Aktionen auch direkt im Menü
+
 ## 1.14.4 – 2026-11-11
 
 ### Schnellwahl
