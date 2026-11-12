@@ -314,6 +314,8 @@ async fn save_prefs(
     log::set_verbose(prefs.verbose_log);
     plugins::nextcloud::apply_prefs(&app, &prefs);
     bus::publish(&app, Event::PrefsSaved);
+    // Die Schnellwahl zeigt je nach Einstellung andere Tasten
+    let _ = app.emit_to("quick", "prefs-saved", ());
     desktop::apply_window(&app, &prefs);
     if old.quick_dock != prefs.quick_dock {
         relabel(&app, state.session.lock().await.as_ref());

@@ -14,10 +14,14 @@
   import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
   import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
-  import { loadPrefs } from "#lib/prefs.svelte.ts";
+  import { loadPrefs, prefs } from "#lib/prefs.svelte.ts";
   import { t } from "#lib/i18n.svelte.ts";
 
-  const blfs = $derived(fkeys.keys.filter(isTransferKey));
+  // Inhalt nach Einstellung: Funktionstasten, Favoriten oder beides
+  const content = $derived(prefs.value?.quick_content ?? "");
+  const showFkeys = $derived(content !== "favorites");
+  const showFavorites = $derived(content !== "fkeys");
+  const blfs = $derived(showFkeys ? fkeys.keys.filter(isTransferKey) : []);
 
   onMount(() => {
     initPhone();
@@ -34,7 +38,7 @@
     document.addEventListener("visibilitychange", reload);
     // Kontowechsel: Tasten des alten Kontos weg, die des neuen laden
     const reset = () => { resetFkeys(); resetFavorites(); };
-    const offs = [listen("switching", reset), listen("logged-out", reset), listen("session", () => { loadFkeys(); loadFavorites(); })];
+    const offs = [listen("switching", reset), listen("logged-out", reset), listen("session", () => { loadFkeys(); loadFavorites(); }), listen("prefs-saved", () => loadPrefs().catch(() => {}))];
     return () => {
       document.removeEventListener("visibilitychange", reload);
       offs.forEach((p) => p.then((off) => off()));
@@ -83,11 +87,13 @@
     {#each blfs as k (k.id)}
       <FkeyTile key={k} onclick={() => press(k)} />
     {:else}
-      {#if !favorites.list.length}
+      {#if showFkeys && !(showFavorites && favorites.list.length)}
         <p class="muted">{fkeys.error || (fkeys.loaded ? t("Keine Besetztlampenfelder eingerichtet.") : t("Lade …"))}</p>
+      {:else if !showFkeys && !favorites.list.length}
+        <p class="muted">{t("Keine Favoriten vorhanden.")}</p>
       {/if}
     {/each}
-    {#if favorites.list.length}<Favorites compact />{/if}
+    {#if showFavorites && favorites.list.length}<Favorites compact />{/if}
   </div>
 </main>
 
