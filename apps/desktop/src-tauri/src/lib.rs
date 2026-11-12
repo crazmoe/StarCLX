@@ -994,6 +994,7 @@ pub fn run() {
             locked_prefs,
             quick_hide,
             dock::quick_dock_expand,
+            dock::quick_dock_focus,
             busylight::busylight_info,
             busylight::busylight_test,
             plugins::headset::headset_info,

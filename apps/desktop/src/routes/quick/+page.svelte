@@ -56,6 +56,12 @@
     }, 700);
   }
 
+  // Angedockt bekommt die Leiste beim Ausfahren keinen Fokus; ein Klick
+  // hinein holt ihn, damit man ins Suchfeld tippen kann.
+  function focusDock() {
+    if (!document.hasFocus()) invoke("quick_dock_focus");
+  }
+
   function onkeydown(e: KeyboardEvent) {
     if (e.key === "Escape") invoke("quick_hide");
   }
@@ -63,7 +69,7 @@
 
 <svelte:window {onkeydown} />
 
-<main class="quick" onpointerenter={enter} onpointerleave={leave}>
+<main class="quick" onpointerenter={enter} onpointerleave={leave} onpointerdown={focusDock}>
   <DialSearch />
   {#if !connection.online}<p class="notice">{t("Keine Verbindung zur Anlage")}</p>
   {:else if phone.notice}<p class="notice">{phone.notice}</p>{/if}
