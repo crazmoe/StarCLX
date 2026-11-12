@@ -144,19 +144,56 @@ mod imp {
     /// X11: Fenster ist als Dock gemeldet
     static DOCK_HINT: AtomicBool = AtomicBool::new(false);
 
+    /// X11: Leiste zuoberst legen. Das einmal gesetzte „immer im Vordergrund“
+    /// reicht nicht: Andere Fenster mit derselben Ebene (z. B. das Hauptfenster
+    /// mit „immer im Vordergrund“) schieben sich darüber, und ein einfaches
+    /// Anheben ignoriert der Fenstermanager, solange ein anderes Programm aktiv
+    /// ist. Das Umschalten von „über anderen“ hebt das Fenster dagegen an.
+    fn raise(w: &WebviewWindow) {
+        let Ok(gw) = w.gtk_window() else {
+            return;
+        };
+        gw.set_keep_above(false);
+        gw.set_keep_above(true);
+        if let Some(gdk_win) = gw.window() {
+            gdk_win.raise();
+        }
+    }
+
+    /// X11: gerade aktives Fenster (_NET_ACTIVE_WINDOW). gtk-rs bindet die
+    /// veraltete GDK-Funktion nicht mehr, darum direkt über die C-Schnittstelle.
+    fn active_window() -> Option<gtk::gdk::Window> {
+        use gtk::glib::translate::{ToGlibPtr, from_glib_full};
+        let screen = gtk::gdk::Screen::default()?;
+        unsafe {
+            from_glib_full(gtk::gdk::ffi::gdk_screen_get_active_window(
+                screen.to_glib_none().0,
+            ))
+        }
+    }
+
     /// X11: Mausposition am Rand selbst prüfen; die Webansicht im schmalen
     /// Streifen meldet das Überfahren nicht zuverlässig (wie unter Windows).
+    /// Wechselt das aktive Fenster, die Leiste wieder nach oben holen.
     fn watch(app: &AppHandle) {
         if WATCHING.swap(true, Ordering::SeqCst) {
             return;
         }
         let app = app.clone();
         let mut outside_since: Option<std::time::Instant> = None;
+        let mut active: Option<gtk::gdk::Window> = None;
         gtk::glib::timeout_add_local(std::time::Duration::from_millis(120), move || {
             let (edge, autohide) = super::STATE.lock().unwrap().clone();
             let Some(w) = app.get_webview_window("quick") else {
                 return gtk::glib::ControlFlow::Continue;
             };
+            if !edge.is_empty() {
+                let now = active_window();
+                if now != active {
+                    active = now;
+                    raise(&w);
+                }
+            }
             if edge.is_empty() || !autohide {
                 outside_since = None;
                 return gtk::glib::ControlFlow::Continue;
@@ -193,9 +230,9 @@ mod imp {
         });
     }
 
-    fn wayland() -> bool {
-        std::env::var("XDG_SESSION_TYPE").is_ok_and(|t| t == "wayland")
-            || std::env::var_os("WAYLAND_DISPLAY").is_some()
+    /// GTK läuft über X11 (auch XWayland, z. B. mit GDK_BACKEND=x11)
+    fn x11() -> bool {
+        gtk::gdk::Display::default().is_some_and(|d| d.type_().name() == "GdkX11Display")
     }
 
     /// gtk-layer-shell, wenn installiert und vom Compositor unterstützt
@@ -220,10 +257,10 @@ mod imp {
         let left = edge == "left";
         let width = if open { WIDTH } else { STRIP };
         let _ = app.run_on_main_thread(move || {
-            if wayland() {
-                dock_layer(&w, left, autohide, width);
-            } else {
+            if x11() {
                 dock_x11(&w, left, autohide, width);
+            } else {
+                dock_layer(&w, left, autohide, width);
             }
         });
     }
@@ -314,6 +351,7 @@ mod imp {
         let _ = w.set_size(PhysicalSize::new(px as u32, area.size.height));
         let _ = w.set_position(PhysicalPosition::new(x, area.position.y));
         let _ = w.show();
+        raise(w);
         let lg = |v: i32| (v as f64 / scale).round() as i32;
         *LAST.lock().unwrap() = (
             (
@@ -324,9 +362,7 @@ mod imp {
             ),
             width == WIDTH,
         );
-        if autohide {
-            watch(w.app_handle());
-        }
+        watch(w.app_handle());
 
         // Platz freihalten wie ein Panel (Koordinaten relativ zum ganzen Bildschirm)
         let Ok(gw) = w.gtk_window() else {

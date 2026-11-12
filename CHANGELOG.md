@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.14.4 – 2026-11-11
+
+### Schnellwahl
+- Die angedockte Leiste bleibt im Vordergrund: Sie wird beim Ausklappen und bei jedem Wechsel des aktiven Fensters wieder nach oben geholt; vorher konnten andere Fenster (auch das Hauptfenster mit „Immer im Vordergrund“) sie verdecken
+- Andocken erkennt X11 jetzt an GTK selbst, damit es auch mit XWayland (GDK_BACKEND=x11) greift
+
 ## 1.14.3 – 2026-11-11
 
 ### Favoriten
