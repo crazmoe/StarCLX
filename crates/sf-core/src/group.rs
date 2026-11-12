@@ -63,6 +63,20 @@ pub async fn memberships(hub: &OneHub) -> sf_onehub::Result<Vec<Membership>> {
     Ok(out)
 }
 
+/// Ist der Benutzer in dieser Gruppe angemeldet? `None`, wenn er dort nicht
+/// Mitglied ist. Nur ein Aufruf, ohne die Gruppendetails zu lesen.
+pub async fn logged_on(hub: &OneHub, id: &str) -> sf_onehub::Result<Option<bool>> {
+    Ok(hub
+        .group()
+        .get_group_memberships(())
+        .await?
+        .into_inner()
+        .group_memberships
+        .into_iter()
+        .find(|m| m.group_id.as_ref().is_some_and(|g| g.id == id))
+        .map(|m| m.logged_on))
+}
+
 /// An- (`on = true`) oder abmelden
 pub async fn set_logged_on(hub: &OneHub, id: &str, on: bool) -> sf_onehub::Result<()> {
     let mut svc = hub.group();

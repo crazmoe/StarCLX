@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.4 – 2026-11-12
+
+### Benachrichtigungen
+- Verpasste Gruppen- und Warteschlangenanrufe melden sich nur noch, wenn du in dieser Gruppe bzw. Warteschlange angemeldet bist
+
 ## 1.15.3 – 2026-11-12
 
 ### Profil
