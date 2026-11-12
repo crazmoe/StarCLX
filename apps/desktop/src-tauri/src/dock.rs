@@ -160,6 +160,18 @@ mod imp {
         }
     }
 
+    /// X11: gerade aktives Fenster (_NET_ACTIVE_WINDOW). gtk-rs bindet die
+    /// veraltete GDK-Funktion nicht mehr, darum direkt über die C-Schnittstelle.
+    fn active_window() -> Option<gtk::gdk::Window> {
+        use gtk::glib::translate::{ToGlibPtr, from_glib_full};
+        let screen = gtk::gdk::Screen::default()?;
+        unsafe {
+            from_glib_full(gtk::gdk::ffi::gdk_screen_get_active_window(
+                screen.to_glib_none().0,
+            ))
+        }
+    }
+
     /// X11: Mausposition am Rand selbst prüfen; die Webansicht im schmalen
     /// Streifen meldet das Überfahren nicht zuverlässig (wie unter Windows).
     /// Wechselt das aktive Fenster, die Leiste wieder nach oben holen.
@@ -176,8 +188,7 @@ mod imp {
                 return gtk::glib::ControlFlow::Continue;
             };
             if !edge.is_empty() {
-                #[allow(deprecated)]
-                let now = gtk::gdk::Screen::default().and_then(|s| s.active_window());
+                let now = active_window();
                 if now != active {
                     active = now;
                     raise(&w);
