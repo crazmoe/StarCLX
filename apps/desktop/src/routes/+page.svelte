@@ -597,7 +597,7 @@
   .reg { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #777; }
   /* Wie in der STARFACE-App: Status-Sprechblase oben rechts; der Punkt unten rechts zeigt das Softphone */
   .me .reg { position: absolute; right: -1px; bottom: -1px; width: 0.6rem; height: 0.6rem; border: 2px solid var(--bar); }
-  .me .pic { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  .me .pic { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
   .me .mychat { position: absolute; right: -0.4rem; top: -0.25rem; width: 1.2rem; height: 1.1rem; }
   /* Ring in der Telefonfarbe; Ruhe wie im Menü mit Symbol oben links */
   .me.dnd, .me.busy { border-color: var(--red); }

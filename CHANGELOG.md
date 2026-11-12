@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.3 – 2026-11-12
+
+### Profil
+- Das eigene Profilbild wird oben links und im Profilmenü rund in den Kreis zugeschnitten; nicht quadratische Bilder ragten vorher über den Ring und verdeckten den Namen
+
 ## 1.15.2 – 2026-11-12
 
 ### Schnellwahl
