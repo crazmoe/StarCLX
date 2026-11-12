@@ -104,6 +104,18 @@ fn watch_monitors(app: &AppHandle) {
     });
 }
 
+/// Angedockte Leiste angeklickt: ihr den Tastaturfokus geben. Das Ausfahren
+/// per Maus aktiviert das Fenster bewusst nicht (es soll niemandem den Fokus
+/// wegnehmen); ohne Fokus liesse sich aber nichts ins Suchfeld tippen.
+#[tauri::command]
+pub fn quick_dock_focus(app: AppHandle) {
+    if docked()
+        && let Some(w) = app.get_webview_window("quick")
+    {
+        let _ = w.set_focus();
+    }
+}
+
 /// Eingefahrene Leiste aus- oder wieder einfahren
 #[tauri::command]
 pub fn quick_dock_expand(app: AppHandle, open: bool) {
