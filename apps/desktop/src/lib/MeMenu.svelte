@@ -268,7 +268,8 @@
     display: grid; place-items: center; font-size: 1.4rem; font-weight: 600; color: #fff;
     background: linear-gradient(135deg, #3a7bd5, #00a37a); border: 3px solid var(--green);
   }
-  .big img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  /* Absolut statt Grid-Zelle: sonst wächst die Zeile bei nicht quadratischen Bildern auf die Bildhöhe */
+  .big img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
   .bub { position: absolute; right: -0.4rem; top: -0.2rem; width: 1.6rem; height: 1.45rem; }
   .dndb { position: absolute; left: -0.3rem; top: -0.2rem; display: grid; color: var(--red); background: #fff; border-radius: 50%; }
   .rdb { position: absolute; left: -0.2rem; bottom: 0; width: 1.45rem; height: 1.45rem; border-radius: 50%; display: grid; place-items: center; background: #111; color: #fff; border: 2px solid #fff; }
