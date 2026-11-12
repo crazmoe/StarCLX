@@ -27,6 +27,8 @@ pub struct Entry {
     pub duration_secs: i64,
     /// Bei Gruppenanrufen der Gruppenname
     pub group: String,
+    /// Bei Gruppenanrufen die OneHub-ID der Gruppe bzw. Warteschlange
+    pub group_id: String,
     /// Wer den Gruppenanruf angenommen hat
     pub answered_by: String,
     pub comment: String,
@@ -285,6 +287,7 @@ fn view_of(e: &v1::journal::JournalEntry) -> Entry {
         missed: e.answer_type == v1::journal::AnswerType::Missed as i32,
         start: millis(&e.start_time),
         duration_secs: e.duration.as_ref().map_or(0, |d| d.seconds),
+        group_id: group.group_id.map(|g| g.id).unwrap_or_default(),
         group: group.group_name,
         answered_by: group.group_call_answered_by,
         comment_modified: millis(&comment.comment_modified),

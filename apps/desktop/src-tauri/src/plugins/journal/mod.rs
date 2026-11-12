@@ -33,7 +33,19 @@ fn start_journal(app: &AppHandle, hub: sf_onehub::OneHub) -> Journal {
                 JournalEvent::Entries { entries } => {
                     let _ = app.emit("journal", entries);
                 }
-                JournalEvent::Missed { entry } => notify_missed(&app, &entry),
+                JournalEvent::Missed { entry } => {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if group_logged_off(&app, &entry.group_id).await {
+                            tracing::debug!(
+                                group = entry.group,
+                                "Gruppe abgemeldet: keine Meldung"
+                            );
+                        } else {
+                            notify_missed(&app, &entry);
+                        }
+                    });
+                }
                 JournalEvent::Error { message } => {
                     let _ = app.emit("journal-error", message);
                 }
@@ -41,6 +53,29 @@ fn start_journal(app: &AppHandle, hub: sf_onehub::OneHub) -> Journal {
         }
     });
     journal
+}
+
+/// Ist der Benutzer in der Gruppe bzw. Warteschlange dieses Anrufs
+/// abgemeldet? Dann soll ein verpasster Gruppenanruf keine Meldung bringen.
+/// Erst der Live-Stand der Warteschlangen, sonst die Gruppen der Anlage;
+/// ist nichts bekannt, wird gemeldet.
+async fn group_logged_off(app: &AppHandle, group_id: &str) -> bool {
+    if group_id.is_empty() {
+        return false;
+    }
+    if let Some(on) = crate::plugins::queue::logged_in(app, group_id).await {
+        return !on;
+    }
+    let Ok(hub) = crate::hub(&app.state::<crate::AppState>()).await else {
+        return false;
+    };
+    match sf_core::group::logged_on(&hub, group_id).await {
+        Ok(on) => on == Some(false),
+        Err(e) => {
+            tracing::debug!(error = %e, group_id, "Gruppenstatus nicht gelesen");
+            false
+        }
+    }
 }
 
 fn notify_missed(app: &AppHandle, entry: &sf_core::journal::Entry) {

@@ -37,6 +37,18 @@ pub async fn session_started(app: &AppHandle, hub: sf_onehub::OneHub, user_id: S
     restart(app, Some((hub, user_id))).await;
 }
 
+/// Bin ich in dieser Warteschlange angemeldet? `None`, wenn ich dort kein
+/// Agent bin oder der Stand noch fehlt.
+pub async fn logged_in(app: &AppHandle, id: &str) -> Option<bool> {
+    let state = app.state::<QueueState>();
+    let view = state.view.lock().await;
+    view.queues
+        .iter()
+        .find(|q| q.id == id)
+        .and_then(|q| q.agents.iter().find(|a| a.user_id == view.me))
+        .map(|a| a.logged_in)
+}
+
 async fn restart(app: &AppHandle, login: Option<(sf_onehub::OneHub, String)>) {
     let state = app.state::<QueueState>();
     *state.view.lock().await = QueueView {
