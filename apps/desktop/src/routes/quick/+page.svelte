@@ -28,6 +28,9 @@
     initConnection();
     loadPrefs().catch(() => {});
     loadFkeys();
+    // Ohne diesen Aufruf kämen die Favoriten erst beim nächsten Einblenden:
+    // Die Favoriten-Ansicht lädt sie selbst, erscheint aber erst mit Inhalt.
+    loadFavorites();
     // Beim Einblenden neu laden; so gilt auch eine inzwischen geänderte Sprache.
     const reload = () => {
       if (document.visibilityState !== "visible") return;
@@ -89,7 +92,7 @@
     {:else}
       {#if showFkeys && !(showFavorites && favorites.list.length)}
         <p class="muted">{fkeys.error || (fkeys.loaded ? t("Keine Besetztlampenfelder eingerichtet.") : t("Lade …"))}</p>
-      {:else if !showFkeys && !favorites.list.length}
+      {:else if !showFkeys && favorites.loaded && !favorites.list.length}
         <p class="muted">{t("Keine Favoriten vorhanden.")}</p>
       {/if}
     {/each}
