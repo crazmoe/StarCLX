@@ -183,9 +183,16 @@ async fn set_session(app: &AppHandle, session: Option<Session>) {
     // gelten noch deren Einstellungen (z. B. das vorherige primäre Telefon).
     if let Some(s) = &session {
         let info = SessionInfo::from(s.info());
+        let before = settings::load(app);
         settings::update(app, |st| {
             st.remember(&info.server, &info.user_id, &info.display_name);
         });
+        // Jedes Konto hat eigene Oberfläche und Nextcloud
+        let after = settings::load(app);
+        if after.prefs != before.prefs {
+            let _ = app.emit_to("quick", "prefs-saved", ());
+        }
+        plugins::nextcloud::account_switched(app, before.nextcloud);
     }
     rebuild_tray_menu(app, session.as_ref());
     let login = session.as_ref().and_then(|s| {

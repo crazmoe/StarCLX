@@ -53,6 +53,40 @@ pub struct Account {
     /// Ausschalten wiederkommen
     #[serde(default)]
     pub fkey_redirects: crate::plugins::fkeys::FkeyRedirects,
+    /// Oberfläche und Nextcloud dieses Kontos; fehlt bei Konten aus
+    /// Versionen, in denen alle Konten sie teilten
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own: Option<AccountOwn>,
+}
+
+/// Einstellungen, die jedes Konto für sich hat (Schlüssel wie in `Prefs`).
+/// Geräte, Sprache, Tastenkürzel usw. gehören dem Rechner und bleiben für
+/// alle Konten gleich.
+pub const ACCOUNT_PREFS: &[&str] = &[
+    "theme",
+    "accent",
+    "workspace",
+    "workspace_tiles",
+    "workspace_views",
+    "workspace_view",
+    "fkey_columns",
+    "favorite_flows",
+    "quick_content",
+    "nextcloud_folder",
+    "nextcloud_link_days",
+    "nextcloud_link_password",
+    "nextcloud_caller_names",
+];
+
+/// Was ein Konto für sich speichert. `Settings::prefs` und
+/// `Settings::nextcloud` halten immer die Werte des aktiven Kontos.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct AccountOwn {
+    /// Werte zu [`ACCOUNT_PREFS`]
+    #[serde(default)]
+    pub prefs: serde_json::Map<String, serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nextcloud: Option<crate::plugins::nextcloud::Account>,
 }
 
 impl Settings {
@@ -103,6 +137,59 @@ impl Settings {
         }
         self.last_server = Some(server.to_owned());
         self.last_user = Some(user_id.to_owned());
+    }
+
+    fn active_key(&self) -> Option<(String, String)> {
+        self.active().map(|a| (a.server.clone(), a.user_id.clone()))
+    }
+
+    /// Werte des aktiven Kontos (siehe [`ACCOUNT_PREFS`]) beim Konto `key`
+    /// ablegen
+    fn store_own(&mut self, key: &(String, String)) {
+        let prefs = serde_json::to_value(&self.prefs).unwrap_or_default();
+        let own = AccountOwn {
+            prefs: ACCOUNT_PREFS
+                .iter()
+                .filter_map(|k| Some(((*k).to_owned(), prefs.get(*k)?.clone())))
+                .collect(),
+            nextcloud: self.nextcloud.clone(),
+        };
+        if let Some(a) = self
+            .accounts
+            .iter_mut()
+            .find(|a| a.server == key.0 && a.user_id == key.1)
+        {
+            a.own = Some(own);
+        }
+    }
+
+    /// Übernimmt die Werte des aktiven Kontos. Hat es noch keine, behält es
+    /// die bisherigen Werte als Ausgangspunkt; die Nextcloud aber nur, wenn
+    /// noch kein Konto eigene Werte hat (Umstieg von älteren Versionen: die
+    /// Verbindung bleibt beim zuletzt benutzten Konto).
+    fn apply_own(&mut self) {
+        let Some(active) = self.active() else {
+            return;
+        };
+        let Some(own) = active.own.clone() else {
+            if self.accounts.iter().any(|a| a.own.is_some()) {
+                self.nextcloud = None;
+            }
+            return;
+        };
+        let mut prefs = serde_json::to_value(&self.prefs).unwrap_or_default();
+        if let Some(map) = prefs.as_object_mut() {
+            for (k, v) in own.prefs {
+                if ACCOUNT_PREFS.contains(&k.as_str()) {
+                    map.insert(k, v);
+                }
+            }
+        }
+        match serde_json::from_value(prefs) {
+            Ok(p) => self.prefs = p,
+            Err(e) => tracing::warn!(error = %e, "Einstellungen des Kontos ungültig"),
+        }
+        self.nextcloud = own.nextcloud;
     }
 
     /// Konto aus der Liste nehmen
@@ -356,6 +443,8 @@ fn with_policy(raw: Option<serde_json::Value>, policy: &crate::policy::Policy) -
         .and_then(|v| serde_json::from_value(v.clone()).ok())
         .unwrap_or_default();
     settings.prefs = policy.prefs(raw.as_ref().and_then(|v| v.get("prefs")));
+    settings.apply_own();
+    policy.enforce(&mut settings.prefs);
     if let Some(server) = policy.server()
         && (settings.last_server.is_none() || policy.is_locked("server"))
     {
@@ -383,10 +472,23 @@ pub fn save(app: &AppHandle, settings: &Settings) {
 }
 
 /// Liest, ändert und speichert die Einstellungen in einem Schritt.
+/// Die Werte des aktiven Kontos (siehe [`ACCOUNT_PREFS`]) landen dabei bei
+/// diesem Konto; wechselt `f` das Konto, gelten danach die des neuen.
 pub fn update(app: &AppHandle, f: impl FnOnce(&mut Settings)) {
     let mut s = load(app);
-    f(&mut s);
+    change(&mut s, f);
     save(app, &s);
+}
+
+fn change(s: &mut Settings, f: impl FnOnce(&mut Settings)) {
+    let before = s.active_key();
+    f(s);
+    if let Some(key) = &before {
+        s.store_own(key);
+    }
+    if s.active_key() != before {
+        s.apply_own();
+    }
 }
 
 #[cfg(test)]
@@ -426,6 +528,51 @@ mod tests {
         s.forget("https://a", "u1");
         assert!(s.active().is_none());
         assert_eq!(s.accounts.len(), 1);
+    }
+
+    #[test]
+    fn layout_and_nextcloud_per_account() {
+        let nc = |user: &str| crate::plugins::nextcloud::Account {
+            server: "https://cloud".into(),
+            login_name: user.into(),
+            ..Default::default()
+        };
+        // Stand aus einer Version, in der alle Konten alles teilten
+        let mut s: Settings = serde_json::from_str(
+            r#"{"last_server":"https://a","last_user":"u1",
+                "accounts":[{"server":"https://a","user_id":"u1"},{"server":"https://b","user_id":"u2"}],
+                "prefs":{"workspace":"free","theme":"dark"}}"#,
+        )
+        .unwrap();
+        s.nextcloud = Some(nc("anna"));
+        s.apply_own();
+        assert_eq!(s.nextcloud, Some(nc("anna")));
+        change(&mut s, |s| s.prefs.accent = "#112233".into());
+        // Zweites Konto: übernimmt das Layout, aber nicht die Nextcloud
+        change(&mut s, |s| s.remember("https://b", "u2", "Ben"));
+        assert_eq!(s.prefs.workspace, "free");
+        assert_eq!(s.prefs.accent, "#112233");
+        assert_eq!(s.nextcloud, None);
+        change(&mut s, |s| {
+            s.prefs.theme = "light".into();
+            s.prefs.accent = String::new();
+            s.prefs.ringtone = false;
+            s.nextcloud = Some(nc("ben"));
+        });
+        // Zurück zum ersten: eigene Werte, Gerätewerte bleiben gemeinsam
+        change(&mut s, |s| s.remember("https://a", "u1", "Anna"));
+        assert_eq!(s.prefs.theme, "dark");
+        assert_eq!(s.prefs.accent, "#112233");
+        assert!(!s.prefs.ringtone);
+        assert_eq!(s.nextcloud, Some(nc("anna")));
+        // Übersteht Speichern und Laden
+        let raw = serde_json::to_value(&s).unwrap();
+        let policy = crate::policy::Policy::from_files(std::iter::empty::<&str>());
+        let mut s = with_policy(Some(raw), &policy);
+        change(&mut s, |s| s.remember("https://b", "u2", "Ben"));
+        assert_eq!(s.prefs.theme, "light");
+        assert_eq!(s.prefs.accent, "");
+        assert_eq!(s.nextcloud, Some(nc("ben")));
     }
 
     #[test]

@@ -1,5 +1,13 @@
 # Änderungen
 
+## 1.15.5 – 2026-11-12
+
+### Konten
+- Jedes Konto hat seine eigene Oberfläche: Arbeitsbereich, Ansichten und Kacheln, Spalten der Funktionstasten, Favoriten-Abläufe, Inhalt der Schnellwahl, Farbschema und Akzentfarbe. Beim Kontowechsel erscheint die Oberfläche des anderen Kontos
+- Auch die Nextcloud-Verbindung und ihre Einstellungen gehören jetzt zum Konto. Beim Kontowechsel verbindet StarCLX die Nextcloud des anderen Kontos und lädt deren Kontakte
+- Nach dem Update übernehmen alle Konten die bisherige Oberfläche; eine bestehende Nextcloud-Verbindung bleibt beim zuletzt benutzten Konto
+- Geräte, Klingeltöne, Sprache, Busylight und Tastenkürzel bleiben für alle Konten gleich
+
 ## 1.15.4 – 2026-11-12
 
 ### Benachrichtigungen

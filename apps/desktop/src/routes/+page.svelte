@@ -118,7 +118,7 @@
 
   onMount(() => {
     const offs = [
-      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); loadFavorites(); }),
+      listen<SessionInfo>("session", (e) => { session = e.payload; notice = ""; adding = false; phase = "session"; loadPrefs().catch(() => {}); loadPermissions(); loadVoicemails(); loadRecordings(); loadConferences(); loadFavorites(); }),
       listen<string>("login-error", (e) => { notice = e.payload; phase = "login"; }),
       listen<string>("logged-out", (e) => showLogin(e.payload)),
       // Kontowechsel: erst trennen, dann das andere Konto verbinden
