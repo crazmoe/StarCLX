@@ -1,0 +1,7 @@
+[starclx]
+name=StarCLX
+baseurl=https://crazmoe.github.io/StarCLX/rpm
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://crazmoe.github.io/StarCLX/starclx.asc

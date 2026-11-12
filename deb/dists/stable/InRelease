@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Thu, 12 Nov 2026 23:39:21 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ a2ba1936fe22126fa5c2577b2edd1051              138 Release
+ 0896434453c6e23da2bfb713a88a49de             2745 main/binary-amd64/Packages
+ 9ae6036a49b074b30b36f74fe38060b0             1024 main/binary-amd64/Packages.gz
+SHA1:
+ 03db8dfe3d06f2e29349999c3baa43d5c311320e              138 Release
+ a1676e6dd754bf291cf3da1ab7092fa805c6fcaa             2745 main/binary-amd64/Packages
+ 07d923c5de26b2ed472910ef706aaaf82e2f7788             1024 main/binary-amd64/Packages.gz
+SHA256:
+ 52b24db8d461a646455bff6f132623bd9ef74e253bfe1501ce2c8363213dc464              138 Release
+ 680419cb6fb19036653a92b140aa1a30d26544586b5f5d4cb991b034dc9b80f8             2745 main/binary-amd64/Packages
+ 85ec8cc85840ece1b8da42cc74e7ae38f42174e488aa71273492fb9828f606a9             1024 main/binary-amd64/Packages.gz
+SHA512:
+ fe903974c0a935bf9f8b353272188e6b5d594b2bef74ecdb9f521e9bc9c015dbf5bbec1ac481ce95dece35ea365529be93f4085b2d187c7cc7fb8141ab220f53              138 Release
+ bc5457d77d38a07f114717339205d60b568e87f9b811bc88efb231d19422924c078c7c412689462a56081345f9e768dc0a4016e7b5f4ffb5ef5256398f33516b             2745 main/binary-amd64/Packages
+ 1a4c531c23524932941bb4f4fa95bebc47c34de204527459a937bd527da468cf706f1c021b879e90bb217bfd8acc86b3a6270f15993a1bb47086f02f66b17e54             1024 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEBVBU+NvGrWfgmNPWP1MLX5W/c0EFAmr2TikACgkQP1MLX5W/
+c0FaBg/8D5FW+tCn0fL6F4L9URHt8bmiVovPF/Oxi4YKBK5CxqH+Aoq8lkeUk5rq
+QVXnL4Jlyj/9cYQNRObB7h+/Y4PRYmpvprli3AeElPn32eKOjwiTbkPQL9WH7PRv
+6S2vlj82oBdcjIiM18QfoUk4qy3tzoV2lhcvTnSFpZq3TJbDuyYVVIUkpYRXeqMA
+iXBjmfpdq5sU/nlkzIzlxtHw6dHU0t9GhCXjy511xB6fVvqbRaPkc1t3n408GZAx
+KbAeAAEV6J9/Qa13PePToKSLuJcGcOoDTts9i9dAVDFNsPjN5HZ/FWMzfZ4JFC7Y
+KFJ3Yq5sISRZNCMKMppdhmvMAH9PdmSDQIFwzYQo8S+B8oGkYtv2IYUgU+UdU2aT
+bJ++7sl0NCfzRSei1QFSIHroSH/2c54KdysZ0Pb/4F4K3+XvAOCLPFNmLANTDsd3
+s3hDbKbMfoc/FSx7nMHzsM95PTdXVGqFVrZgUnZCWO9krpV3lGXpASZrkfEs7lOY
+bd2necYj/N1Hvq72A3ailbAEQhokybNpclQSti53X9zl55pcsioBwLX1Eekr3FN/
+frQ329GAiX/57S6YjtDRU3YYyVhsCpjyCjpdPhEA0jS0V3+fPvksh8LYz+PtpxBX
+9dX1Si3GAa6vyEKDuteHnunMbn2cOqK7x1zb6bPnBtOHSWweqXg=
+=SUQ4
+-----END PGP SIGNATURE-----
