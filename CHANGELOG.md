@@ -1,6 +1,6 @@
 # Änderungen
 
-## 1.14.6 – 2026-11-12
+## 1.15.1 – 2026-11-12
 
 ### Schnellwahl
 - Neue Einstellung **Schnellwahl zeigt**: Funktionstasten und Favoriten, nur Funktionstasten oder nur Favoriten
