@@ -589,6 +589,15 @@
           {#if desktop.wayland && draft.always_on_top}
             <p class="small muted">{t("Unter Wayland bestimmt der Desktop, ob ein Fenster oben bleibt. Bei GNOME geht es über Alt+Leertaste → „Immer im Vordergrund“.")}</p>
           {/if}
+          <hr />
+          <label class="field">
+            <span>{t("Schnellwahl zeigt")}</span>
+            <select bind:value={draft.quick_content} disabled={lk("quick_content")}>
+              <option value="">{t("Funktionstasten und Favoriten")}</option>
+              <option value="fkeys">{t("Nur Funktionstasten")}</option>
+              <option value="favorites">{t("Nur Favoriten")}</option>
+            </select>
+          </label>
           <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->
           {#if !(desktop.wayland && desktop.gnome)}
             <label class="field">

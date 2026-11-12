@@ -59,6 +59,8 @@ export type Prefs = {
   quick_dock_autohide: boolean;
   /** Bildschirm der angedockten Schnellwahl (Name); "" = Hauptbildschirm */
   quick_dock_monitor: string;
+  /** Inhalt der Schnellwahl: "" = Funktionstasten und Favoriten */
+  quick_content: "" | "fkeys" | "favorites";
   hotkeys: Hotkeys;
   fkey_columns: number;
   workspace: "tabs" | "free";

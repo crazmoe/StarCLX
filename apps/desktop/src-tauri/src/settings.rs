@@ -205,6 +205,8 @@ pub struct Prefs {
     pub quick_dock_autohide: bool,
     /// Bildschirm der angedockten Schnellwahl (Name); leer = Hauptbildschirm
     pub quick_dock_monitor: String,
+    /// Inhalt der Schnellwahl: "fkeys" (Funktionstasten), "favorites" oder leer = beides
+    pub quick_content: String,
     pub hotkeys: crate::desktop::Hotkeys,
     /// Spalten im Funktionstasten-Raster (lokal, wie in Windows)
     pub fkey_columns: u8,
@@ -277,6 +279,7 @@ impl Default for Prefs {
             quick_dock: String::new(),
             quick_dock_autohide: false,
             quick_dock_monitor: String::new(),
+            quick_content: String::new(),
             hotkeys: crate::desktop::Hotkeys::default(),
             fkey_columns: 3,
             workspace: "tabs".into(),

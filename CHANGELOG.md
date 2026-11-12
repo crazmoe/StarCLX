@@ -2,6 +2,12 @@
 
 ## 1.15.0 – 2026-11-12
 
+### Schnellwahl
+- Neue Einstellung **Schnellwahl zeigt**: Funktionstasten und Favoriten, nur Funktionstasten oder nur Favoriten
+- In den Einstellungen trennt ein Strich die Schnellwahl-Einstellungen von „Immer im Vordergrund“
+
+## 1.15.0 – 2026-11-12
+
 ### Favoriten
 - Neue Schritte im Ablauf beim Klick: „In Gruppen anmelden“, „Aus Gruppen abmelden“ und „Gruppen an-/abmelden“ (wie die Funktionstaste); die Gruppen werden im Ablauf angehakt, bei einem Gruppen-Favoriten gilt ohne Auswahl dessen Gruppe
 - Bei Gruppen-Favoriten stehen die drei Aktionen auch direkt im Menü
