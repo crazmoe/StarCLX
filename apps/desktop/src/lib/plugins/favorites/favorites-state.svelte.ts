@@ -6,7 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { action, phone, run } from "../call/phone.svelte";
 import { openConversation } from "../chat/chat.svelte";
-import { consultAndTransfer, fkeys, type UserState } from "../fkeys/fkeys.svelte";
+import { consultAndTransfer, fkeys, type Membership, type UserState } from "../fkeys/fkeys.svelte";
 import { t } from "../../i18n.svelte";
 import { prefs, savePrefs, type FlowStep } from "../../prefs.svelte";
 
@@ -124,7 +124,7 @@ export const searchTargets = (term: string) => invoke<Candidate[]>("favorite_sea
 // ── Aktionen und Abläufe ─────────────────────────────────────────────────────
 
 /** Schritte, aus denen sich ein Ablauf zusammensetzt; `text` = braucht eine Eingabe */
-export const stepTypes = (): { kind: string; label: string; text?: string }[] => [
+export const stepTypes = (): { kind: string; label: string; text?: string; groups?: boolean }[] => [
   { kind: "auto", label: t("Heranholen, wenn es klingelt, sonst anrufen") },
   { kind: "call", label: t("Anrufen") },
   { kind: "pickup", label: t("Heranholen, wenn es klingelt") },
@@ -135,7 +135,26 @@ export const stepTypes = (): { kind: string; label: string; text?: string }[] =>
   { kind: "mail", label: t("E-Mail schreiben") },
   { kind: "open", label: t("URL oder Programm öffnen"), text: t("URL oder Befehl, $(callerid) = Nummer") },
   { kind: "copy", label: t("Nummer kopieren") },
+  { kind: "group_on", label: t("In Gruppen anmelden"), groups: true },
+  { kind: "group_off", label: t("Aus Gruppen abmelden"), groups: true },
+  { kind: "group_toggle", label: t("Gruppen an-/abmelden"), groups: true },
 ];
+
+/** Gruppen, in denen man Mitglied ist (für die Gruppen-Schritte) */
+export const memberships = $state({ list: [] as Membership[] });
+export async function loadMemberships() {
+  try {
+    memberships.list = await invoke<Membership[]>("favorite_groups");
+  } catch (e) {
+    favorites.notice = String(e);
+  }
+}
+
+/** Gruppen eines Schritts; ohne Auswahl bei einem Gruppen-Favoriten diese Gruppe */
+function stepGroups(f: Favorite, step: FlowStep): string[] {
+  if (step.groups?.length) return step.groups;
+  return f.kind === "group" ? [f.target_id] : [];
+}
 
 /** Ablauf eines Favoriten; ohne eigenen der Standard */
 export const flowOf = (f: Favorite): FlowStep[] => prefs.value?.favorite_flows?.[f.id] ?? [{ kind: "auto" }];
@@ -171,6 +190,10 @@ export function possible(f: Favorite, kind: string): boolean {
       return !!f.email;
     case "open":
       return true;
+    case "group_on":
+    case "group_off":
+    case "group_toggle":
+      return f.kind === "group";
     default:
       return false;
   }
@@ -239,6 +262,21 @@ export async function runStep(f: Favorite, step: FlowStep): Promise<boolean> {
       await navigator.clipboard.writeText(f.number).catch(() => {});
       favorites.notice = t("Nummer kopiert");
       return true;
+    case "group_on":
+    case "group_off":
+    case "group_toggle": {
+      const ids = stepGroups(f, step);
+      if (!ids.length) return true;
+      const on = step.kind === "group_toggle" ? null : step.kind === "group_on";
+      try {
+        const now = await invoke<boolean>("favorite_group_login", { ids, on });
+        favorites.notice = now ? t("In Gruppen angemeldet") : t("Aus Gruppen abgemeldet");
+        return true;
+      } catch (e) {
+        favorites.notice = String(e);
+        return false;
+      }
+    }
     default:
       return true;
   }

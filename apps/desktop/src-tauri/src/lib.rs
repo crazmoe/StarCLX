@@ -1081,6 +1081,8 @@ pub fn run() {
             favorites::favorite_delete,
             favorites::favorite_search,
             favorites::favorite_chat_jid,
+            favorites::favorite_groups,
+            favorites::favorite_group_login,
             fkeys::fkey_avatar,
             fkeys::account_pick_avatar,
             fkeys::account_set_avatar,

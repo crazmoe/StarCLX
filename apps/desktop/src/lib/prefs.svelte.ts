@@ -3,7 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { setLanguage } from "./i18n.svelte";
 
 /** Ein Schritt im Ablauf eines Favoriten (siehe plugins/favorites) */
-export type FlowStep = { kind: string; text?: string };
+/** `groups` = Gruppen-IDs für die Gruppen-Schritte */
+export type FlowStep = { kind: string; text?: string; groups?: string[] };
 
 export type Prefs = {
   softphone: boolean;

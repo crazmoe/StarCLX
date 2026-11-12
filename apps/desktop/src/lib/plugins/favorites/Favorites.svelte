@@ -12,7 +12,7 @@
   import { connection } from "../../connection.svelte";
   import type { FlowStep } from "../../prefs.svelte";
   import {
-    createCategory, createFavorite, deleteCategory, deleteFavorite, favName, favorites, flowOf, hasOwnFlow, loadFavorites,
+    createCategory, createFavorite, deleteCategory, deleteFavorite, favName, favorites, flowOf, hasOwnFlow, loadFavorites, loadMemberships, memberships,
     moveCategory, moveFavorite, nextPosition, possible, press, renameCategory, renameFavorite, runStep, saveFlow, searchTargets, stepTypes,
     type Candidate, type Category, type Favorite,
   } from "./favorites-state.svelte";
@@ -44,6 +44,14 @@
   function editFlow(fav: Favorite) {
     menu = null;
     flow = { fav, steps: structuredClone($state.snapshot(flowOf(fav))) };
+    loadMemberships();
+  }
+  const needsGroups = (kind: string) => !!stepTypes().find((s) => s.kind === kind)?.groups;
+  function toggleGroup(s: FlowStep, id: string, on: boolean) {
+    const set = new Set(s.groups ?? []);
+    if (on) set.add(id);
+    else set.delete(id);
+    s.groups = [...set];
   }
   function moveStep(i: number, d: number) {
     if (!flow) return;
@@ -237,6 +245,19 @@
             {#if needsText(s.kind)}
               <input type="text" placeholder={needsText(s.kind)} bind:value={s.text} />
             {/if}
+            {#if needsGroups(s.kind)}
+              <div class="groups">
+                {#each memberships.list as g (g.id)}
+                  <label class:muted={g.read_only}>
+                    <input type="checkbox" disabled={g.read_only} checked={s.groups?.includes(g.id) ?? false} onchange={(e) => toggleGroup(s, g.id, e.currentTarget.checked)} />
+                    {g.name}{g.logged_on ? ` (${t("angemeldet")})` : ""}
+                  </label>
+                {:else}
+                  <span class="small muted">{t("Du bist in keiner Gruppe Mitglied.")}</span>
+                {/each}
+                {#if fl.fav.kind === "group"}<span class="small muted">{t("Ohne Auswahl gilt die Gruppe dieses Favoriten.")}</span>{/if}
+              </div>
+            {/if}
           </li>
         {/each}
       </ol>
@@ -374,5 +395,7 @@
   .steps li { display: flex; flex-direction: column; gap: 0.3rem; }
   .srow { display: flex; align-items: center; gap: 0.2rem; }
   .srow select { flex: 1; }
+  .groups { display: flex; flex-direction: column; gap: 0.2rem; padding-left: 0.2rem; }
+  .groups label { display: flex; align-items: center; gap: 0.4rem; }
   .addstep { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.3rem; }
 </style>
