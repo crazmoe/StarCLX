@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.2 – 2026-11-12
+
+### Schnellwahl
+- Die Favoriten erscheinen in der Schnellwahl gleich beim Start; vorher wurden sie erst beim nächsten Einblenden geladen, angedockt also nie
+
 ## 1.15.1 – 2026-11-12
 
 ### Schnellwahl
