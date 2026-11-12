@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.15.3 – 2026-11-12
+
+### Funktionstasten und Favoriten
+- Abwesende Kollegen erscheinen mit oranger Fläche hinter dem Bild, Offline-Kollegen mit dunkelgrauer Fläche und abgeblendetem Bild und Namen; Gespräch und Klingeln behalten ihre Farbe
+- Die Chat-Sprechblase ist bei „Abwesend“ orange und bei „Offline“ grau statt rot
+- Die Farben passen sich dem hellen und dunklen Farbschema an
+
 ## 1.15.2 – 2026-11-12
 
 ### Schnellwahl

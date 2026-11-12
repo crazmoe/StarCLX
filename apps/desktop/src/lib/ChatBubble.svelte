@@ -1,6 +1,6 @@
 <script lang="ts">
   // Chat-Status als Sprechblase wie in der STARFACE-App: grün mit Haken
-  // (verfügbar), rot mit Kreis (abwesend, offline), rot mit Kreuz (nicht stören).
+  // (verfügbar), orange mit Kreis (abwesend), grau mit Kreis (offline), rot mit Kreuz (nicht stören).
   let { state }: { state: string } = $props();
 </script>
 
@@ -19,5 +19,7 @@
   .bubble { width: 100%; height: 100%; overflow: visible; display: block; }
   .body { stroke: #fff; stroke-width: 1; stroke-linejoin: round; fill: var(--red); }
   .available .body { fill: var(--green); }
+  .away .body { fill: var(--away); }
+  .offline .body { fill: #8a9096; }
   .mark { fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 </style>

@@ -3,7 +3,7 @@
   // Besetztlampenfeld wie in der STARFACE-App: Bild auf einer Fläche in der
   // Telefonfarbe, Ruhe oben links, Chat-Status oben rechts, Umleitung unten
   // links, darunter der Statustext.
-  import { account, avatarOf, blfUser, callDrag, chatText, keyState, keyTitle, typeInfo, type FunctionKey } from "./fkeys.svelte";
+  import { account, avatarOf, blfUser, callDrag, chatText, keyState, presenceTone, keyTitle, typeInfo, type FunctionKey } from "./fkeys.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import ChatBubble from "../../ChatBubble.svelte";
   import Icon from "../../Icon.svelte";
@@ -19,6 +19,7 @@
   const kstate = $derived(keyState(key));
   const user = $derived(blf ? blfUser(key) : undefined);
   const presence = $derived(user?.state);
+  const tone = $derived(blf ? presenceTone(presence, kstate) : "");
   // Gruppen haben kein Bild
   const avatar = $derived(user && !user.group ? avatarOf(user.id) : null);
   // Wie in der STARFACE-App aus dem angezeigten Namen, ohne „[Nummer]“
@@ -101,7 +102,7 @@
 </script>
 
 <button
-  class="tile {kstate}"
+  class="tile {kstate} {tone}"
   class:sep={key.functionKeyType === "SEPARATOR" && editor}
   class:blank
   class:unusable={!info.usable && !blank}
@@ -173,6 +174,11 @@
   .ringing .blf { background: var(--yellow); }
   /* iQueue-Nachbearbeitung: noch nicht wieder frei */
   .wrapup .blf { background: var(--accent); }
+  /* Abwesend und offline am Chat-Status unterscheiden; Farben aus dem Farbschema */
+  .away .blf { background: var(--away); }
+  .offline .blf { background: var(--offline); }
+  .offline .pic { filter: grayscale(1); opacity: 0.55; }
+  .offline .txt strong { color: var(--muted); }
   .pic {
     position: absolute; right: 0.15rem; top: 0.15rem; width: 2.2rem; height: 2.2rem; border-radius: 50%;
     overflow: hidden; display: grid; place-items: center; background: #c9ccd0; color: #555b62;

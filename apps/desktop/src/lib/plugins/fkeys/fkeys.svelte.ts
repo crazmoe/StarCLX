@@ -311,6 +311,16 @@ export function ownChat(userId: string): { availability: string; text: string } 
   return { availability: prefs.value?.chat_availability || "available", text: prefs.value?.chat_text ?? "" };
 }
 
+/** Abwesend/Offline zusätzlich zur Telefonfarbe: nur, solange das Telefon
+ *  frei oder nicht erreichbar ist, damit Gespräch und Klingeln sichtbar bleiben.
+ *  "away", "offline" oder "" */
+export function presenceTone(s: UserState | undefined, color: string): string {
+  if (!s || !["free", "off", "dnd"].includes(color)) return "";
+  if (s.chat === "offline") return "offline";
+  if (s.chat === "away" && color === "free") return "away";
+  return "";
+}
+
 /** Statuszeile wie in der STARFACE-App: eigener Text, sonst der Chat-Zustand */
 export function chatText(s: UserState | undefined): string {
   if (!s?.chat) return "";

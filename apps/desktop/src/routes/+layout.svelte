@@ -33,6 +33,9 @@
     --green: #5cb82b;
     --red: #d9262d;
     --yellow: #f2c40f;
+    /* Kollegen abwesend (orange, vom Klingeln-Gelb und Besetzt-Rot abgesetzt) und offline */
+    --away: #e8711f;
+    --offline: #484d54;
     color: var(--text);
     background: var(--bg);
   }
@@ -48,6 +51,8 @@
     --text: #1f2226;
     --muted: #5f6670;
     --accent-soft: #f5a31a40;
+    --away: #e0691a;
+    --offline: #b9bfc6;
   }
   :global(body) { margin: 0; }
   :global(input), :global(button) {

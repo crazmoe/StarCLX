@@ -2,7 +2,7 @@
   // Ein Favorit wie ein Besetztlampenfeld: Bild auf einer Fläche in der
   // Telefonfarbe, Name und Status. Klick führt den Ablauf aus, das Menü (⋯ oder
   // Rechtsklick) bietet alle Aktionen. Ein Gespräch lässt sich daraufziehen.
-  import { avatarOf, callDrag, chatText } from "../fkeys/fkeys.svelte";
+  import { avatarOf, callDrag, chatText, presenceTone } from "../fkeys/fkeys.svelte";
   import ChatBubble from "../../ChatBubble.svelte";
   import Icon from "../../Icon.svelte";
   import { t } from "../../i18n.svelte";
@@ -12,6 +12,7 @@
 
   const color = $derived(favColor(fav));
   const presence = $derived(favState(fav));
+  const tone = $derived(fav.kind === "user" ? presenceTone(presence, color) : "");
   const avatar = $derived(fav.kind === "user" ? avatarOf(fav.target_id) : null);
   const initials = $derived(
     favName(fav)
@@ -30,7 +31,7 @@
   );
 </script>
 
-<div class="fav {color}" class:target={callDrag.call && callDrag.over === `fav:${fav.id}`} data-fav={fav.id} data-fav-number={fav.number}>
+<div class="fav {color} {tone}" class:target={callDrag.call && callDrag.over === `fav:${fav.id}`} data-fav={fav.id} data-fav-number={fav.number}>
   <button class="main" {title} {onclick} oncontextmenu={(e) => { e.preventDefault(); onmenu(e); }}>
     {#if fav.kind === "number"}
       <span class="contact"><Icon name="call" size={18} /></span>
@@ -73,6 +74,11 @@
   .busy .blf { background: var(--red); }
   .ringing .blf { background: var(--yellow); }
   .wrapup .blf { background: var(--accent); }
+  /* Abwesend und offline am Chat-Status unterscheiden; Farben aus dem Farbschema */
+  .away .blf { background: var(--away); }
+  .offline .blf { background: var(--offline); }
+  .offline .pic { filter: grayscale(1); opacity: 0.55; }
+  .offline .txt strong { color: var(--muted); }
   .pic {
     position: absolute; right: 0.15rem; top: 0.15rem; width: 2.2rem; height: 2.2rem; border-radius: 50%;
     overflow: hidden; display: grid; place-items: center; background: #c9ccd0; color: #555b62;
