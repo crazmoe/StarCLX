@@ -144,6 +144,30 @@ pub fn start(app: &AppHandle) {
     });
 }
 
+/// Nach einem Kontowechsel: Jedes Konto hat seine eigene Nextcloud.
+/// `before` ist die Nextcloud des vorherigen Kontos.
+pub fn account_switched(app: &AppHandle, before: Option<Account>) {
+    let settings = settings::load(app);
+    apply_prefs(app, &settings.prefs);
+    if settings.nextcloud == before {
+        return;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = app.state::<NextcloudState>();
+        let running = state.sync_lock.lock().await;
+        *state.client.lock().await = None;
+        contacts::clear(&app);
+        state.status.lock().unwrap().error.clear();
+        emit(&app, |_| {});
+        drop(running);
+        if settings.nextcloud.is_some() {
+            reconnect(&app).await;
+            contacts::sync(&app).await;
+        }
+    });
+}
+
 /// Nach dem Speichern der Einstellungen
 pub fn apply_prefs(app: &AppHandle, prefs: &settings::Prefs) {
     app.state::<NextcloudState>()
@@ -338,7 +362,17 @@ async fn disconnect(app: &AppHandle, revoke: bool) {
     {
         tracing::info!(error = %e, "App-Passwort nicht widerrufen");
     }
-    if let Some(a) = settings::load(app).nextcloud {
+    let st = settings::load(app);
+    // Dieselbe Nextcloud kann auch an einem anderen Konto hängen
+    if let Some(a) = &st.nextcloud
+        && !st.accounts.iter().any(|o| {
+            st.active() != Some(o)
+                && o.own
+                    .as_ref()
+                    .and_then(|own| own.nextcloud.as_ref())
+                    .is_some_and(|n| n.server == a.server && n.login_name == a.login_name)
+        })
+    {
         delete_secret(a.secret_key()).await;
     }
     settings::update(app, |s| s.nextcloud = None);
