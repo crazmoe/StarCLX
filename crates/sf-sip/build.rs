@@ -88,7 +88,12 @@ fn main() {
     }
     // Fedora und andere RPM-Distributionen liefern kein libspandsp.a; dort
     // für lokale Builds dynamisch linken (spandsp muss dann installiert sein).
-    let default_dirs = ["/usr/lib64", "/usr/lib", "/usr/lib/x86_64-linux-gnu", "/usr/lib/aarch64-linux-gnu"];
+    let default_dirs = [
+        "/usr/lib64",
+        "/usr/lib",
+        "/usr/lib/x86_64-linux-gnu",
+        "/usr/lib/aarch64-linux-gnu",
+    ];
     let has_static = spandsp
         .link_paths
         .iter()
