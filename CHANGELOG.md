@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.6 – 2026-11-16
+
+### Bauen
+- StarCLX lässt sich auch unter Fedora und anderen RPM-Distributionen selbst kompilieren, die spandsp nur als gemeinsame Bibliothek liefern; dort wird spandsp dynamisch gelinkt (Beitrag aus einem Fork)
+
 ## 1.15.5 – 2026-11-12
 
 ### Konten

@@ -86,7 +86,21 @@ fn main() {
     for dir in &spandsp.link_paths {
         println!("cargo:rustc-link-search=native={}", dir.display());
     }
-    println!("cargo:rustc-link-lib=static=spandsp");
+    // Fedora und andere RPM-Distributionen liefern kein libspandsp.a; dort
+    // für lokale Builds dynamisch linken (spandsp muss dann installiert sein).
+    let default_dirs = ["/usr/lib64", "/usr/lib", "/usr/lib/x86_64-linux-gnu", "/usr/lib/aarch64-linux-gnu"];
+    let has_static = spandsp
+        .link_paths
+        .iter()
+        .map(|p| p.as_path())
+        .chain(default_dirs.iter().map(Path::new))
+        .any(|d| d.join("libspandsp.a").exists());
+    if has_static {
+        println!("cargo:rustc-link-lib=static=spandsp");
+    } else {
+        println!("cargo:warning=libspandsp.a fehlt, spandsp wird dynamisch gelinkt");
+        println!("cargo:rustc-link-lib=spandsp");
+    }
 
     for lib in SYSTEM_LIBS {
         pkg_config::Config::new().probe(lib).unwrap_or_else(|e| {
