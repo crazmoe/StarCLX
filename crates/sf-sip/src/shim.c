@@ -300,10 +300,13 @@ static void mqueue_handler(int id, void *data, void *arg)
 		ua = find_ua_for_call(c->a, false, &call);
 		if (ua && c->b) {
 			const char *p;
-			for (p = c->b; *p && !err; p++)
+			/* Jede Taste einzeln drücken und loslassen, sonst
+			 * wird aus "12" bei RFC 4733 ein langer Ton */
+			for (p = c->b; *p && !err; p++) {
 				err = call_send_digit(call, *p);
-			if (!err)
-				err = call_send_digit(call, KEYCODE_REL);
+				if (!err)
+					err = call_send_digit(call, KEYCODE_REL);
+			}
 		}
 		break;
 

@@ -10,6 +10,8 @@ export type Prefs = {
   softphone: boolean;
   primary_on_login: boolean;
   primary_on_answer: boolean;
+  /** Tastentöne: "rtp" (RFC 4733), "info" (SIP INFO), "auto" oder "pbx" (über die Anlage) */
+  dtmf_mode: string;
   notify_missed: boolean;
   notify_missed_group: boolean;
   speakers: string[];

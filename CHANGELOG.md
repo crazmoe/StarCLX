@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.15.8 – 2026-11-17
+
+### Softphone
+- Tastentöne (Ziffernblock im Gespräch, DTMF-Funktionstasten, Tür öffnen) sendet das Softphone jetzt selbst per SIP, wie ein Tischtelefon. Bisher spielte die Anlage sie ein; Sprachmenüs (IVR-Module) auf derselben Anlage erkannten sie dann nicht, am Softphone war nur eine kurze Unterbrechung zu hören
+- Neue Einstellung unter Telefonie → Softphone: „Tastentöne (DTMF) senden als“ RFC 4733/2833 (Standard), SIP INFO, Automatisch oder „Über die Anlage“ (bisheriges Verhalten). Gespräche an anderen Telefonen steuert weiter die Anlage
+
 ## 1.15.7 – 2026-11-17
 
 ### Softphone

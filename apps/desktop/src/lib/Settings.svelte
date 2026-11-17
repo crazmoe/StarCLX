@@ -404,6 +404,17 @@
           <Toggle bind:checked={draft.softphone} disabled={lk("softphone")} label={t("Softphone verwenden")} />
           <Toggle bind:checked={draft.primary_on_login} disabled={!draft.softphone || lk("primary_on_login")} label={t("Softphone bei der Anmeldung am Server als primäres Telefon auswählen")} />
           <Toggle bind:checked={draft.primary_on_answer} disabled={!draft.softphone || lk("primary_on_answer")} label={t("Bei Rufannahme das Softphone als primäres Telefon auswählen")} />
+          <hr />
+          <label class="field">
+            <span>{t("Tastentöne (DTMF) senden als")}</span>
+            <select bind:value={draft.dtmf_mode} disabled={!draft.softphone || lk("dtmf_mode")}>
+              <option value="rtp">{t("RFC 4733 / RFC 2833 (Standard)")}</option>
+              <option value="info">SIP INFO</option>
+              <option value="auto">{t("Automatisch (RFC 4733, sonst SIP INFO)")}</option>
+              <option value="pbx">{t("Über die Anlage")}</option>
+            </select>
+          </label>
+          <p class="small muted">{t("Gilt für Gespräche am Softphone. „Über die Anlage“ erreicht keine Sprachmenüs (IVR) auf derselben Anlage.")}</p>
         </div>
       </section>
 

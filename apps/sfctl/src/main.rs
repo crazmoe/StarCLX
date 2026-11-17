@@ -851,6 +851,7 @@ async fn start_softphone(
         port: creds.port,
         register_interval: 3600,
         outbound: None,
+        dtmf: config.dtmf.unwrap_or_default(),
     })?;
 
     let registered = tokio::time::timeout(Duration::from_secs(15), async {

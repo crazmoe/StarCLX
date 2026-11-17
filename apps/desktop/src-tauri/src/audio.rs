@@ -116,7 +116,14 @@ pub fn bluetooth_call_done() {
 /// baresip-Einstellungen für Lautsprecher und Mikrofon aus der Reihenfolge
 /// in den Einstellungen.
 pub async fn softphone_config(prefs: &Prefs) -> sf_sip::Config {
-    let mut config = sf_sip::Config::default();
+    let mut config = sf_sip::Config {
+        dtmf: if prefs.dtmf_mode == "pbx" {
+            None
+        } else {
+            Some(sf_sip::DtmfMode::parse(&prefs.dtmf_mode).unwrap_or_default())
+        },
+        ..Default::default()
+    };
     if prefs.speakers.is_empty() && prefs.microphones.is_empty() {
         return config;
     }

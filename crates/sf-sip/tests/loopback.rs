@@ -38,6 +38,7 @@ async fn call_between_two_local_accounts_with_srtp() {
         ca_file: None,
         trusted_fingerprints: Vec::new(),
         extra: "ausrc_srate 16000\nausrc_channels 1\n".into(),
+        dtmf: None,
     };
     let (phone, mut rx, port) = common::start_on_free_port(ip, config);
 

@@ -162,6 +162,11 @@ pub struct Config {
     pub trusted_fingerprints: Vec<String>,
     /// Weitere baresip-Konfigurationszeilen (für Tests und Sonderfälle).
     pub extra: String,
+    /// Tastentöne im Gespräch selbst per SIP senden (in dieser Art). `None`
+    /// überlässt das der Anlage (gRPC SendDtmf). Die spielt sie selbst auf
+    /// die Kanäle des Gesprächs; ein IVR-Modul auf derselben Anlage erkennt
+    /// sie so nicht.
+    pub dtmf: Option<DtmfMode>,
 }
 
 impl Default for Config {
@@ -174,6 +179,7 @@ impl Default for Config {
             ca_file: Some("/etc/ssl/certs/ca-certificates.crt".into()),
             trusted_fingerprints: Vec::new(),
             extra: String::new(),
+            dtmf: Some(DtmfMode::Rtp),
         }
     }
 }
@@ -225,6 +231,40 @@ pub struct Account {
     /// dorthin und fragt kein DNS; dessen eigener Resolver findet unter
     /// Windows manche Namen nicht, die das System auflöst.
     pub outbound: Option<SocketAddr>,
+    /// Wie Tastentöne ans Gegenüber gehen
+    pub dtmf: DtmfMode,
+}
+
+/// Übertragungsart für Tastentöne (DTMF)
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DtmfMode {
+    /// RTP-Events nach RFC 4733 (früher RFC 2833)
+    #[default]
+    Rtp,
+    /// SIP INFO (`application/dtmf-relay`)
+    Info,
+    /// RFC 4733, wenn das Gegenüber es anbietet, sonst SIP INFO
+    Auto,
+}
+
+impl DtmfMode {
+    /// Wert aus den Einstellungen: `rtp`, `info` oder `auto`
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "rtp" => Some(Self::Rtp),
+            "info" => Some(Self::Info),
+            "auto" => Some(Self::Auto),
+            _ => None,
+        }
+    }
+
+    fn param(self) -> &'static str {
+        match self {
+            Self::Rtp => "rtpevent",
+            Self::Info => "info",
+            Self::Auto => "auto",
+        }
+    }
 }
 
 impl std::fmt::Debug for Account {
@@ -236,6 +276,7 @@ impl std::fmt::Debug for Account {
             .field("port", &self.port)
             .field("register_interval", &self.register_interval)
             .field("outbound", &self.outbound)
+            .field("dtmf", &self.dtmf)
             .finish()
     }
 }
@@ -259,12 +300,14 @@ impl Account {
             .unwrap_or_default();
         Ok(format!(
             "<sip:{user}@{host}:{port};transport=tls>;auth_pass={pw};mediaenc=srtp-mand;\
-             regint={regint};answermode=manual;audio_codecs=g722,pcma,pcmu{outbound}",
+             regint={regint};answermode=manual;audio_codecs=g722,pcma,pcmu;\
+             dtmfmode={dtmf}{outbound}",
             user = self.user,
             host = self.host,
             port = self.port,
             pw = self.password,
             regint = self.register_interval,
+            dtmf = self.dtmf.param(),
         ))
     }
 }
@@ -551,11 +594,26 @@ mod tests {
             port: 5061,
             register_interval: 3600,
             outbound: None,
+            dtmf: DtmfMode::default(),
         };
         let aor = acc.to_aor().unwrap();
         assert!(aor.starts_with("<sip:1004.WinClient@pbx.example.com:5061;transport=tls>"));
         assert!(aor.contains(";mediaenc=srtp-mand"));
         assert!(aor.contains(";answermode=manual"));
+        assert!(aor.contains(";dtmfmode=rtpevent"));
+        let info = Account {
+            dtmf: DtmfMode::Info,
+            ..acc
+        };
+        assert!(info.to_aor().unwrap().contains(";dtmfmode=info"));
+    }
+
+    #[test]
+    fn dtmf_mode_from_settings() {
+        assert_eq!(DtmfMode::parse("rtp"), Some(DtmfMode::Rtp));
+        assert_eq!(DtmfMode::parse("info"), Some(DtmfMode::Info));
+        assert_eq!(DtmfMode::parse("auto"), Some(DtmfMode::Auto));
+        assert_eq!(DtmfMode::parse("pbx"), None);
     }
 
     #[test]
@@ -567,6 +625,7 @@ mod tests {
             port: 5061,
             register_interval: 0,
             outbound: None,
+            dtmf: DtmfMode::Info,
         };
         assert!(acc.to_aor().is_err());
     }
@@ -580,6 +639,7 @@ mod tests {
             port: 5061,
             register_interval: 3600,
             outbound: Some("192.0.2.7:5061".parse().unwrap()),
+            dtmf: DtmfMode::Rtp,
         };
         let aor = acc.to_aor().unwrap();
         assert!(aor.starts_with("<sip:1004.WinClient@pbx.example.com:5061;transport=tls>"));

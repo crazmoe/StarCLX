@@ -35,6 +35,7 @@ async fn call_over_tls(ip: std::net::IpAddr, cert: &std::path::Path, pins: Vec<S
             "sip_certificate {}\nausrc_srate 16000\nausrc_channels 1\n",
             cert.display()
         ),
+        dtmf: None,
     });
     let alice = format!("sip:alice@{ip}");
     phone
