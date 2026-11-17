@@ -30,7 +30,7 @@
   import MeMenu from "#lib/MeMenu.svelte";
   import { avatarOf, fkeys, ownChat, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import ChatBubble from "#lib/ChatBubble.svelte";
-  import { canDial, initPhone, phone, run, isRingingIn } from "#lib/plugins/call/phone.svelte.ts";
+  import { canDial, dtmfFromKeyboard, initPhone, phone, run, isRingingIn } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs, prefs, savePrefs, type View } from "#lib/prefs.svelte.ts";
   import Workspace, { newView, tilesOf, viewsOf } from "#lib/Workspace.svelte";
   import ViewRail from "#lib/ViewRail.svelte";
@@ -409,6 +409,9 @@
     error: t("Softphone nicht angemeldet"),
   });
 </script>
+
+<!-- Ziffern, * und # im Gespräch als Tastentöne senden -->
+<svelte:window onkeydown={dtmfFromKeyboard} />
 
 {#if phase === "session" && session}
   <div class="shell">

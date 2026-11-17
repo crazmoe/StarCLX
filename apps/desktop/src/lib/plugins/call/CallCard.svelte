@@ -191,6 +191,7 @@
               <button onclick={() => run("phone_dtmf", { callId: call.id, digits: k })}>{k}</button>
             {/each}
           </div>
+          <p class="hint">{t("Ziffern, * und # gehen auch direkt über die Tastatur.")}</p>
         {/if}
         {#if can("call_recording")}
           <button class="row" onclick={() => action("record", call.id)}>
