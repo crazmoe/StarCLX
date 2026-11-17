@@ -221,6 +221,9 @@ pub struct Prefs {
     pub primary_on_login: bool,
     /// Bei Rufannahme das Softphone als primäres Telefon auswählen
     pub primary_on_answer: bool,
+    /// Tastentöne: "rtp" (RFC 4733), "info" (SIP INFO), "auto" oder "pbx"
+    /// (die Anlage spielt sie ein, wie bis 1.9.6)
+    pub dtmf_mode: String,
     /// Benachrichtigung über verpasste Anrufe (ohne Gruppenanrufe)
     pub notify_missed: bool,
     /// Benachrichtigung bei verpassten Gruppenanrufen
@@ -326,6 +329,7 @@ impl Default for Prefs {
             softphone: true,
             primary_on_login: false,
             primary_on_answer: false,
+            dtmf_mode: "rtp".into(),
             notify_missed: true,
             notify_missed_group: true,
             speakers: Vec::new(),
@@ -389,6 +393,7 @@ impl Prefs {
         self.softphone != other.softphone
             || self.speakers != other.speakers
             || self.microphones != other.microphones
+            || self.dtmf_mode != other.dtmf_mode
     }
 }
 

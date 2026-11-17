@@ -212,6 +212,31 @@ impl Inner {
         !ours && self.sip_active.is_empty() && self.sip_ringing.is_empty()
     }
 
+    /// Angenommener SIP-Anruf am Softphone zu einem Gespräch der Anlage.
+    /// Ohne Zuordnung nur, wenn es eindeutig ist und das Gespräch nicht an
+    /// einem anderen Telefon läuft.
+    fn sip_call_of(&self, call_id: &str) -> Option<String> {
+        let c = self.calls.get(call_id)?;
+        if let Some(id) = c
+            .sip_call_ids
+            .iter()
+            .find(|id| self.sip_active.contains(id))
+        {
+            return Some(id.clone());
+        }
+        let unassigned = c.sip_call_ids.is_empty()
+            && !self.call_phone.contains_key(call_id)
+            && !self.elsewhere(c);
+        let [only] = self.sip_active.as_slice() else {
+            return None;
+        };
+        let claimed = self
+            .calls
+            .values()
+            .any(|o| o.id != c.id && o.sip_call_ids.contains(only));
+        (unassigned && !claimed).then(|| only.clone())
+    }
+
     fn calls(&self) -> Vec<CallView> {
         self.calls
             .values()
@@ -245,6 +270,9 @@ pub struct Phone {
     inner: Arc<Mutex<Inner>>,
     events: mpsc::UnboundedSender<PhoneEvent>,
     tasks: Vec<JoinHandle<()>>,
+    /// Tastentöne bei Gesprächen am Softphone selbst per SIP senden statt
+    /// über die Anlage (siehe [`sf_sip::Config::dtmf`])
+    dtmf_sip: bool,
 }
 
 impl Phone {
@@ -318,6 +346,7 @@ impl Phone {
             port: creds.port,
             register_interval: 3600,
             outbound,
+            dtmf: config.dtmf.unwrap_or_default(),
         })?;
 
         // Auf die erste Registrierung warten, damit ein Fehler beim Start
@@ -341,6 +370,7 @@ impl Phone {
         });
 
         let mut phone = Self::new(hub, Some(phone_id), Some(sip), events);
+        phone.dtmf_sip = config.dtmf.is_some();
         phone.tasks.push(phone.spawn_sip_driver(sip_rx));
         phone.tasks.push(phone.spawn_pbx_driver());
         Ok(phone)
@@ -370,6 +400,7 @@ impl Phone {
             sip,
             events,
             tasks: Vec::new(),
+            dtmf_sip: false,
         }
     }
 
@@ -543,7 +574,18 @@ impl Phone {
         Ok(())
     }
 
+    /// Sendet Tastentöne. Läuft das Gespräch am eigenen Softphone, gehen
+    /// sie dort per SIP hinaus (wie bei einem Tischtelefon). Nur so erkennt
+    /// sie ein IVR-Modul oder die Sprachbox auf derselben Anlage; spielt die
+    /// Anlage sie selbst ein (gRPC), hört man am Softphone nur eine kurze
+    /// Unterbrechung. Andere Telefone steuert weiter die Anlage.
     pub async fn send_dtmf(&self, call_id: &str, digits: &str) -> PhoneResult<()> {
+        if let Some(sip_id) = self.sip_call_of(call_id)
+            && let Ok(sip) = self.sip()
+        {
+            sip.send_dtmf(&sip_id, digits)?;
+            return Ok(());
+        }
         let req = v1::call::SendDtmfRequest {
             call_id: Some(call_id_of(call_id)),
             digits: digits.to_owned(),
@@ -554,6 +596,15 @@ impl Phone {
             .await
             .map_err(sf_onehub::Error::from)?;
         Ok(())
+    }
+
+    /// SIP-Anruf am Softphone, der zu diesem Gespräch gehört, falls
+    /// Tastentöne dort selbst gesendet werden sollen
+    fn sip_call_of(&self, call_id: &str) -> Option<String> {
+        if !self.dtmf_sip {
+            return None;
+        }
+        self.inner.lock().unwrap().sip_call_of(call_id)
     }
 
     /// Kamera-URL der Türsprechstelle, von der dieser Anruf kommt
@@ -1119,6 +1170,38 @@ mod tests {
         // Ohne Softphone zeigt der Client die Anrufe des Tischtelefons wie bisher.
         inner.softphone = false;
         assert!(!inner.calls()[0].elsewhere);
+    }
+
+    #[test]
+    fn dtmf_goes_to_matching_softphone_call() {
+        let mut inner = Inner {
+            softphone: true,
+            ..Inner::default()
+        };
+        let mut a = call("a", v1::types::CallState::Connected);
+        a.sip_call_ids = vec!["sip-a".into()];
+        let b = call("b", v1::types::CallState::Connected);
+        apply(
+            &mut inner,
+            E::CallCreated(v1::call::CallCreatedEvent { calls: vec![a, b] }),
+        );
+        // Noch kein SIP-Anruf am Softphone: über die Anlage
+        assert_eq!(inner.sip_call_of("a"), None);
+
+        inner.sip_active.push("sip-a".into());
+        assert_eq!(inner.sip_call_of("a").as_deref(), Some("sip-a"));
+        // Der SIP-Anruf gehört zu "a", nicht zu "b"
+        assert_eq!(inner.sip_call_of("b"), None);
+        // Ohne Zuordnung nur, wenn es eindeutig ist
+        inner.sip_active = vec!["sip-x".into()];
+        assert_eq!(inner.sip_call_of("b").as_deref(), Some("sip-x"));
+        inner.sip_active.push("sip-y".into());
+        assert_eq!(inner.sip_call_of("b"), None);
+        // Über ein anderes Telefon gewählt: die Anlage
+        inner.sip_active = vec!["sip-x".into()];
+        inner.call_phone.insert("b".into(), "tisch".into());
+        assert_eq!(inner.sip_call_of("b"), None);
+        assert_eq!(inner.sip_call_of("unbekannt"), None);
     }
 
     #[test]
