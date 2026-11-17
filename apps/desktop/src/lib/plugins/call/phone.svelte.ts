@@ -103,3 +103,27 @@ export const canDial = () => phone.status.control;
 export const hasSoftphone = () => phone.status.state === "ready";
 
 export const isRingingIn = (c: Call) => c.incoming && c.phase === "ringing";
+
+/** Steht der Fokus in einem Feld, das Text annimmt? Dann gehören Tasten dorthin. */
+function typingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  if (!(target instanceof HTMLInputElement)) return false;
+  return !["button", "checkbox", "radio", "range", "color", "file", "submit", "reset", "image"].includes(target.type);
+}
+
+/**
+ * Tastatur im Gespräch: Ziffern (auch Ziffernblock), * und # gehen als
+ * Tastentöne ans laufende Gespräch, solange kein Eingabefeld den Fokus hat.
+ * Nur bei genau einem verbundenen Gespräch, damit nichts im falschen landet.
+ */
+export function dtmfFromKeyboard(e: KeyboardEvent) {
+  if (e.defaultPrevented || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;
+  if (!/^[0-9*#]$/.test(e.key)) return;
+  if (typingTarget(e.target) || typingTarget(document.activeElement)) return;
+  const active = phone.status.calls.filter((c) => c.phase === "connected" && !c.elsewhere);
+  if (active.length !== 1) return;
+  e.preventDefault();
+  run("phone_dtmf", { callId: active[0].id, digits: e.key });
+}

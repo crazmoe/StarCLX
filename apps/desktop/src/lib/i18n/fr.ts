@@ -148,6 +148,7 @@ const dict: Record<string, string> = {
   "Nummer unterdrücken": "Masquer le numéro",
   "Parkplatz": "Place de parcage",
   "Tastentöne": "Tonalités DTMF",
+  "Ziffern, * und # gehen auch direkt über die Tastatur.": "Les chiffres, * et # fonctionnent aussi directement au clavier.",
   "z. B. {beispiel}": "p. ex. {beispiel}",
   "Anzeige": "Affichage",
   "Kontaktliste": "Liste des contacts",

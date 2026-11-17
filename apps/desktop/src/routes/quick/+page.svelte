@@ -13,7 +13,7 @@
   import Favorites from "#lib/plugins/favorites/Favorites.svelte";
   import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
   import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
-  import { initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
+  import { dtmfFromKeyboard, initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs, prefs } from "#lib/prefs.svelte.ts";
   import { t } from "#lib/i18n.svelte.ts";
 
@@ -71,6 +71,7 @@
 
   function onkeydown(e: KeyboardEvent) {
     if (e.key === "Escape") invoke("quick_hide");
+    else dtmfFromKeyboard(e);
   }
 </script>
 
