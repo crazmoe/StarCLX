@@ -51,12 +51,19 @@
   // Eingefahrene Leiste am Rand: Maus drauf fährt aus, Maus weg wieder ein
   // (nicht während ein Gespräch gezogen wird). Ob die Leiste angedockt und
   // eingefahren ist, weiss nur das Programm; sonst bleibt der Aufruf wirkungslos.
+  // Ausfahren erst nach kurzer Verzögerung: Wer nur über den Rand hinaus
+  // fährt und gleich zurück, öffnet die Leiste nicht. Ist sie schon offen,
+  // ändert der verspätete Aufruf nichts.
+  const EXPAND_DELAY = 1000;
   let collapse: ReturnType<typeof setTimeout> | undefined;
+  let expand: ReturnType<typeof setTimeout> | undefined;
   function enter() {
     clearTimeout(collapse);
-    invoke("quick_dock_expand", { open: true });
+    clearTimeout(expand);
+    expand = setTimeout(() => invoke("quick_dock_expand", { open: true }), EXPAND_DELAY);
   }
   function leave() {
+    clearTimeout(expand);
     clearTimeout(collapse);
     collapse = setTimeout(() => {
       if (!callDrag.call && !dropMenu.call) invoke("quick_dock_expand", { open: false });
