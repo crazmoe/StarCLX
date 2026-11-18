@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.15.11 – 2026-11-18
+
+### Gespräche
+- Wer während eines Gesprächs einen Kollegen anruft (Klick auf Favorit, Besetztlampenfeld, Direktwahl, Suche oder Ruflisten-Eintrag), startet jetzt eine Rückfrage. Bisher war das ein zweiter, unabhängiger Anruf, der sich nicht vermitteln liess
+- „Vermitteln“ erscheint auch, wenn neben dem aktiven Gespräch genau eines gehalten wird, das nicht über Rückfrage entstand; es verbindet beide Gespräche
+- Ein gehaltenes Gespräch auf den Kollegen zu ziehen, mit dem man gerade spricht, verbindet die beiden, statt es an seine (besetzte) Nummer weiterzuleiten
+
 ## 1.15.10 – 2026-11-18
 
 ### Gespräche
