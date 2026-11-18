@@ -12,6 +12,8 @@ const dict: Record<string, string> = {
   "Auflegen vermittelt das gehaltene Gespräch": "Riagganciando si trasferisce la chiamata in attesa",
   "Mikrofon einschalten": "Attiva il microfono",
   "Stumm schalten": "Disattiva audio",
+  "Vermitteln": "Trasferisci",
+  "Gehaltenes Gespräch mit diesem verbinden": "Collega la chiamata in attesa con questa",
   "Rückfrage beenden, zurück zum ersten Gespräch": "Termina la consultazione e torna alla prima chiamata",
   "Zurück": "Indietro",
   "Auflegen und vermitteln": "Riaggancia e trasferisci",

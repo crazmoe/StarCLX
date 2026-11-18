@@ -12,6 +12,8 @@ const dict: Record<string, string> = {
   "Auflegen vermittelt das gehaltene Gespräch": "Hanging up transfers the held call",
   "Mikrofon einschalten": "Unmute microphone",
   "Stumm schalten": "Mute",
+  "Vermitteln": "Transfer",
+  "Gehaltenes Gespräch mit diesem verbinden": "Connect the held call with this one",
   "Rückfrage beenden, zurück zum ersten Gespräch": "End consultation and return to the first call",
   "Zurück": "Back",
   "Auflegen und vermitteln": "Hang up and transfer",

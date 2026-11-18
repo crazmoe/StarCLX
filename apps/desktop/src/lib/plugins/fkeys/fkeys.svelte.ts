@@ -1,6 +1,6 @@
 // Funktionstasten: Daten von der Anlage, Zustände und Auslösen.
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { action, phone, run, type Call } from "../call/phone.svelte";
 import { t } from "../../i18n.svelte";
 import { prefs } from "../../prefs.svelte";
@@ -541,13 +541,26 @@ export function blank(type: string): FunctionKey {
 }
 
 // ── Gespräch auf ein Besetztlampenfeld ziehen ──────────────────────────────
-// Ablegen startet eine Rückfrage zum Kollegen; Auflegen dieser Rückfrage
-// vermittelt dann das erste Gespräch an ihn.
+// Ablegen vermittelt das Gespräch direkt (ohne Rückfrage) an den Kollegen.
+// Eine Rückfrage, die per Favoriten-Ablauf gestartet wurde, vermittelt beim
+// Auflegen; das merken sich alle Fenster (Hauptfenster und Schnellwahl).
 
 /** Laufendes Ziehen eines Gesprächs (für Vorschau und Hervorhebung) */
 export const callDrag = $state({ call: null as Call | null, x: 0, y: 0, over: "" });
-/** Erste Gespräche, deren Rückfrage per Besetztlampenfeld gestartet wurde */
+/** Erste Gespräche, deren Rückfrage beim Auflegen vermitteln soll */
 const blfTransfers = $state<Record<string, boolean>>({});
+
+// Schnellwahl und Hauptfenster haben je eigenen Speicher: Änderungen an
+// alle Fenster schicken, damit beide Call Manager dasselbe anzeigen.
+listen<{ id: string; on: boolean }>("consult-transfer", ({ payload }) => {
+  if (payload.on) blfTransfers[payload.id] = true;
+  else delete blfTransfers[payload.id];
+}).catch(() => {});
+function markTransfer(id: string, on: boolean) {
+  if (on) blfTransfers[id] = true;
+  else delete blfTransfers[id];
+  emit("consult-transfer", { id, on }).catch(() => {});
+}
 
 let pending: { call: Call; x: number; y: number } | null = null;
 
@@ -584,7 +597,7 @@ function onUp(e: PointerEvent) {
   stopCallDrag();
   if (!call) return;
   const fav = favAt(e.clientX, e.clientY);
-  if (fav) return void consultAndTransfer(call, fav.number);
+  if (fav) return void transferNow(call, fav.number);
   const k = blfAt(e.clientX, e.clientY);
   if (k) transferTo(call, k);
 }
@@ -609,16 +622,27 @@ export function startCallDrag(e: PointerEvent, call: Call) {
   window.addEventListener("pointercancel", stopCallDrag);
 }
 
-/** Rückfrage zum Ziel der Taste; Auflegen vermittelt danach */
+/** Gespräch direkt an das Ziel der Taste vermitteln */
 async function transferTo(call: Call, k: FunctionKey) {
   const number = k.functionKeyType === "QUICKDIAL" ? k.directCallTargetnumber : account(k)?.number;
   if (!number) return void (phone.notice = t("Für diese Taste ist keine Rufnummer bekannt."));
-  await consultAndTransfer(call, number);
+  await transferNow(call, number);
+}
+
+/** Gespräch ohne Rückfrage an `number` vermitteln */
+async function transferNow(call: Call, number: string) {
+  await action("forward", call.id, number);
 }
 
 /** Rückfrage zu `number`; legt man sie auf, wird das erste Gespräch dorthin vermittelt */
 export async function consultAndTransfer(call: Call, number: string) {
-  if (await action("consult", call.id, number)) blfTransfers[call.id] = true;
+  if (await action("consult", call.id, number)) markTransfer(call.id, true);
+}
+
+/** Rückfrage mit dem gehaltenen ersten Gespräch verbinden */
+export async function completeTransfer(c: Call) {
+  const first = c.consultation_of;
+  if (await action("transfer_consultation", c.id) && first) markTransfer(first, false);
 }
 
 /** Soll Auflegen dieses Gesprächs vermitteln? */
@@ -628,7 +652,7 @@ export const transfersOnHangup = (c: Call) =>
 /** Rückfrage abbrechen und zum ersten Gespräch zurück */
 export async function backToFirst(c: Call) {
   const first = c.consultation_of;
-  if (first) delete blfTransfers[first];
+  if (first) markTransfer(first, false);
   await run("phone_hangup", { callId: c.id });
   if (first && phone.status.calls.some((x) => x.id === first && x.phase === "held")) {
     await run("phone_hold", { callId: first, hold: false });

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon, { type IconName } from "../../Icon.svelte";
-  import { backToFirst, callDrag, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
+  import { backToFirst, callDrag, completeTransfer, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
   import { action, duration, hasSoftphone, isRingingIn, phone, run, who, type Call } from "./phone.svelte";
   import { t } from "../../i18n.svelte";
   import { can } from "../../permissions.svelte";
@@ -23,6 +23,10 @@
     ),
   );
   const transfers = $derived(transfersOnHangup(call));
+  // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar
+  const canComplete = $derived(
+    connected && !!call.consultation_of && phone.status.calls.some((x) => x.id === call.consultation_of),
+  );
   const others = $derived(phone.status.calls.filter((c) => c.id !== call.id));
 
   const title = $derived(
@@ -93,9 +97,12 @@
         <Icon name={phone.status.muted ? "micOff" : "mic"} size={18} />
       </button>
     {/if}
-    {#if transfers}
+    {#if canComplete}
       <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
-      <button class="round red" class:big={!ringingIn} title={t("Auflegen und vermitteln")} onclick={() => action("transfer_consultation", call.id)}>
+      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call)}>{t("Vermitteln")}</button>
+    {/if}
+    {#if transfers}
+      <button class="round red" class:big={!ringingIn} title={t("Auflegen und vermitteln")} onclick={() => completeTransfer(call)}>
         <Icon name="hangup" size={30} />
       </button>
     {:else}
@@ -222,6 +229,7 @@
   }
   .pill.draggable { cursor: grab; touch-action: none; }
   .back { padding: 0.3rem 0.7rem; border-radius: 999px; }
+  .back.transfer { background: var(--green); color: #fff; border: none; font-weight: 600; }
   .ghost {
     position: fixed; z-index: 50; pointer-events: none; transform: translate(12px, 12px);
     display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 6px;

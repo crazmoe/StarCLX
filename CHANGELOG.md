@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.15.10 – 2026-11-18
+
+### Gespräche
+- Ein Gespräch auf eine Taste oder einen Favoriten in der Schnellwahl (oder im Hauptfenster) zu ziehen, vermittelt es jetzt direkt an den Kollegen. Bisher startete das Ziehen nur eine Rückfrage, und im Call Manager liess sich danach nur makeln oder auflegen
+- Während einer Rückfrage zeigt das Gespräch jetzt gut sichtbar die Knöpfe „Vermitteln“ (verbindet das gehaltene Gespräch mit dem Rückfrage-Partner) und „Zurück“
+- „Auflegen vermittelt“ bei einer Rückfrage aus einem Favoriten-Ablauf gilt jetzt in beiden Fenstern, nicht nur in dem, in dem die Rückfrage gestartet wurde
+
 ## 1.15.9 – 2026-11-17
 
 ### Gespräche
