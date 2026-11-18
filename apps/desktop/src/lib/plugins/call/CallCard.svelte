@@ -26,11 +26,12 @@
   // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar.
   // Ohne Rückfrage-Bezug (zweiter Anruf normal gewählt) genügt genau ein
   // weiteres, gehaltenes Gespräch.
+  // Auch schon, während es beim Kollegen noch klingelt (Vermitteln vor dem Melden).
   const heldOther = $derived.by(() => {
-    if (!connected || call.elsewhere) return undefined;
+    if ((!connected && call.phase !== "ringback") || call.elsewhere || call.incoming) return undefined;
     if (call.consultation_of) return phone.status.calls.find((x) => x.id === call.consultation_of);
     const held = phone.status.calls.filter((x) => x.id !== call.id && x.phase === "held" && !x.elsewhere);
-    return held.length === 1 && !held[0].consultation_of ? held[0] : undefined;
+    return held.length === 1 ? held[0] : undefined;
   });
   const canComplete = $derived(!!heldOther);
   const others = $derived(phone.status.calls.filter((c) => c.id !== call.id));
