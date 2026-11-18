@@ -4,7 +4,19 @@
   // eine andere, oft sehr breite Schrift (z. B. DejaVu Sans).
   import "@fontsource-variable/inter";
   let { children } = $props();
+
+  // Kein Browser-Menü (Zurück, Neu laden …) auf Rechtsklick.
+  // In Eingabefeldern und bei markiertem Text bleibt es für Kopieren/Einfügen.
+  function oncontextmenu(e: MouseEvent) {
+    if (e.defaultPrevented) return;
+    const el = e.target as HTMLElement | null;
+    if (el?.closest("input, textarea, [contenteditable='true']")) return;
+    if (window.getSelection()?.toString()) return;
+    e.preventDefault();
+  }
 </script>
+
+<svelte:window {oncontextmenu} />
 
 {@render children()}
 

@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.15.14 – 2026-11-18
+
+### Oberfläche
+- Ein Rechtsklick ins Programm zeigt nicht mehr das Browser-Menü (Zurück, Neu laden …). In Eingabefeldern und bei markiertem Text bleibt Kopieren/Einfügen möglich
+- Die Einstellung „Gespräch auf Kollegen ziehen“ steht jetzt unter Telefonie → Vermitteln statt bei der Schnellwahl
+- Die eingefahrene Schnellwahlleiste öffnet sich erst, wenn die Maus etwa eine Sekunde am Rand bleibt. Wer nur kurz über den Rand hinaus fährt, öffnet sie nicht mehr. Die Wartezeit ist unter Allgemein → „Ausfahren nach“ einstellbar (sofort bis 2 Sekunden)
+
 ## 1.15.13 – 2026-11-18
 
 ### Gespräche

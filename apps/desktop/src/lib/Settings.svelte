@@ -52,6 +52,7 @@
 
   const sections: { id: string; icon: IconName; label: string }[] = $derived([
     { id: "softphone", icon: "call", label: "Softphone" },
+    { id: "transfer", icon: "forward", label: t("Vermitteln") },
     { id: "notifications", icon: "bell", label: t("Benachrichtigungen") },
     { id: "audio", icon: "headset", label: t("Audio") },
     { id: "headset", icon: "headset", label: t("Headset-Tasten") },
@@ -418,6 +419,21 @@
         </div>
       </section>
 
+      <section id="transfer">
+        <h3>{t("Vermitteln")}</h3>
+        <div class="card">
+          <label class="field">
+            <span>{t("Gespräch auf Kollegen ziehen")}</span>
+            <select bind:value={draft.drag_transfer} disabled={lk("drag_transfer")}>
+              <option value="">{t("Rückfrage starten")}</option>
+              <option value="direct">{t("Direkt vermitteln")}</option>
+              <option value="ask">{t("Jedes Mal fragen")}</option>
+            </select>
+          </label>
+          <p class="small muted">{t("Gilt für Funktionstasten und Favoriten im Hauptfenster und in der Schnellwahl.")}</p>
+        </div>
+      </section>
+
       <section id="notifications">
         <h3>{t("Benachrichtigungen")}</h3>
         <div class="card">
@@ -609,14 +625,6 @@
               <option value="favorites">{t("Nur Favoriten")}</option>
             </select>
           </label>
-          <label class="field">
-            <span>{t("Gespräch auf Kollegen ziehen")}</span>
-            <select bind:value={draft.drag_transfer} disabled={lk("drag_transfer")}>
-              <option value="">{t("Rückfrage starten")}</option>
-              <option value="direct">{t("Direkt vermitteln")}</option>
-              <option value="ask">{t("Jedes Mal fragen")}</option>
-            </select>
-          </label>
           <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->
           {#if !(desktop.wayland && desktop.gnome)}
             <label class="field">
@@ -640,6 +648,19 @@
                 </label>
               {/if}
               <Toggle bind:checked={draft.quick_dock_autohide} disabled={lk("quick_dock_autohide")} label={t("Einfahren und erst bei Mausberührung am Rand zeigen")} />
+              {#if draft.quick_dock_autohide}
+                <label class="field">
+                  <span>{t("Ausfahren nach")}</span>
+                  <select bind:value={draft.quick_expand_delay} disabled={lk("quick_expand_delay")}>
+                    <option value={0}>{t("Sofort")}</option>
+                    <option value={300}>{t("{n} Sekunden", { n: "0,3" })}</option>
+                    <option value={500}>{t("{n} Sekunden", { n: "0,5" })}</option>
+                    <option value={1000}>{t("1 Sekunde")}</option>
+                    <option value={1500}>{t("{n} Sekunden", { n: "1,5" })}</option>
+                    <option value={2000}>{t("{n} Sekunden", { n: "2" })}</option>
+                  </select>
+                </label>
+              {/if}
               {#if desktop.wayland}
                 <p class="small muted">{t("Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).")}</p>
               {/if}

@@ -297,6 +297,8 @@ pub struct Prefs {
     pub quick_dock_monitor: String,
     /// Inhalt der Schnellwahl: "fkeys" (Funktionstasten), "favorites" oder leer = beides
     pub quick_content: String,
+    /// Eingefahrene Schnellwahl erst nach so vielen Millisekunden am Rand ausfahren
+    pub quick_expand_delay: u32,
     /// Gespräch auf einen Kollegen ziehen: leer = Rückfrage, "direct" = direkt
     /// vermitteln, "ask" = nach dem Ablegen fragen
     pub drag_transfer: String,
@@ -374,6 +376,7 @@ impl Default for Prefs {
             quick_dock_autohide: false,
             quick_dock_monitor: String::new(),
             quick_content: String::new(),
+            quick_expand_delay: 1000,
             drag_transfer: String::new(),
             hotkeys: crate::desktop::Hotkeys::default(),
             fkey_columns: 3,
