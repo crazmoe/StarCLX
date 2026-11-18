@@ -1052,8 +1052,12 @@ fn phase_of(state: v1::types::CallState) -> CallPhase {
         S::Provisional => CallPhase::Setup,
         S::Ringing => CallPhase::Ringing,
         S::RingBack => CallPhase::Ringback,
-        S::Connected | S::ConferenceActive => CallPhase::Connected,
-        S::Parked => CallPhase::Held,
+        // Während einer Rückfrage meldet die Anlage das gerade aktive
+        // Gespräch als „Consult“ und das andere als „Parked“ (auch beim Makeln).
+        S::Connected | S::ConferenceActive | S::Consult | S::ConferenceConsult => {
+            CallPhase::Connected
+        }
+        S::Parked | S::ConferenceInactive => CallPhase::Held,
         _ => CallPhase::Other,
     }
 }
