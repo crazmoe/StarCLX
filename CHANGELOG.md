@@ -1,5 +1,11 @@
 # Änderungen
 
+## 1.15.13 – 2026-11-18
+
+### Gespräche
+- Behoben: Sobald der Kollege eine Rückfrage annahm, erkannte das Programm das Gespräch nicht als aktiv (die Anlage meldet es dann als „Rückfrage“). Deshalb fehlten „Zurück“ und „Vermitteln“, ebenso Stummschalten und die Reiter. Das gilt auch beim Makeln zwischen den beiden Gesprächen
+- „Vermitteln“ nach dem Makeln nutzt den Rückfrage-Bezug der Anlage, egal welches der beiden Gespräche gerade aktiv ist
+
 ## 1.15.12 – 2026-11-18
 
 ### Gespräche

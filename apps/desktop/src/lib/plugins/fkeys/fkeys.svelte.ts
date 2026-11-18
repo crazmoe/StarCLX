@@ -665,14 +665,17 @@ export async function consultAndTransfer(call: Call, number: string) {
 export async function completeTransfer(c: Call, held?: Call) {
   // Welcher Weg bei der Anlage greift, hängt davon ab, ob sie das Gespräch
   // als Rückfrage führt; der erste Versuch läuft still, der zweite meldet.
-  const consult = () => invoke("phone_action", { action: "transfer_consultation", callId: c.id });
+  // Rückfrage-Gespräch: das aktive (beim Makeln auch das gehaltene)
+  const consultId = c.consultation_of ? c.id : held?.consultation_of === c.id ? held.id : c.id;
+  const consult = () => invoke("phone_action", { action: "transfer_consultation", callId: consultId });
   const join = () => invoke("phone_action", { action: "transfer_calls", callId: c.id, number: held?.id });
-  const [first, second] = c.consultation_of || !held ? [consult, join] : [join, consult];
+  const linked = !!c.consultation_of || held?.consultation_of === c.id;
+  const [first, second] = linked || !held ? [consult, join] : [join, consult];
   phone.notice = "";
   try {
     await first();
   } catch {
-    if (!held && !c.consultation_of) return;
+    if (!held && !linked) return;
     try {
       await second();
     } catch (e) {
@@ -680,6 +683,7 @@ export async function completeTransfer(c: Call, held?: Call) {
     }
   }
   if (c.consultation_of) markTransfer(c.consultation_of, false);
+  if (held?.consultation_of === c.id) markTransfer(c.id, false);
 }
 
 /** Soll Auflegen dieses Gesprächs vermitteln? */
