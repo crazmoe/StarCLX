@@ -63,6 +63,8 @@ export type Prefs = {
   quick_dock_monitor: string;
   /** Inhalt der Schnellwahl: "" = Funktionstasten und Favoriten */
   quick_content: "" | "fkeys" | "favorites";
+  /** Gespräch auf Kollegen ziehen: "" = Rückfrage, "direct" = direkt vermitteln */
+  drag_transfer: "" | "direct" | "ask";
   hotkeys: Hotkeys;
   fkey_columns: number;
   workspace: "tabs" | "free";

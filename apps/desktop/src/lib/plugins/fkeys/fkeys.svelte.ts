@@ -577,7 +577,9 @@ function blfAt(x: number, y: number) {
 /** Favorit unter dem Zeiger (Elemente mit data-fav und data-fav-number) */
 function favAt(x: number, y: number) {
   const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-fav]");
-  return el?.dataset.favNumber ? { id: el.dataset.fav ?? "", number: el.dataset.favNumber } : undefined;
+  return el?.dataset.favNumber
+    ? { id: el.dataset.fav ?? "", number: el.dataset.favNumber, name: el.dataset.favName ?? "" }
+    : undefined;
 }
 
 function onMove(e: PointerEvent) {
@@ -597,9 +599,9 @@ function onUp(e: PointerEvent) {
   stopCallDrag();
   if (!call) return;
   const fav = favAt(e.clientX, e.clientY);
-  if (fav) return void transferNow(call, fav.number);
+  if (fav) return void dropOn(call, fav.number, fav.name, e.clientX, e.clientY);
   const k = blfAt(e.clientX, e.clientY);
-  if (k) transferTo(call, k);
+  if (k) transferTo(call, k, e.clientX, e.clientY);
 }
 
 function stopCallDrag() {
@@ -622,23 +624,36 @@ export function startCallDrag(e: PointerEvent, call: Call) {
   window.addEventListener("pointercancel", stopCallDrag);
 }
 
-/** Gespräch direkt an das Ziel der Taste vermitteln */
-async function transferTo(call: Call, k: FunctionKey) {
+/** Gespräch auf das Ziel der Taste abgelegt */
+async function transferTo(call: Call, k: FunctionKey, x: number, y: number) {
   const number = k.functionKeyType === "QUICKDIAL" ? k.directCallTargetnumber : account(k)?.number;
   if (!number) return void (phone.notice = t("Für diese Taste ist keine Rufnummer bekannt."));
-  await transferNow(call, number);
+  await dropOn(call, number, account(k)?.name || k.name, x, y);
 }
 
-/** Gespräch ohne Rückfrage an `number` vermitteln. Spricht man gerade mit
- * dieser Nummer (Rückfrage oder zweiter Anruf), werden beide verbunden. */
-async function transferNow(call: Call, number: string) {
+/** Gespräch auf `number` abgelegt. Spricht man gerade mit dieser Nummer
+ * (Rückfrage oder zweiter Anruf), werden beide verbunden. Sonst nach
+ * Einstellung: Rückfrage (Standard) oder direkt vermitteln. */
+async function dropOn(call: Call, number: string, name = "", x = 0, y = 0) {
   const digits = (n: string) => n.replace(/\D/g, "");
   const want = digits(number);
   const peer = phone.status.calls.find(
     (c) => c.id !== call.id && c.phase === "connected" && want && digits(c.remote_number).endsWith(want),
   );
   if (peer) return void (await completeTransfer(peer, call));
-  await action("forward", call.id, number);
+  const mode = prefs.value?.drag_transfer ?? "";
+  if (mode === "ask") return void Object.assign(dropMenu, { call, number, name, x, y });
+  await dropAs(call, number, mode === "direct" ? "direct" : "consult");
+}
+
+/** Auswahl nach dem Ablegen (Einstellung „Nachfragen“) */
+export const dropMenu = $state({ call: null as Call | null, number: "", name: "", x: 0, y: 0 });
+
+/** Abgelegtes Gespräch per Rückfrage oder direkt vermitteln */
+export async function dropAs(call: Call, number: string, how: "consult" | "direct" | null) {
+  dropMenu.call = null;
+  if (how === "direct") await action("forward", call.id, number);
+  else if (how === "consult") await action("consult", call.id, number);
 }
 
 /** Rückfrage zu `number`; legt man sie auf, wird das erste Gespräch dorthin vermittelt */
@@ -648,12 +663,23 @@ export async function consultAndTransfer(call: Call, number: string) {
 
 /** Gespräch `c` mit dem gehaltenen verbinden (Rückfrage oder zweiter Anruf) */
 export async function completeTransfer(c: Call, held?: Call) {
-  const first = c.consultation_of;
-  if (first) {
-    if (await action("transfer_consultation", c.id)) markTransfer(first, false);
-  } else if (held) {
-    await action("transfer_calls", c.id, held.id);
+  // Welcher Weg bei der Anlage greift, hängt davon ab, ob sie das Gespräch
+  // als Rückfrage führt; der erste Versuch läuft still, der zweite meldet.
+  const consult = () => invoke("phone_action", { action: "transfer_consultation", callId: c.id });
+  const join = () => invoke("phone_action", { action: "transfer_calls", callId: c.id, number: held?.id });
+  const [first, second] = c.consultation_of || !held ? [consult, join] : [join, consult];
+  phone.notice = "";
+  try {
+    await first();
+  } catch {
+    if (!held && !c.consultation_of) return;
+    try {
+      await second();
+    } catch (e) {
+      return void (phone.notice = String(e));
+    }
   }
+  if (c.consultation_of) markTransfer(c.consultation_of, false);
 }
 
 /** Soll Auflegen dieses Gesprächs vermitteln? */

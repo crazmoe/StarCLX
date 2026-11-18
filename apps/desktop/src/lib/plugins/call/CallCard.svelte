@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon, { type IconName } from "../../Icon.svelte";
-  import { backToFirst, callDrag, completeTransfer, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
+  import { backToFirst, callDrag, completeTransfer, dropAs, dropMenu, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
   import { action, duration, hasSoftphone, isRingingIn, phone, run, who, type Call } from "./phone.svelte";
   import { t } from "../../i18n.svelte";
   import { can } from "../../permissions.svelte";
@@ -26,10 +26,12 @@
   // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar.
   // Ohne Rückfrage-Bezug (zweiter Anruf normal gewählt) genügt genau ein
   // weiteres, gehaltenes Gespräch.
-  // Auch schon, während es beim Kollegen noch klingelt (Vermitteln vor dem Melden).
+  // Erst, wenn der Kollege abgenommen hat. Kennt die Anlage den Bezug nicht
+  // (oder zeigt er ins Leere), genügt genau ein gehaltenes Gespräch.
   const heldOther = $derived.by(() => {
-    if ((!connected && call.phase !== "ringback") || call.elsewhere || call.incoming) return undefined;
-    if (call.consultation_of) return phone.status.calls.find((x) => x.id === call.consultation_of);
+    if (!connected || call.elsewhere) return undefined;
+    const linked = call.consultation_of && phone.status.calls.find((x) => x.id === call.consultation_of);
+    if (linked) return linked;
     const held = phone.status.calls.filter((x) => x.id !== call.id && x.phase === "held" && !x.elsewhere);
     return held.length === 1 ? held[0] : undefined;
   });
@@ -104,10 +106,6 @@
         <Icon name={phone.status.muted ? "micOff" : "mic"} size={18} />
       </button>
     {/if}
-    {#if canComplete}
-      <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
-      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call, heldOther)}>{t("Vermitteln")}</button>
-    {/if}
     {#if transfers}
       <button class="round red" class:big={!ringingIn} title={t("Auflegen und vermitteln")} onclick={() => completeTransfer(call)}>
         <Icon name="hangup" size={30} />
@@ -123,6 +121,16 @@
       </button>
     {/if}
   </div>
+
+  <!-- Rückfrage verbunden: unter der Karte, damit der Name sichtbar bleibt -->
+  {#if canComplete}
+    <div class="xfer">
+      <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
+      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call, heldOther)}>
+        <Icon name="forward" size={18} /><span>{t("Vermitteln an {name}", { name: heldOther ? who(heldOther) : "" })}</span>
+      </button>
+    </div>
+  {/if}
 
   {#snippet tabButton(id: "consult" | "conference" | "extras", icon: IconName | null, label: string)}
     <button class="tab" class:active={tab === id} onclick={() => (tab = tab === id ? null : id)}>
@@ -223,6 +231,17 @@
   {/if}
 </article>
 
+<!-- Nach dem Ablegen fragen: Rückfrage oder direkt vermitteln -->
+<svelte:window onkeydown={(e) => dropMenu.call?.id === call.id && e.key === "Escape" && dropAs(call, "", null)} />
+{#if dropMenu.call?.id === call.id}
+  <button class="veil" aria-label={t("Abbrechen")} onclick={() => dropAs(call, "", null)}></button>
+  <div class="dropmenu" role="menu" style="left: {Math.min(dropMenu.x, innerWidth - 230)}px; top: {Math.min(dropMenu.y, innerHeight - 150)}px">
+    <p>{who(call)} → {dropMenu.name || dropMenu.number}</p>
+    <button role="menuitem" onclick={() => dropAs(call, dropMenu.number, "consult")}><b>R</b><span>{t("Mit Rückfrage")}</span></button>
+    <button role="menuitem" onclick={() => dropAs(call, dropMenu.number, "direct")}><Icon name="forward" size={18} /><span>{t("Direkt vermitteln")}</span></button>
+    <button role="menuitem" class="muted" onclick={() => dropAs(call, "", null)}><span>{t("Abbrechen")}</span></button>
+  </div>
+{/if}
 {#if callDrag.call?.id === call.id}
   <div class="ghost" style="left: {callDrag.x}px; top: {callDrag.y}px">
     <Icon name="forward" size={16} /> {who(call)}{callDrag.over ? "" : ` … ${t("auf Besetztlampenfeld ziehen")}`}
@@ -236,7 +255,26 @@
   }
   .pill.draggable { cursor: grab; touch-action: none; }
   .back { padding: 0.3rem 0.7rem; border-radius: 999px; }
-  .back.transfer { background: var(--green); color: #fff; border: none; font-weight: 600; }
+  .xfer { display: flex; gap: 0.4rem; padding: 0.4rem 0.2rem 0.1rem; }
+  .xfer .back { padding: 0.45rem 0.8rem; cursor: pointer; }
+  .back.transfer {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    background: var(--green); color: #fff; border: none; font-weight: 600;
+  }
+  .back.transfer span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .veil { position: fixed; inset: 0; z-index: 59; background: transparent; border: none; padding: 0; cursor: default; }
+  .dropmenu {
+    position: fixed; z-index: 60; width: 220px; display: flex; flex-direction: column; padding: 0.3rem;
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 4px 14px #0006;
+  }
+  .dropmenu p { margin: 0.2rem 0.5rem 0.35rem; font-size: 0.8rem; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .dropmenu button:not(.veil) {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.6rem; border: none; border-radius: 6px;
+    background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit;
+  }
+  .dropmenu button:hover { background: var(--panel); }
+  .dropmenu b { width: 18px; text-align: center; }
+  .dropmenu .muted { color: var(--muted); }
   .ghost {
     position: fixed; z-index: 50; pointer-events: none; transform: translate(12px, 12px);
     display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 6px;

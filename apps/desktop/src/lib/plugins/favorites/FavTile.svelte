@@ -30,7 +30,7 @@
   );
 </script>
 
-<div class="fav {color}" class:target={callDrag.call && callDrag.over === `fav:${fav.id}`} data-fav={fav.id} data-fav-number={fav.number}>
+<div class="fav {color}" class:target={callDrag.call && callDrag.over === `fav:${fav.id}`} data-fav={fav.id} data-fav-number={fav.number} data-fav-name={favName(fav)}>
   <button class="main" {title} {onclick} oncontextmenu={(e) => { e.preventDefault(); onmenu(e); }}>
     {#if fav.kind === "number"}
       <span class="contact"><Icon name="call" size={18} /></span>

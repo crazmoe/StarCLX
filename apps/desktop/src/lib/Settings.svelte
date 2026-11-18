@@ -609,6 +609,14 @@
               <option value="favorites">{t("Nur Favoriten")}</option>
             </select>
           </label>
+          <label class="field">
+            <span>{t("Gespräch auf Kollegen ziehen")}</span>
+            <select bind:value={draft.drag_transfer} disabled={lk("drag_transfer")}>
+              <option value="">{t("Rückfrage starten")}</option>
+              <option value="direct">{t("Direkt vermitteln")}</option>
+              <option value="ask">{t("Jedes Mal fragen")}</option>
+            </select>
+          </label>
           <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->
           {#if !(desktop.wayland && desktop.gnome)}
             <label class="field">
