@@ -648,6 +648,19 @@
                 </label>
               {/if}
               <Toggle bind:checked={draft.quick_dock_autohide} disabled={lk("quick_dock_autohide")} label={t("Einfahren und erst bei Mausberührung am Rand zeigen")} />
+              {#if draft.quick_dock_autohide}
+                <label class="field">
+                  <span>{t("Ausfahren nach")}</span>
+                  <select bind:value={draft.quick_expand_delay} disabled={lk("quick_expand_delay")}>
+                    <option value={0}>{t("Sofort")}</option>
+                    <option value={300}>{t("{n} Sekunden", { n: "0,3" })}</option>
+                    <option value={500}>{t("{n} Sekunden", { n: "0,5" })}</option>
+                    <option value={1000}>{t("1 Sekunde")}</option>
+                    <option value={1500}>{t("{n} Sekunden", { n: "1,5" })}</option>
+                    <option value={2000}>{t("{n} Sekunden", { n: "2" })}</option>
+                  </select>
+                </label>
+              {/if}
               {#if desktop.wayland}
                 <p class="small muted">{t("Unter Wayland braucht das Andocken gtk-layer-shell (Paket libgtk-layer-shell0, z. B. bei KDE, Sway, Hyprland).")}</p>
               {/if}

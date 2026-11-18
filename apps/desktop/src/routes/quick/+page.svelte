@@ -53,14 +53,13 @@
   // eingefahren ist, weiss nur das Programm; sonst bleibt der Aufruf wirkungslos.
   // Ausfahren erst nach kurzer Verzögerung: Wer nur über den Rand hinaus
   // fährt und gleich zurück, öffnet die Leiste nicht. Ist sie schon offen,
-  // ändert der verspätete Aufruf nichts.
-  const EXPAND_DELAY = 1000;
+  // ändert der verspätete Aufruf nichts. Die Dauer ist einstellbar.
   let collapse: ReturnType<typeof setTimeout> | undefined;
   let expand: ReturnType<typeof setTimeout> | undefined;
   function enter() {
     clearTimeout(collapse);
     clearTimeout(expand);
-    expand = setTimeout(() => invoke("quick_dock_expand", { open: true }), EXPAND_DELAY);
+    expand = setTimeout(() => invoke("quick_dock_expand", { open: true }), prefs.value?.quick_expand_delay ?? 1000);
   }
   function leave() {
     clearTimeout(expand);
