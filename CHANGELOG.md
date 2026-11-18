@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.14 – 2026-11-18
+
+### Oberfläche
+- Ein Rechtsklick ins Programm zeigt nicht mehr das Browser-Menü (Zurück, Neu laden …). In Eingabefeldern und bei markiertem Text bleibt Kopieren/Einfügen möglich
+
 ## 1.15.13 – 2026-11-18
 
 ### Gespräche
