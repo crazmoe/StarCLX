@@ -12,6 +12,8 @@ const dict: Record<string, string> = {
   "Auflegen vermittelt das gehaltene Gespräch": "Raccrocher transfère l'appel en attente",
   "Mikrofon einschalten": "Activer le microphone",
   "Stumm schalten": "Couper le micro",
+  "Vermitteln": "Transférer",
+  "Gehaltenes Gespräch mit diesem verbinden": "Relier l'appel en attente à celui-ci",
   "Rückfrage beenden, zurück zum ersten Gespräch": "Terminer la consultation et revenir au premier appel",
   "Zurück": "Retour",
   "Auflegen und vermitteln": "Raccrocher et transférer",
