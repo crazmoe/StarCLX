@@ -297,7 +297,8 @@ pub struct Prefs {
     pub quick_dock_monitor: String,
     /// Inhalt der Schnellwahl: "fkeys" (Funktionstasten), "favorites" oder leer = beides
     pub quick_content: String,
-    /// Gespräch auf einen Kollegen ziehen: leer = Rückfrage, "direct" = direkt vermitteln
+    /// Gespräch auf einen Kollegen ziehen: leer = Rückfrage, "direct" = direkt
+    /// vermitteln, "ask" = nach dem Ablegen fragen
     pub drag_transfer: String,
     pub hotkeys: crate::desktop::Hotkeys,
     /// Spalten im Funktionstasten-Raster (lokal, wie in Windows)

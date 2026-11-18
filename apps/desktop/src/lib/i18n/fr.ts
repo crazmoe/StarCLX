@@ -16,6 +16,8 @@ const dict: Record<string, string> = {
   "Gespräch auf Kollegen ziehen": "Glisser un appel sur un collègue",
   "Rückfrage starten": "Lance un appel de consultation",
   "Direkt vermitteln": "Transfère directement",
+  "Mit Rückfrage": "Avec consultation",
+  "Jedes Mal fragen": "Demander à chaque fois",
   "Vermitteln": "Transférer",
   "Gehaltenes Gespräch mit diesem verbinden": "Relier l'appel en attente à celui-ci",
   "Rückfrage beenden, zurück zum ersten Gespräch": "Terminer la consultation et revenir au premier appel",

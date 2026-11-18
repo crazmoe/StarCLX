@@ -12,7 +12,7 @@
   import FkeyTile from "#lib/plugins/fkeys/FkeyTile.svelte";
   import Favorites from "#lib/plugins/favorites/Favorites.svelte";
   import { favorites, loadFavorites, resetFavorites } from "#lib/plugins/favorites/favorites-state.svelte.ts";
-  import { callDrag, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
+  import { callDrag, dropMenu, fkeys, isTransferKey, loadFkeys, press, resetFkeys } from "#lib/plugins/fkeys/fkeys.svelte.ts";
   import { dtmfFromKeyboard, initPhone, phone } from "#lib/plugins/call/phone.svelte.ts";
   import { loadPrefs, prefs } from "#lib/prefs.svelte.ts";
   import { t } from "#lib/i18n.svelte.ts";
@@ -59,7 +59,7 @@
   function leave() {
     clearTimeout(collapse);
     collapse = setTimeout(() => {
-      if (!callDrag.call) invoke("quick_dock_expand", { open: false });
+      if (!callDrag.call && !dropMenu.call) invoke("quick_dock_expand", { open: false });
     }, 700);
   }
 

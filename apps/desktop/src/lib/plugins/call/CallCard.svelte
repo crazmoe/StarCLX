@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon, { type IconName } from "../../Icon.svelte";
-  import { backToFirst, callDrag, completeTransfer, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
+  import { backToFirst, callDrag, completeTransfer, dropAs, dropMenu, startCallDrag, transfersOnHangup } from "../fkeys/fkeys.svelte";
   import { action, duration, hasSoftphone, isRingingIn, phone, run, who, type Call } from "./phone.svelte";
   import { t } from "../../i18n.svelte";
   import { can } from "../../permissions.svelte";
@@ -231,6 +231,17 @@
   {/if}
 </article>
 
+<!-- Nach dem Ablegen fragen: Rückfrage oder direkt vermitteln -->
+<svelte:window onkeydown={(e) => dropMenu.call?.id === call.id && e.key === "Escape" && dropAs(call, "", null)} />
+{#if dropMenu.call?.id === call.id}
+  <button class="veil" aria-label={t("Abbrechen")} onclick={() => dropAs(call, "", null)}></button>
+  <div class="dropmenu" role="menu" style="left: {Math.min(dropMenu.x, innerWidth - 230)}px; top: {Math.min(dropMenu.y, innerHeight - 150)}px">
+    <p>{who(call)} → {dropMenu.name || dropMenu.number}</p>
+    <button role="menuitem" onclick={() => dropAs(call, dropMenu.number, "consult")}><b>R</b><span>{t("Mit Rückfrage")}</span></button>
+    <button role="menuitem" onclick={() => dropAs(call, dropMenu.number, "direct")}><Icon name="forward" size={18} /><span>{t("Direkt vermitteln")}</span></button>
+    <button role="menuitem" class="muted" onclick={() => dropAs(call, "", null)}><span>{t("Abbrechen")}</span></button>
+  </div>
+{/if}
 {#if callDrag.call?.id === call.id}
   <div class="ghost" style="left: {callDrag.x}px; top: {callDrag.y}px">
     <Icon name="forward" size={16} /> {who(call)}{callDrag.over ? "" : ` … ${t("auf Besetztlampenfeld ziehen")}`}
@@ -251,6 +262,19 @@
     background: var(--green); color: #fff; border: none; font-weight: 600;
   }
   .back.transfer span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .veil { position: fixed; inset: 0; z-index: 59; background: transparent; border: none; padding: 0; cursor: default; }
+  .dropmenu {
+    position: fixed; z-index: 60; width: 220px; display: flex; flex-direction: column; padding: 0.3rem;
+    background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 4px 14px #0006;
+  }
+  .dropmenu p { margin: 0.2rem 0.5rem 0.35rem; font-size: 0.8rem; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .dropmenu button:not(.veil) {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.6rem; border: none; border-radius: 6px;
+    background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit;
+  }
+  .dropmenu button:hover { background: var(--panel); }
+  .dropmenu b { width: 18px; text-align: center; }
+  .dropmenu .muted { color: var(--muted); }
   .ghost {
     position: fixed; z-index: 50; pointer-events: none; transform: translate(12px, 12px);
     display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 6px;

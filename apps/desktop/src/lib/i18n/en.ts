@@ -16,6 +16,8 @@ const dict: Record<string, string> = {
   "Gespräch auf Kollegen ziehen": "Dragging a call onto a colleague",
   "Rückfrage starten": "Starts a consultation call",
   "Direkt vermitteln": "Transfers directly",
+  "Mit Rückfrage": "With consultation",
+  "Jedes Mal fragen": "Ask each time",
   "Vermitteln": "Transfer",
   "Gehaltenes Gespräch mit diesem verbinden": "Connect the held call with this one",
   "Rückfrage beenden, zurück zum ersten Gespräch": "End consultation and return to the first call",
