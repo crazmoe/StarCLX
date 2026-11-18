@@ -26,10 +26,12 @@
   // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar.
   // Ohne Rückfrage-Bezug (zweiter Anruf normal gewählt) genügt genau ein
   // weiteres, gehaltenes Gespräch.
-  // Auch schon, während es beim Kollegen noch klingelt (Vermitteln vor dem Melden).
+  // Erst, wenn der Kollege abgenommen hat. Kennt die Anlage den Bezug nicht
+  // (oder zeigt er ins Leere), genügt genau ein gehaltenes Gespräch.
   const heldOther = $derived.by(() => {
-    if ((!connected && call.phase !== "ringback") || call.elsewhere || call.incoming) return undefined;
-    if (call.consultation_of) return phone.status.calls.find((x) => x.id === call.consultation_of);
+    if (!connected || call.elsewhere) return undefined;
+    const linked = call.consultation_of && phone.status.calls.find((x) => x.id === call.consultation_of);
+    if (linked) return linked;
     const held = phone.status.calls.filter((x) => x.id !== call.id && x.phase === "held" && !x.elsewhere);
     return held.length === 1 ? held[0] : undefined;
   });
@@ -104,10 +106,6 @@
         <Icon name={phone.status.muted ? "micOff" : "mic"} size={18} />
       </button>
     {/if}
-    {#if canComplete}
-      <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
-      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call, heldOther)}>{t("Vermitteln")}</button>
-    {/if}
     {#if transfers}
       <button class="round red" class:big={!ringingIn} title={t("Auflegen und vermitteln")} onclick={() => completeTransfer(call)}>
         <Icon name="hangup" size={30} />
@@ -123,6 +121,16 @@
       </button>
     {/if}
   </div>
+
+  <!-- Rückfrage verbunden: unter der Karte, damit der Name sichtbar bleibt -->
+  {#if canComplete}
+    <div class="xfer">
+      <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
+      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call, heldOther)}>
+        <Icon name="forward" size={18} /><span>{t("Vermitteln an {name}", { name: heldOther ? who(heldOther) : "" })}</span>
+      </button>
+    </div>
+  {/if}
 
   {#snippet tabButton(id: "consult" | "conference" | "extras", icon: IconName | null, label: string)}
     <button class="tab" class:active={tab === id} onclick={() => (tab = tab === id ? null : id)}>
@@ -236,7 +244,13 @@
   }
   .pill.draggable { cursor: grab; touch-action: none; }
   .back { padding: 0.3rem 0.7rem; border-radius: 999px; }
-  .back.transfer { background: var(--green); color: #fff; border: none; font-weight: 600; }
+  .xfer { display: flex; gap: 0.4rem; padding: 0.4rem 0.2rem 0.1rem; }
+  .xfer .back { padding: 0.45rem 0.8rem; cursor: pointer; }
+  .back.transfer {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+    background: var(--green); color: #fff; border: none; font-weight: 600;
+  }
+  .back.transfer span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .ghost {
     position: fixed; z-index: 50; pointer-events: none; transform: translate(12px, 12px);
     display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 6px;

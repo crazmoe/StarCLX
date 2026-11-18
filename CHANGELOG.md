@@ -1,5 +1,13 @@
 # Änderungen
 
+## 1.15.12 – 2026-11-18
+
+### Gespräche
+- Ein Gespräch auf einen Kollegen zu ziehen startet jetzt wieder eine Rückfrage. Neue Einstellung unter Allgemein → „Gespräch auf Kollegen ziehen“: „Rückfrage starten“ (Standard) oder „Direkt vermitteln“
+- „Zurück“ und „Vermitteln an …“ stehen jetzt in einer eigenen Zeile unter dem Gespräch und verdecken den Namen nicht mehr
+- „Vermitteln“ erscheint erst, wenn der Kollege abgenommen hat, und bleibt danach sichtbar, auch wenn die Anlage den Bezug zum gehaltenen Gespräch anders meldet
+- Vermitteln probiert beide Wege der Anlage (Rückfrage verbinden und zwei Gespräche verbinden), bevor ein Fehler erscheint
+
 ## 1.15.11 – 2026-11-18
 
 ### Gespräche
