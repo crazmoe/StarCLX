@@ -629,8 +629,15 @@ async function transferTo(call: Call, k: FunctionKey) {
   await transferNow(call, number);
 }
 
-/** Gespräch ohne Rückfrage an `number` vermitteln */
+/** Gespräch ohne Rückfrage an `number` vermitteln. Spricht man gerade mit
+ * dieser Nummer (Rückfrage oder zweiter Anruf), werden beide verbunden. */
 async function transferNow(call: Call, number: string) {
+  const digits = (n: string) => n.replace(/\D/g, "");
+  const want = digits(number);
+  const peer = phone.status.calls.find(
+    (c) => c.id !== call.id && c.phase === "connected" && want && digits(c.remote_number).endsWith(want),
+  );
+  if (peer) return void (await completeTransfer(peer, call));
   await action("forward", call.id, number);
 }
 
@@ -639,10 +646,14 @@ export async function consultAndTransfer(call: Call, number: string) {
   if (await action("consult", call.id, number)) markTransfer(call.id, true);
 }
 
-/** Rückfrage mit dem gehaltenen ersten Gespräch verbinden */
-export async function completeTransfer(c: Call) {
+/** Gespräch `c` mit dem gehaltenen verbinden (Rückfrage oder zweiter Anruf) */
+export async function completeTransfer(c: Call, held?: Call) {
   const first = c.consultation_of;
-  if (await action("transfer_consultation", c.id) && first) markTransfer(first, false);
+  if (first) {
+    if (await action("transfer_consultation", c.id)) markTransfer(first, false);
+  } else if (held) {
+    await action("transfer_calls", c.id, held.id);
+  }
 }
 
 /** Soll Auflegen dieses Gesprächs vermitteln? */

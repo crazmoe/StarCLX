@@ -472,7 +472,17 @@ pub async fn phone_dial(
     // Die Anlage ruft zuerst das primäre Telefon an.
     crate::instances::ensure_free()?;
     let via = dial_phone_id(&app).await;
-    with_phone(&state, async |p| p.dial(&number, via.as_deref()).await).await
+    with_phone(&state, async |p| {
+        // Läuft schon ein Gespräch an diesem Telefon, wird daraus eine
+        // Rückfrage (wie im Windows-Client); so lässt sie sich vermitteln.
+        if let Some(active) = p.calls().into_iter().find(|c| {
+            c.phase == CallPhase::Connected && c.consultation_of.is_none() && !c.elsewhere
+        }) {
+            return p.consult(&active.id, &number).await;
+        }
+        p.dial(&number, via.as_deref()).await
+    })
+    .await
 }
 
 #[tauri::command]
@@ -560,6 +570,8 @@ pub async fn phone_action(
         "switch_phone" => p.switch_phone(&call_id).await,
         "consult" => p.consult(&call_id, &number).await,
         "transfer_consultation" => p.transfer_consultation(&call_id).await,
+        // `number` enthält hier die ID des gehaltenen Gesprächs
+        "transfer_calls" => p.transfer_calls(&call_id, &raw).await,
         "conference" => {
             let mut ids = vec![call_id.clone()];
             ids.extend(

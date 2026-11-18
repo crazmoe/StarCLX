@@ -23,10 +23,17 @@
     ),
   );
   const transfers = $derived(transfersOnHangup(call));
-  // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar
-  const canComplete = $derived(
-    connected && !!call.consultation_of && phone.status.calls.some((x) => x.id === call.consultation_of),
-  );
+  // Laufende Rückfrage mit gehaltenem ersten Gespräch: direkt vermittelbar.
+  // Ohne Rückfrage-Bezug (zweiter Anruf normal gewählt) genügt genau ein
+  // weiteres, gehaltenes Gespräch.
+  // Auch schon, während es beim Kollegen noch klingelt (Vermitteln vor dem Melden).
+  const heldOther = $derived.by(() => {
+    if ((!connected && call.phase !== "ringback") || call.elsewhere || call.incoming) return undefined;
+    if (call.consultation_of) return phone.status.calls.find((x) => x.id === call.consultation_of);
+    const held = phone.status.calls.filter((x) => x.id !== call.id && x.phase === "held" && !x.elsewhere);
+    return held.length === 1 ? held[0] : undefined;
+  });
+  const canComplete = $derived(!!heldOther);
   const others = $derived(phone.status.calls.filter((c) => c.id !== call.id));
 
   const title = $derived(
@@ -99,7 +106,7 @@
     {/if}
     {#if canComplete}
       <button class="back" title={t("Rückfrage beenden, zurück zum ersten Gespräch")} onclick={() => backToFirst(call)}>{t("Zurück")}</button>
-      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call)}>{t("Vermitteln")}</button>
+      <button class="back transfer" title={t("Gehaltenes Gespräch mit diesem verbinden")} onclick={() => completeTransfer(call, heldOther)}>{t("Vermitteln")}</button>
     {/if}
     {#if transfers}
       <button class="round red" class:big={!ringingIn} title={t("Auflegen und vermitteln")} onclick={() => completeTransfer(call)}>

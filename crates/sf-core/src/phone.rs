@@ -746,6 +746,22 @@ impl Phone {
         Ok(())
     }
 
+    /// Verbindet zwei eigene Gespräche miteinander und steigt aus, auch wenn
+    /// das zweite keine Rückfrage war (z. B. normal gewählt, während das
+    /// erste gehalten wurde).
+    pub async fn transfer_calls(&self, call_id: &str, parked_id: &str) -> PhoneResult<()> {
+        let req = v1::call::TransferCallRequest {
+            call_id: Some(call_id_of(call_id)),
+            call_id_parked: Some(call_id_of(parked_id)),
+        };
+        self.hub
+            .call()
+            .transfer_call(req)
+            .await
+            .map_err(sf_onehub::Error::from)?;
+        Ok(())
+    }
+
     /// Startet eine Konferenz aus den angegebenen Anrufen (z. B. gehaltenes
     /// Gespräch und Rückfrage).
     pub async fn conference(&self, call_ids: &[String]) -> PhoneResult<()> {
