@@ -4,6 +4,7 @@
 
 ### Oberfläche
 - Ein Rechtsklick ins Programm zeigt nicht mehr das Browser-Menü (Zurück, Neu laden …). In Eingabefeldern und bei markiertem Text bleibt Kopieren/Einfügen möglich
+- Die Einstellung „Gespräch auf Kollegen ziehen“ steht jetzt unter Telefonie → Vermitteln statt bei der Schnellwahl
 
 ## 1.15.13 – 2026-11-18
 

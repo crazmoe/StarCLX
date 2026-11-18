@@ -52,6 +52,7 @@
 
   const sections: { id: string; icon: IconName; label: string }[] = $derived([
     { id: "softphone", icon: "call", label: "Softphone" },
+    { id: "transfer", icon: "forward", label: t("Vermitteln") },
     { id: "notifications", icon: "bell", label: t("Benachrichtigungen") },
     { id: "audio", icon: "headset", label: t("Audio") },
     { id: "headset", icon: "headset", label: t("Headset-Tasten") },
@@ -418,6 +419,21 @@
         </div>
       </section>
 
+      <section id="transfer">
+        <h3>{t("Vermitteln")}</h3>
+        <div class="card">
+          <label class="field">
+            <span>{t("Gespräch auf Kollegen ziehen")}</span>
+            <select bind:value={draft.drag_transfer} disabled={lk("drag_transfer")}>
+              <option value="">{t("Rückfrage starten")}</option>
+              <option value="direct">{t("Direkt vermitteln")}</option>
+              <option value="ask">{t("Jedes Mal fragen")}</option>
+            </select>
+          </label>
+          <p class="small muted">{t("Gilt für Funktionstasten und Favoriten im Hauptfenster und in der Schnellwahl.")}</p>
+        </div>
+      </section>
+
       <section id="notifications">
         <h3>{t("Benachrichtigungen")}</h3>
         <div class="card">
@@ -607,14 +623,6 @@
               <option value="">{t("Funktionstasten und Favoriten")}</option>
               <option value="fkeys">{t("Nur Funktionstasten")}</option>
               <option value="favorites">{t("Nur Favoriten")}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>{t("Gespräch auf Kollegen ziehen")}</span>
-            <select bind:value={draft.drag_transfer} disabled={lk("drag_transfer")}>
-              <option value="">{t("Rückfrage starten")}</option>
-              <option value="direct">{t("Direkt vermitteln")}</option>
-              <option value="ask">{t("Jedes Mal fragen")}</option>
             </select>
           </label>
           <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->

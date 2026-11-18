@@ -18,6 +18,7 @@ const dict: Record<string, string> = {
   "Direkt vermitteln": "Transfère directement",
   "Mit Rückfrage": "Avec consultation",
   "Jedes Mal fragen": "Demander à chaque fois",
+  "Gilt für Funktionstasten und Favoriten im Hauptfenster und in der Schnellwahl.": "S'applique aux touches de fonction et aux favoris dans la fenêtre principale et la numérotation rapide.",
   "Vermitteln": "Transférer",
   "Gehaltenes Gespräch mit diesem verbinden": "Relier l'appel en attente à celui-ci",
   "Rückfrage beenden, zurück zum ersten Gespräch": "Terminer la consultation et revenir au premier appel",
