@@ -432,6 +432,7 @@ const dict: Record<string, string> = {
   "Softphone bereit": "Softphone pronto",
   "Lizenz": "Licenza",
   "Softphone nicht angemeldet": "Softphone non registrato",
+  "Kein Softphone freigeschaltet": "Nessun softphone abilitato",
   "Menü schliessen": "Chiudi menu",
   "Anordnung bearbeiten": "Modifica disposizione",
   "Kachel ein- oder ausblenden": "Mostra o nascondi riquadro",

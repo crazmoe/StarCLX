@@ -54,6 +54,7 @@
     starting: t("Softphone startet …"),
     ready: t("Softphone bereit"),
     error: t("Softphone nicht angemeldet"),
+    unavailable: t("Kein Softphone freigeschaltet"),
   } as Record<string, string>);
 
   async function run(f: () => Promise<unknown>) {
@@ -162,7 +163,8 @@
     {#if licenseLabel}<span class="muted">{t("Lizenz")}: {licenseLabel}</span>{/if}
     <span class="muted state"><span class="reg {phone.status.state}"></span>{stateText[phone.status.state]}</span>
     {#if !connection.online}<span class="notice">{t("Keine Verbindung zur Anlage")}</span>
-    {:else if phone.status.state === "error" && phone.status.detail}<span class="notice">{t(phone.status.detail)}</span>{/if}
+    {:else if phone.status.state === "error" && phone.status.detail}<span class="notice">{t(phone.status.detail)}</span>
+    {:else if phone.status.state === "unavailable" && phone.status.detail}<span class="muted">{t(phone.status.detail)}</span>{/if}
     {#if phone.status.state === "error" && phone.status.sip_certificate}
       <code class="fp">{phone.status.sip_certificate}</code>
       <button class="certok" onclick={trustSipCert}>{t("SIP-Zertifikat bestätigen")}</button>

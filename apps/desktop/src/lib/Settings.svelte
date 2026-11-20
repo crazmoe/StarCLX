@@ -19,6 +19,7 @@
   import { setLanguage, t } from "./i18n.svelte";
   import { avatarOf, fkeys } from "./plugins/fkeys/fkeys.svelte";
   import { can } from "./permissions.svelte";
+  import { phone } from "./plugins/call/phone.svelte";
 
   type SignalingNumber = { id: string; number: string; suppressed: boolean; read_only: boolean; selected: boolean };
 
@@ -37,6 +38,8 @@
   }
   /** Vom System gesperrt, nicht änderbar */
   const lk = (key: keyof Prefs) => locked.keys.includes(key);
+  // Die Anlage gibt diesem Benutzer kein Softphone (Lizenz/Recht fehlt): nichts dazu anbieten
+  const noSoftphone = $derived(phone.status.state === "unavailable");
   let numbers = $state<SignalingNumber[]>([]);
   let numbersError = $state("");
   let signaling = $state("");
@@ -402,13 +405,14 @@
       <section id="softphone">
         <h3>Softphone</h3>
         <div class="card">
-          <Toggle bind:checked={draft.softphone} disabled={lk("softphone")} label={t("Softphone verwenden")} />
-          <Toggle bind:checked={draft.primary_on_login} disabled={!draft.softphone || lk("primary_on_login")} label={t("Softphone bei der Anmeldung am Server als primäres Telefon auswählen")} />
-          <Toggle bind:checked={draft.primary_on_answer} disabled={!draft.softphone || lk("primary_on_answer")} label={t("Bei Rufannahme das Softphone als primäres Telefon auswählen")} />
+          {#if noSoftphone}<p class="small muted">{t(phone.status.detail)}</p>{/if}
+          <Toggle bind:checked={draft.softphone} disabled={noSoftphone || lk("softphone")} label={t("Softphone verwenden")} />
+          <Toggle bind:checked={draft.primary_on_login} disabled={noSoftphone || !draft.softphone || lk("primary_on_login")} label={t("Softphone bei der Anmeldung am Server als primäres Telefon auswählen")} />
+          <Toggle bind:checked={draft.primary_on_answer} disabled={noSoftphone || !draft.softphone || lk("primary_on_answer")} label={t("Bei Rufannahme das Softphone als primäres Telefon auswählen")} />
           <hr />
           <label class="field">
             <span>{t("Tastentöne (DTMF) senden als")}</span>
-            <select bind:value={draft.dtmf_mode} disabled={!draft.softphone || lk("dtmf_mode")}>
+            <select bind:value={draft.dtmf_mode} disabled={noSoftphone || !draft.softphone || lk("dtmf_mode")}>
               <option value="rtp">{t("RFC 4733 / RFC 2833 (Standard)")}</option>
               <option value="info">SIP INFO</option>
               <option value="auto">{t("Automatisch (RFC 4733, sonst SIP INFO)")}</option>

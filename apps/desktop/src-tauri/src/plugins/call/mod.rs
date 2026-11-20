@@ -131,7 +131,8 @@ pub async fn apply_prefs(app: &AppHandle, old: &Prefs, prefs: &Prefs) -> Result<
 
 #[derive(Clone, Default, Serialize)]
 pub struct PhoneStatus {
-    /// "off", "starting", "ready" oder "error"
+    /// "off", "starting", "ready", "error" oder "unavailable" (die Anlage
+    /// gibt diesem Benutzer kein App-Telefon: Recht oder Lizenz fehlt)
     state: String,
     detail: String,
     calls: Vec<sf_core::phone::CallView>,
@@ -326,7 +327,7 @@ async fn start_softphone(
             tracing::warn!(error = %e, "Softphone nicht gestartet");
             let detail = match &e {
                 sf_core::phone::PhoneError::NoProvisioningRight(_) => t(
-                    "Dem Benutzer fehlt in der Anlage das Recht für App-Telefone (uci_autoprovisioning). Der Administrator kann es unter Benutzer → Rechte freischalten.",
+                    "Für deinen Benutzer ist auf der Anlage kein Softphone freigeschaltet (Lizenz oder Recht „uci_autoprovisioning“ fehlt). Anrufe laufen über dein primäres Telefon. Der Administrator kann es unter Benutzer → Rechte freischalten.",
                 )
                 .to_owned(),
                 sf_core::phone::PhoneError::UntrustedSipCertificate { .. } => t(
@@ -335,12 +336,20 @@ async fn start_softphone(
                 .to_owned(),
                 _ => e.to_string(),
             };
+            // Ohne Recht/Lizenz für App-Telefone ist das kein Fehler: Das
+            // Softphone steht diesem Benutzer schlicht nicht zur Verfügung.
+            // Es wird nicht angeboten und nie primäres Telefon; gewählt wird
+            // über das primäre Telefon der Anlage.
+            let state = match &e {
+                sf_core::phone::PhoneError::NoProvisioningRight(_) => "unavailable",
+                _ => "error",
+            };
             let sip_certificate = match e {
                 sf_core::phone::PhoneError::UntrustedSipCertificate { fingerprint } => fingerprint,
                 _ => String::new(),
             };
             update_phone_status(app, |s| {
-                s.state = "error".into();
+                s.state = state.into();
                 s.detail = detail;
                 s.sip_certificate = sip_certificate;
             });
@@ -599,6 +608,16 @@ async fn with_phone(
     let phone = state.phone.lock().await;
     let phone = phone.as_ref().ok_or(t("Anrufsteuerung ist nicht bereit"))?;
     f(phone).await.map_err(|e| e.to_string())
+}
+
+/// Nach einer Rechteänderung: Fehlte das Recht für App-Telefone, das
+/// Softphone erneut versuchen; vielleicht hat der Administrator es erteilt.
+pub async fn retry_if_unavailable(app: &AppHandle) {
+    let unavailable = app.state::<CallState>().status.lock().unwrap().state == "unavailable";
+    if unavailable && settings::load(app).prefs.softphone {
+        tracing::info!("Rechte geändert, versuche das Softphone erneut");
+        restart_phone(app).await;
+    }
 }
 
 async fn restart_phone(app: &AppHandle) {
