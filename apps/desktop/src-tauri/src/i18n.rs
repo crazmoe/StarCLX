@@ -569,11 +569,11 @@ const TEXTS: &[(&str, [&str; 3])] = &[
         ],
     ),
     (
-        "Dem Benutzer fehlt in der Anlage das Recht für App-Telefone (uci_autoprovisioning). Der Administrator kann es unter Benutzer → Rechte freischalten.",
+        "Für deinen Benutzer ist auf der Anlage kein Softphone freigeschaltet (Lizenz oder Recht „uci_autoprovisioning“ fehlt). Anrufe laufen über dein primäres Telefon. Der Administrator kann es unter Benutzer → Rechte freischalten.",
         [
-            "The user lacks the permission for app phones on the PBX (uci_autoprovisioning). An administrator can grant it under Users → Permissions.",
-            "L’utilisateur n’a pas le droit pour les téléphones d’application sur le PBX (uci_autoprovisioning). Un administrateur peut l’accorder sous Utilisateurs → Droits.",
-            "L’utente non ha il permesso per i telefoni app sul centralino (uci_autoprovisioning). Un amministratore può concederlo in Utenti → Permessi.",
+            "No softphone is enabled for your user on the PBX (licence or the permission “uci_autoprovisioning” is missing). Calls are placed via your primary phone. An administrator can enable it under Users → Permissions.",
+            "Aucun softphone n’est activé pour votre utilisateur sur le PBX (licence ou droit « uci_autoprovisioning » manquant). Les appels passent par votre téléphone principal. Un administrateur peut l’activer sous Utilisateurs → Droits.",
+            "Per il tuo utente non è abilitato alcun softphone sul centralino (manca la licenza o il permesso «uci_autoprovisioning»). Le chiamate passano dal tuo telefono principale. Un amministratore può abilitarlo in Utenti → Permessi.",
         ],
     ),
     (

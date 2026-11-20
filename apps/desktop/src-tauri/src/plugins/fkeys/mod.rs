@@ -230,6 +230,7 @@ pub async fn fkeys_load(
                         {
                             tracing::warn!("Token nach Rechteänderung nicht erneuert");
                         }
+                        crate::plugins::call::retry_if_unavailable(&app).await;
                         "me-permission"
                     }
                 };

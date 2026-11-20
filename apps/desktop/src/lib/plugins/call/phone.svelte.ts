@@ -24,7 +24,8 @@ export type Call = {
   elsewhere: boolean;
 };
 export type PhoneStatus = {
-  state: "off" | "starting" | "ready" | "error";
+  /** "unavailable": Die Anlage gibt diesem Benutzer kein Softphone (Lizenz/Recht fehlt) */
+  state: "off" | "starting" | "ready" | "error" | "unavailable";
   detail: string;
   calls: Call[];
   muted: boolean;

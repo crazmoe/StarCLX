@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.15.15 – 2026-11-20
+
+### Softphone
+- Hat der Benutzer auf der Anlage kein Softphone (Lizenz oder Recht „uci_autoprovisioning“ fehlt), zeigt StarCLX das nicht mehr als Fehler an. Das Softphone wird dann nicht angeboten, die Softphone-Einstellungen sind ausgegraut, und StarCLX macht sich nie zum primären Telefon. Angerufen wird über das primäre Telefon der Anlage. Erteilt der Administrator das Recht später, startet das Softphone von selbst
+
 ## 1.15.14 – 2026-11-18
 
 ### Oberfläche

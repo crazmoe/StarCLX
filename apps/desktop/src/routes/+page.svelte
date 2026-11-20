@@ -407,6 +407,7 @@
     starting: t("Softphone startet …"),
     ready: t("Softphone bereit"),
     error: t("Softphone nicht angemeldet"),
+    unavailable: t("Kein Softphone freigeschaltet"),
   });
 </script>
 
