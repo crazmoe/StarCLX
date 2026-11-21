@@ -1,5 +1,5 @@
 //! Fehlerberichte und Statusmeldungen an die Sammelstelle der Firma
-//! (`starclx-sammelstelle`).
+//! ([StarDash](https://github.com/crazmoe/StarDash)).
 //!
 //! Alles hier ist nur aktiv, wenn die Firma in der Vorgabedatei unter
 //! `[Support]` eine Adresse einträgt ([`Config::from_values`]). Ohne diese

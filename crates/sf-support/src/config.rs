@@ -59,7 +59,7 @@ pub enum InternalNumbers {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
-    /// Adresse der Sammelstelle, z. B. `https://support.firma.ch/starclx`
+    /// Adresse der Sammelstelle, z. B. `https://stardash.firma.ch`
     pub url: String,
     /// Firmen-Schlüssel: ordnet Berichte der Firma zu
     pub token: String,
