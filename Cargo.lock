@@ -4936,6 +4936,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "sf-support"
+version = "1.15.16"
+dependencies = [
+ "flate2",
+ "gethostname",
+ "hmac 0.12.1",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "sf-tls"
 version = "1.15.16"
 dependencies = [
@@ -5176,6 +5194,7 @@ dependencies = [
  "sf-nextcloud",
  "sf-onehub",
  "sf-sip",
+ "sf-support",
  "sf-tls",
  "tauri",
  "tauri-build",

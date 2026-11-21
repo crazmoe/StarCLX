@@ -165,6 +165,7 @@ fn update_phone_status(app: &AppHandle, f: impl FnOnce(&mut PhoneStatus)) {
         }
         status.clone()
     };
+    crate::support::phone_state(&status.state, &status.detail);
     let _ = app.emit("phone", status);
 }
 
@@ -247,6 +248,7 @@ async fn start_phone(app: AppHandle, hub: sf_onehub::OneHub, host: String) {
                 }
             }
             PhoneEvent::Error { message } => {
+                crate::support::phone_error(&app, &message);
                 let _ = app.emit("phone-error", message);
             }
             PhoneEvent::SipEstablished { sip_call_id } => {

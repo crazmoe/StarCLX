@@ -128,6 +128,7 @@ pub(crate) async fn resume(app: &AppHandle) {
         tracing::warn!(
             "Anlage nach dem Aufwachen nicht erreichbar, verbinde neu, sobald sie antwortet"
         );
+        crate::support::wake_failed(app);
         return;
     }
     // Erst das Token, sonst schlagen die Neuladungen mit 401 fehl.

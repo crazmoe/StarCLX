@@ -110,7 +110,7 @@ pub fn init() {
 /// Öffnet die Datei im Log-Ordner der App und schreibt den Puffer hinein.
 pub fn open(app: &AppHandle) {
     let result =
-        log_dir(app).and_then(|dir| open_in(&dir).map_err(|e| format!("{}: {e}", dir.display())));
+        dir(app).and_then(|dir| open_in(&dir).map_err(|e| format!("{}: {e}", dir.display())));
     if let Err(e) = result {
         *sink() = Sink::Off;
         tracing::warn!(error = %e, "Protokolldatei nicht geöffnet");
@@ -147,15 +147,25 @@ fn open_in(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Die Firma verlangt ausführliches Protokoll (Vorgabe `[Support] verbose`)
+static FORCE_VERBOSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Schaltet zwischen normalem und ausführlichem Protokoll um.
 pub fn set_verbose(verbose: bool) {
+    let verbose = verbose || FORCE_VERBOSE.load(std::sync::atomic::Ordering::Relaxed);
     if let Some(set) = SET_FILTER.get() {
         set(EnvFilter::new(if verbose { VERBOSE } else { NORMAL }));
     }
 }
 
+/// Ausführliches Protokoll immer an, unabhängig von der Einstellung
+pub fn force_verbose() {
+    FORCE_VERBOSE.store(true, std::sync::atomic::Ordering::Relaxed);
+    set_verbose(true);
+}
+
 /// Betriebssystem, Version und unter Linux Distribution und Desktop
-fn system_info() -> String {
+pub fn system_info() -> String {
     let mut lines = vec![format!(
         "{} {}",
         std::env::consts::OS,
@@ -189,7 +199,7 @@ fn system_info() -> String {
 }
 
 /// Inhalt für „Protokoll speichern“: Kopf, vorige und aktuelle Datei
-fn report(dir: &Path) -> Vec<u8> {
+pub fn report(dir: &Path) -> Vec<u8> {
     let mut out = format!(
         "StarCLX {}\n{}\n\n",
         env!("CARGO_PKG_VERSION"),
@@ -206,7 +216,7 @@ fn report(dir: &Path) -> Vec<u8> {
     out
 }
 
-fn log_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub fn dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_log_dir()
         .map(crate::instances::dir)
@@ -218,7 +228,7 @@ fn log_dir(app: &AppHandle) -> Result<PathBuf, String> {
 #[tauri::command]
 pub async fn log_export(app: AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
-    let dir = log_dir(&app)?;
+    let dir = dir(&app)?;
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
@@ -243,7 +253,7 @@ pub async fn log_export(app: AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 pub fn log_open_dir(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    let dir = log_dir(&app)?;
+    let dir = dir(&app)?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)

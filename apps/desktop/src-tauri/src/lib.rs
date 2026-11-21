@@ -18,6 +18,7 @@ mod policy;
 mod presence;
 mod settings;
 mod shortcuts;
+mod support;
 mod wake;
 mod zoom;
 
@@ -661,7 +662,10 @@ pub(crate) fn handle_urls(app: &AppHandle, urls: Vec<String>) {
             show_main_window(&app);
             let _ = match finish_login(&app, &url).await {
                 Ok(info) => app.emit("session", info),
-                Err(e) => app.emit("login-error", e),
+                Err(e) => {
+                    support::login_failed(&app, &e);
+                    app.emit("login-error", e)
+                }
             };
         });
     }
@@ -905,6 +909,7 @@ pub fn run() {
             presence::start(app.handle());
             wake::start(app.handle());
             connection::start(app.handle());
+            support::start(app.handle());
             let prefs = settings::load(app.handle()).prefs;
             log::set_verbose(prefs.verbose_log);
             i18n::set_language(&prefs.language);
@@ -1151,6 +1156,9 @@ pub fn run() {
             chat::pick_download_dir,
             log::log_export,
             log::log_open_dir,
+            support::support_info,
+            support::support_notice_seen,
+            support::support_send,
             audio::audio_info,
             audio::audio_preview,
             audio::bluetooth_names,
@@ -1167,9 +1175,11 @@ pub fn run() {
                 && !EXITING.swap(true, std::sync::atomic::Ordering::SeqCst)
             {
                 api.prevent_exit();
+                support::stop();
                 dock::release(app);
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
+                    support::stop_beat(&app).await;
                     plugins::call::session_ended(&app).await;
                     app.exit(code.unwrap_or(0));
                 });

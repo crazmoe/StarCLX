@@ -85,3 +85,19 @@
 
 ## Protokoll
 #verbose_log=false
+
+## Fehlerberichte an StarDash (https://github.com/crazmoe/StarDash)
+# Eigene Gruppe am Ende der Datei; gilt nur hier, Benutzer können es weder
+# ein- noch ausschalten. Ohne url= sendet StarCLX nie etwas.
+#[Support]
+# Adresse von StarDash und Firmen-Schlüssel (stardash firma-anlegen <Name>)
+#url=https://stardash.firma.ch
+#token=
+# Automatisch senden bei: crash, sip, login, wake (Komma-Liste; aus = nie)
+#auto=crash,sip,login,wake
+# Ausführliches Protokoll immer an
+#verbose=true
+# Statusmeldung alle x Minuten (0 = aus)
+#heartbeat=15
+# Interne Nummern (bis 6 Stellen): klar oder unkenntlich
+#internal_numbers=klar
