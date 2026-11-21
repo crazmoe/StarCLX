@@ -1,7 +1,0 @@
-syntax = "proto3";
-package gamma.onehub.api.v1.types;
-
-message VideoMeetingId {
-  string id = 1;
-}
-

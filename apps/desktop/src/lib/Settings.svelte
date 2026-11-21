@@ -92,6 +92,7 @@
     { id: "account", icon: "account", label: t("Konto") },
     { id: "password", icon: "lock", label: t("Passwort") },
     { id: "log", icon: "list", label: t("Protokoll") },
+    { id: "license", icon: "info", label: t("Lizenz") },
   ]);
   type Tab = "phone" | "reach" | "chat" | "personal" | "account";
   /** Ein Reiter pro Bereich; die Unterpunkte springen innerhalb des Reiters */
@@ -147,6 +148,13 @@
   }
 
   let version = $state("");
+  // Lizenztexte erst laden, wenn der Reiter Konto offen ist (gut 0,5 MB)
+  let licenses = $state("");
+  $effect(() => {
+    if (tab === "account" && !licenses) {
+      invoke<string>("third_party_licenses").then((l) => (licenses = l), () => {});
+    }
+  });
   getVersion().then((v) => (version = v), () => {});
 
   onMount(() => {
@@ -780,6 +788,17 @@
           <p class="small muted">{t("Das Protokoll kann Namen und Rufnummern enthalten. Passwörter und Tokens stehen nicht darin.")}</p>
         </div>
       </section>
+
+      <section id="license">
+        <h3>{t("Lizenz")}</h3>
+        <div class="card">
+          <p><strong>{t("StarCLX ist kein Produkt der STARFACE GmbH.")}</strong></p>
+          <p class="muted">{t("StarCLX ist ein freies, unabhängiges Programm unter der MIT-Lizenz. Es wird von der STARFACE GmbH weder entwickelt noch unterstützt. STARFACE ist eine Marke der STARFACE GmbH und wird hier nur verwendet, um die unterstützten Telefonanlagen zu benennen.")}</p>
+          <hr />
+          <p>{t("Lizenzen der verwendeten Komponenten")}</p>
+          <pre class="licenses">{licenses || t("Lade …")}</pre>
+        </div>
+      </section>
       </div>
     {/if}
   </div>
@@ -792,6 +811,10 @@
 </div>
 
 <style>
+  .licenses {
+    max-height: 22rem; overflow: auto; margin: 0.3rem 0 0; padding: 0.5rem;
+    background: var(--bg); border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; user-select: text;
+  }
   .version { color: var(--muted); font-size: 0.85rem; margin: 0.4rem 0 0; }
   .settings {
     position: fixed; inset: 0; z-index: 20; background: var(--bg);

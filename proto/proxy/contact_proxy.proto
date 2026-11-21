@@ -1,3 +1,7 @@
+// Schnittstellenbeschreibung, zur Interoperabilität aus der STARFACE App für Windows
+// rekonstruiert (Version in proto/VERSION; Art. 21 URG, Art. 6 Richtlinie 2009/24/EG).
+// Keine Quelldatei der STARFACE GmbH; enthalten sind nur die Dienste, die StarCLX nutzt.
+
 syntax = "proto3";
 package gamma.onehub.api.v1.contact;
 import "google/protobuf/empty.proto";

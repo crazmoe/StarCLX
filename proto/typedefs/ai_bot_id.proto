@@ -1,7 +1,0 @@
-syntax = "proto3";
-package gamma.onehub.api.v1.types;
-
-message AiBotId {
-  string id = 1;
-}
-
