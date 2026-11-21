@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Sat, 21 Nov 2026 12:22:50 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ 27192774ffe2b013466a2014efa0cc10              138 Release
+ 58f9f3602c325a28724d82279eba8847             2751 main/binary-amd64/Packages
+ 86cde855bdb5f9336e9e872db98180a1             1023 main/binary-amd64/Packages.gz
+SHA1:
+ e4db78f48a8b8eb73e3dc2a4db31a6a57c68e133              138 Release
+ 5821391998d710e555dffc696a6d06e6ff11bc01             2751 main/binary-amd64/Packages
+ 6ec92002221a9d2bb5d7d6ca168f12ba71ceb9e5             1023 main/binary-amd64/Packages.gz
+SHA256:
+ cd93b7ac46a031400b22d48f90d17d398ea40f847b9e589c1172f33381798ca4              138 Release
+ ec9e6b649e7d4cd9056029a9759dcff018873a69b7ef2527c4f194b6f615862e             2751 main/binary-amd64/Packages
+ 1c60b9922fabe386ee1df264349f5932a42b6014e377c51501d41798e23fe7c0             1023 main/binary-amd64/Packages.gz
+SHA512:
+ 3e9f41a405e549f4d373b231f656cd99b52078271511f9ffe1e728b33d75638eac94bc62baf1e049fd5d81375d7e84fb6fdc16653d64f5cc5b01e665d65572eb              138 Release
+ 1de008afd0f890c934245b1f2ffb3600ea55a29897c5ebeea775b0705990b4cf0e1354b8763d255b47faf1511559fca40f8c42bf88b17c7065612d3d01611772             2751 main/binary-amd64/Packages
+ 2e0095fc1bf04a5ceb49180cb183eae189f324691efaa469a6930304c0736f3abe1d186ca73d414e4a826cef6341e4e1c0fe9623a54f4726083a9de48f8807d7             1023 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEBVBU+NvGrWfgmNPWP1MLX5W/c0EFAmsBjRoACgkQP1MLX5W/
+c0GrQQ/9H326Qr/H58gbqj7CPLrEcYchsPQRyw/mmMuLzdZy7wNGapY1Og0oaR1t
+RiLqpr/24jXLLAIVtMMNSTf+UcDfKehKngQ6CzQCFkHwN99l8lz43znyrqozrp2H
+yKs/RgSpkINcpnR87K60GjTucmpmuFUhVLVG6R36WMqIT7LyGaRyTqiVGnUY84U/
+P7xdfbxwD4rXMFO6e6NvVYWpfpUK/CU8ioJZ9ugT8TTBHVkMKleKFSnrXcuIaCbb
+YgldrrjIK3v/IyTTVaLKQzSnfGbg56nLMdYfBYwoNkA/2BlgR5C8kBTnc0DRAYwP
+XW2fzHAFRzBj6TyonGYNDM14i31w9TXy2ymi46KqSPQvNBHaCmitcPEFzIXONUDh
+cVJEhpeUpfxSMcjH/DhLo17oOryGflnhrC9n2kFCa2bsQ0sEBXtBqtp8SvQghLVU
+dE+OWzavBJXuglHMkrStlnD6nyESNxwkwRvDknPvK+uRgXZvLJK8vRNB6MrwlpEL
+kr/UgWYSgl7wXrpufffzHe9fHjcHBqbnllYnaxB6KNmTLbuNj4EZ6InIjVzgeMHQ
+hzxZO7ZeDztSLaRCMOuG3opqgeUPXV9A0iDCCHGO5PThqUJfjFIC4K0jDwpVWyEk
+E5pQGoCtzZOecPBK2bnSv2GPy1C3/fi42WsnG4AFMnU+XafTPks=
+=7eRx
+-----END PGP SIGNATURE-----
