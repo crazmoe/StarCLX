@@ -3,7 +3,7 @@
 //! Das Softphone ist bewusst dumm: Es registriert sich, nimmt Anrufe an,
 //! legt auf, schaltet stumm und sendet DTMF. Anrufe starten, halten und
 //! übergeben läuft über die OneHub-API; die Anlage ruft dafür das Softphone
-//! an (siehe `docs/windows-client-analyse.md`).
+//! an.
 //!
 //! baresip ist ein Prozess-Singleton und läuft auf einem eigenen Thread.
 //! Befehle gehen über eine Warteschlange dorthin, Ereignisse kommen über

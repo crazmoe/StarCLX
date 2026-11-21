@@ -740,5 +740,8 @@ const dict: Record<string, string> = {
   "URL oder Programm öffnen": "Open URL or program",
   "Umbenennen": "Rename",
   "optional": "optional",
+  "StarCLX ist kein Produkt der STARFACE GmbH.": "StarCLX is not a product of STARFACE GmbH.",
+  "StarCLX ist ein freies, unabhängiges Programm unter der MIT-Lizenz. Es wird von der STARFACE GmbH weder entwickelt noch unterstützt. STARFACE ist eine Marke der STARFACE GmbH und wird hier nur verwendet, um die unterstützten Telefonanlagen zu benennen.": "StarCLX is free, independent software under the MIT licence. It is neither developed nor supported by STARFACE GmbH. STARFACE is a trademark of STARFACE GmbH and is used here only to name the supported phone systems.",
+  "Lizenzen der verwendeten Komponenten": "Licences of the components used",
 };
 export default dict;

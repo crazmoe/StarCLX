@@ -232,7 +232,7 @@ Tag `v<Version>` von Hand bewirkt dasselbe.
 
 | Pfad | Inhalt |
 |---|---|
-| `proto/` | Aus der STARFACE App für Windows rekonstruierte OneHub-Protos (Version in `proto/VERSION`) |
+| `proto/` | Schnittstellenbeschreibungen der OneHub-Dienste, die StarCLX nutzt, zur Interoperabilität aus der STARFACE App für Windows rekonstruiert (Version in `proto/VERSION`) |
 | `crates/sf-proto` | Daraus generierte gRPC-Client-Stubs |
 | `crates/sf-auth` | OAuth2-Login (Authorization Code + PKCE, Refresh), Schlüsselbund |
 | `crates/sf-onehub` | Verbindung zur OneHub-API (Port 9092) mit Bearer-Token |

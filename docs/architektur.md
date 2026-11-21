@@ -1,6 +1,6 @@
 # Architektur und Tech-Stack: STARFACE-Client für Linux
 
-Stand: 30.09.2026, Geräte-Identität korrigiert am 02.10.2026. Grundlage: [windows-client-analyse.md](windows-client-analyse.md) und der erfolgreiche Durchstich auf dem Rechner (gRPC, SIP/TLS mit SRTP über baresip, XMPP, Browser-Login).
+Stand: 30.09.2026, Geräte-Identität korrigiert am 02.10.2026. Grundlage: die zur Interoperabilität ermittelten Schnittstellen der Anlage und der erfolgreiche Durchstich auf dem Rechner (gRPC, SIP/TLS mit SRTP über baresip, XMPP, Browser-Login).
 
 Vorgabe: Cross-Platform wäre schön, **Linux hat Vorrang vor allem anderen.**
 
@@ -15,7 +15,7 @@ Die Anlage erledigt die schwere Arbeit: Anrufsteuerung, Halten, Übergabe und Ko
 | Baustein | Wahl | Begründung |
 |---|---|---|
 | Sprache Kern | **Rust** (tokio) | Viele parallele Langläufer-Streams (je Dienst ein `Subscribe…Events`, XMPP, SIP) sauber asynchron; speichersicher; ein Binary pro Plattform |
-| gRPC | **tonic 0.14** + `tonic-build` aus den 95 `.proto` | Server-Streaming erstklassig, TLS über rustls, Bearer per Interceptor. Protos werden je App-Version neu extrahiert (`_protodump.py`) |
+| gRPC | **tonic 0.14** + `tonic-build` aus den genutzten `.proto` | Server-Streaming erstklassig, TLS über rustls, Bearer per Interceptor. Protos werden je App-Version neu extrahiert (`_protodump.py`) |
 | Softphone | **libbaresip 4.x** per FFI (bindgen) | Im Durchstich mit genau dieser Anlage erprobt (TLS 5061, SRTP/SDES Pflicht, G.722/PCMA/PCMU). **BSD-Lizenz.** Module für PipeWire, Pulse, ALSA, aber auch WASAPI (Windows) und CoreAudio (macOS), dazu Opus, G.722, SRTP |
 | Chat | **tokio-xmpp 6 + xmpp-parsers** | STARTTLS, SASL mit Token als Passwort, Roster, Carbons, MUC vorhanden. XEP-0136-Archiv (Openfire) als eigene kleine IQ-Schicht |
 | Oberfläche | **Tauri 2** + **Svelte 5 / TypeScript** | Offizielle Plugins decken die Desktop-Integration fast 1:1 ab: `deep-link` (`starface-app://login`, `tel:`, `callto:`, `sip:`), `single-instance`, Tray, Benachrichtigungen, Autostart, `global-shortcut`, Updater. Gleiche UI auf allen Plattformen |

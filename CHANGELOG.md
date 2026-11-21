@@ -1,5 +1,12 @@
 # Änderungen
 
+## 1.15.16 – 2026-11-21
+
+### Lizenz
+- Neuer Punkt Einstellungen → Konto → Lizenz: Hinweis, dass StarCLX kein Produkt der STARFACE GmbH ist, und darunter die Lizenzen aller verwendeten Fremdkomponenten. Die Lizenztexte liegen auch in den Paketen unter /usr/share/doc/starclx/
+- Ohne Recht oder Lizenz „uci_autoprovisioning“ weicht StarCLX nicht mehr auf das App-Telefon der Mac-App aus. Es gilt, was der Administrator auf der Anlage freigegeben hat; angerufen wird dann über das primäre Telefon
+- Im Quelltext liegen nur noch die Schnittstellenbeschreibungen, die StarCLX tatsächlich nutzt
+
 ## 1.15.15 – 2026-11-20
 
 ### Softphone

@@ -61,6 +61,7 @@ modules:
       - install -Dm644 ch.crazmoe.StarCLX.metainfo.xml /app/share/metainfo/ch.crazmoe.StarCLX.metainfo.xml
       - install -Dm644 60-starclx-busylight.rules /app/share/starclx/60-starclx-busylight.rules
       - install -Dm644 60-starclx-headset.rules /app/share/starclx/60-starclx-headset.rules
+      - install -Dm644 -t /app/share/doc/starclx usr/share/doc/starclx/LICENSE usr/share/doc/starclx/THIRD-PARTY-LICENSES.txt
       - |
         for f in usr/share/icons/hicolor/*/apps/starclx.png; do
           install -Dm644 "$f" "/app/${f#usr/}"

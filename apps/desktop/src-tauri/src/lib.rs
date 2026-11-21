@@ -214,6 +214,13 @@ async fn set_session(app: &AppHandle, session: Option<Session>) {
 }
 
 /// Zuletzt benutzte Anlage, um das Anmeldefeld vorzubelegen.
+/// Lizenzen der mitgelieferten Fremdkomponenten (Einstellungen → Konto →
+/// Lizenz). Erzeugt von `scripts/third-party-licenses.mjs`.
+#[tauri::command]
+fn third_party_licenses() -> &'static str {
+    include_str!("../THIRD-PARTY-LICENSES.txt")
+}
+
 #[tauri::command]
 fn last_server(app: AppHandle) -> Option<String> {
     settings::load(&app).last_server
@@ -1098,6 +1105,7 @@ pub fn run() {
             fkeys::account_delete_avatar,
             fkeys::account_change_password,
             fkeys::account_license,
+            third_party_licenses,
             fkeys::fkey_save,
             fkeys::fkey_delete,
             fkeys::fkeys_reorder,
