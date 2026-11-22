@@ -173,6 +173,17 @@ verbose_log[$i]=false
 Weitere Vorlagen in `packaging/vorlagen/etc/xdg`: `autostart/starclx.desktop` startet StarCLX
 für alle beim Anmelden, `mimeapps.list` öffnet `tel:`-Links für alle mit StarCLX (GNOME und KDE).
 
+Fehlerberichte an [StarDash](https://github.com/crazmoe/StarDash) (optional): am Ende von
+`/etc/xdg/starclxrc` eine Gruppe `[Support]` anfügen. Benutzer können das weder ein- noch
+ausschalten; ohne `url=` sendet StarCLX nie etwas. Alle Werte stehen in der Vorlage.
+
+```ini
+[Support]
+url=https://stardash.firma.ch
+# Firmen-Schlüssel aus: sudo stardash firma-anlegen "Firma AG"
+token=...
+```
+
 ### Türkameras mit RTSP
 
 Türkameras mit RTSP-Strom (URL beginnt mit `rtsp://`, Video in H.264) entpackt StarCLX mit
