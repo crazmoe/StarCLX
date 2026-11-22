@@ -37,6 +37,7 @@ fn set_online(app: &AppHandle, online: bool) -> bool {
         return false;
     }
     let _ = app.emit("connection", online);
+    crate::support::connection_changed(online);
     true
 }
 

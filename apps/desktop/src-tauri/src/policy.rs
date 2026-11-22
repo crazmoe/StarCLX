@@ -23,6 +23,8 @@ use crate::settings::Prefs;
 pub const FILE_NAME: &str = "starclxrc";
 /// Schlüssel für die Anlage (sonst Felder von `Prefs`)
 const SERVER: &str = "server";
+/// Gruppe für den Sammler (StarDash)
+pub const SUPPORT_GROUP: &str = "Support";
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Policy {
@@ -30,6 +32,9 @@ pub struct Policy {
     pub values: Map<String, Value>,
     /// Gesperrte Schlüssel
     pub locked: Vec<String>,
+    /// Gruppe `[Support]`: Fehlerberichte an StarDash (siehe `sf_support`).
+    /// Gibt es nur in der Vorgabedatei, nie in den Einstellungen des Benutzers.
+    pub support: std::collections::BTreeMap<String, String>,
 }
 
 /// Vorgaben des Systems, einmal beim ersten Zugriff gelesen
@@ -77,6 +82,10 @@ impl Policy {
         // Einstellung ist schon gesperrt.
         for content in files.rev() {
             for entry in parse(content) {
+                if entry.group.eq_ignore_ascii_case(SUPPORT_GROUP) {
+                    policy.support.insert(entry.key, entry.value);
+                    continue;
+                }
                 if policy.locked.contains(&entry.key) {
                     continue;
                 }
@@ -152,6 +161,8 @@ struct Entry {
     key: String,
     value: String,
     locked: bool,
+    /// Name der Gruppe ohne Klammern und Flags, leer vor der ersten Gruppe
+    group: String,
 }
 
 /// Liest eine Datei im KConfig-Format (Gruppen, Kommentare, `[$i]`).
@@ -161,6 +172,7 @@ fn parse(content: &str) -> Vec<Entry> {
     let mut file_locked = false;
     let mut group_locked = false;
     let mut in_group = false;
+    let mut group = String::new();
     for line in content.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
@@ -172,6 +184,12 @@ fn parse(content: &str) -> Vec<Entry> {
             } else {
                 in_group = true;
                 group_locked = line.ends_with("[$i]");
+                group = line
+                    .trim_end_matches("[$i]")
+                    .trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .trim()
+                    .to_string();
             }
             continue;
         }
@@ -202,6 +220,7 @@ fn parse(content: &str) -> Vec<Entry> {
             key: key.trim().to_string(),
             value: unescape(value.trim()),
             locked,
+            group: group.clone(),
         });
     }
     entries
@@ -299,12 +318,14 @@ mod tests {
                 Entry {
                     key: "server".into(),
                     value: "https://pbx".into(),
-                    locked: true
+                    locked: true,
+                    group: "General".into(),
                 },
                 Entry {
                     key: "away_text".into(),
                     value: " Bin weg".into(),
-                    locked: true
+                    locked: true,
+                    group: "General".into(),
                 },
             ]
         );
@@ -366,6 +387,18 @@ mod tests {
     }
 
     #[test]
+    fn support_group_stays_apart() {
+        let p = policy(&[
+            "[General]\nserver=https://pbx\n[Support]\nurl=https://dash.firma.ch\ntoken=abc\n",
+            "[Support]\nurl=https://andere\nheartbeat=5\n",
+        ]);
+        assert_eq!(p.support.get("url").unwrap(), "https://dash.firma.ch");
+        assert_eq!(p.support.get("heartbeat").unwrap(), "5");
+        assert!(!p.values.contains_key("url") && !p.values.contains_key("token"));
+        assert_eq!(p.server(), Some("https://pbx"));
+    }
+
+    #[test]
     fn template_is_valid() {
         // Die Beispiele sind auskommentiert (`#schluessel=wert`).
         let template = include_str!("../../../../packaging/vorlagen/etc/xdg/starclxrc");
@@ -381,6 +414,8 @@ mod tests {
                 {
                     rest
                 }
+                // Gruppen wie `#[Support]`
+                Some(rest) if rest.starts_with('[') && rest.ends_with(']') => rest,
                 _ => l,
             })
             .collect::<Vec<_>>()
@@ -388,8 +423,16 @@ mod tests {
         let entries = parse(&active);
         assert!(entries.len() > 20);
         let p = policy(&[&active]);
-        for e in &entries {
+        for e in entries.iter().filter(|e| e.group != SUPPORT_GROUP) {
             assert!(p.values.contains_key(&e.key), "Vorlage: {} ungültig", e.key);
         }
+        // Beispiel für den Sammler mit Adresse ergibt eine gültige Einstellung
+        let mut support = p.support.clone();
+        assert!(
+            support.contains_key("internal_numbers"),
+            "Vorlage ohne [Support]"
+        );
+        support.insert("url".into(), "https://stardash.firma.ch".into());
+        assert!(sf_support::Config::from_values(&support).is_some());
     }
 }

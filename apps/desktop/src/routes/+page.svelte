@@ -125,6 +125,8 @@
       listen("switching", () => { clearSessionData(); notice = ""; phase = "restoring"; }),
       listen<{ server: string; notice: string }>("account-login", (e) => { server = e.payload.server; adding = false; showLogin(e.payload.notice); }),
       listen<string>("switch-error", (e) => { notice = e.payload; }),
+      // Automatischer Fehlerbericht an StarDash
+      listen<{ id: string }>("support-sent", (e) => { phone.notice = t("Fehlerbericht an den Support gesendet ({id})", { id: e.payload.id }); }),
       listen<{ action: string; text: string | null }>("hotkey", (e) => hotkey(e.payload.action, e.payload.text)),
       listen("dial-request", takeDialRequest),
       // Nach dem Standby: Voicemails neu holen (Funktionstasten und
@@ -143,6 +145,12 @@
     initQueues();
     loadPrefs().catch(() => {});
     restore();
+    // Einmaliger Hinweis, dass die Firma Fehlerberichte sammelt
+    invoke<{ host: string; first_notice: boolean } | null>("support_info").then((i) => {
+      if (!i?.first_notice) return;
+      phone.notice = t("Deine Firma sammelt Fehlerberichte dieser App auf {host}, ohne Gesprächsinhalte und mit unkenntlich gemachten Nummern und Namen. Mehr unter Einstellungen → Protokoll.", { host: i.host });
+      invoke("support_notice_seen");
+    }, () => {});
     // Ein Plugin möchte einen Reiter zeigen (z. B. Chat aus einem Favoriten)
     const showTab = (e: Event) => {
       const id = (e as CustomEvent<string>).detail as Tab;

@@ -10,6 +10,7 @@
   import FkeyEditor from "./plugins/fkeys/FkeyEditor.svelte";
   import Reach from "./plugins/reach/Reach.svelte";
   import Toggle from "./Toggle.svelte";
+  import SupportReport from "./SupportReport.svelte";
   import BusylightSettings from "./plugins/busylight/Settings.svelte";
   import NextcloudSettings from "./plugins/nextcloud/Settings.svelte";
   import HeadsetSettings from "./plugins/headset/Settings.svelte";
@@ -786,6 +787,7 @@
           </div>
           <Toggle bind:checked={draft.verbose_log} disabled={lk("verbose_log")} label={t("Ausführlich protokollieren (Anruf- und Verbindungsdetails)")} />
           <p class="small muted">{t("Das Protokoll kann Namen und Rufnummern enthalten. Passwörter und Tokens stehen nicht darin.")}</p>
+          <SupportReport />
         </div>
       </section>
 

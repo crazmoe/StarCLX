@@ -259,11 +259,20 @@ pub async fn session_ended(app: &AppHandle) {
     app.state::<ChatState>().transfers.lock().unwrap().clear();
 }
 
+/// Chat verbunden (für die Statusmeldung an StarDash)
+pub fn online(app: &AppHandle) -> bool {
+    app.state::<ChatState>().status.lock().unwrap().online
+}
+
 fn set_status(app: &AppHandle, f: impl FnOnce(&mut ChatStatus)) {
     let status = {
         let state = app.state::<ChatState>();
         let mut s = state.status.lock().unwrap();
+        let was = s.online;
         f(&mut s);
+        if s.online != was {
+            crate::support::chat_changed();
+        }
         s.clone()
     };
     let _ = app.emit("chat-status", status);
