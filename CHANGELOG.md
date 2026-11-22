@@ -1,5 +1,17 @@
 # Änderungen
 
+## 2.0.0 – 2026-11-22
+
+Ab dieser Version eignet sich StarCLX für Firmennetze: Fehlerberichte und Statusmeldungen gehen auf Wunsch an [StarDash](https://github.com/crazmoe/StarDash), die Support-Übersicht, die eine Firma auf ihrem eigenen Server betreibt.
+
+### Fehlerberichte an den Support
+- Einschalten nur durch die Firma in der Vorgabedatei, Gruppe `[Support]` (`url`, `token`, `auto`, `verbose`, `heartbeat`, `internal_numbers`). Ohne diese Vorgabe sendet StarCLX nie etwas, und Benutzer können es nicht ein- oder ausschalten. Werte auch auf Englisch (`auto=off`, `internal_numbers=hidden`)
+- Einstellungen → Protokoll → „Protokoll an Support senden“ mit Feld „Was ist passiert?“; danach zeigt StarCLX eine Bericht-Nr. wie `K7-2F9A`, die man am Telefon durchgeben kann. Die zuletzt gesendeten Berichte stehen darunter
+- Automatische Berichte nach Absturz, SIP-Fehler (Softphone länger abgemeldet), gescheiterter Anmeldung und fehlender Verbindung nach dem Standby; höchstens einer pro Stunde und Anlass, zehn am Tag. Ohne Verbindung warten Berichte und gehen später raus
+- Vor dem Senden bereinigt: externe Nummern gekürzt und mit Fingerabdruck, Namen, E-Mail-Adressen, Chat-Texte und Zugangsdaten entfernt. Interne Nummern bleiben lesbar, ausser `internal_numbers=unkenntlich`. Statt des Benutzers steht der Rechnername im Bericht
+- Statusmeldung alle 15 Minuten (und bei Änderungen) nur mit dem Zustand des Programms: Anlage, Chat, Softphone, Ton, Version. Keine Benutzer, keine Präsenz, keine Gespräche
+- Beim ersten Start mit eingeschaltetem Support einmal ein Hinweis, dass Fehlerprotokolle an den IT-Support gehen
+
 ## 1.15.16 – 2026-11-21
 
 ### Lizenz

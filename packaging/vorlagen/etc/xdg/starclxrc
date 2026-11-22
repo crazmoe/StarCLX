@@ -94,10 +94,12 @@
 #url=https://stardash.firma.ch
 #token=
 # Automatisch senden bei: crash, sip, login, wake (Komma-Liste; aus = nie)
+# Send automatically on: crash, sip, login, wake (comma list; off = never)
 #auto=crash,sip,login,wake
 # Ausführliches Protokoll immer an
 #verbose=true
 # Statusmeldung alle x Minuten (0 = aus)
 #heartbeat=15
 # Interne Nummern (bis 6 Stellen): klar oder unkenntlich
+# Internal numbers (up to 6 digits): clear or hidden
 #internal_numbers=klar

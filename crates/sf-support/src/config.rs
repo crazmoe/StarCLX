@@ -93,7 +93,7 @@ impl Config {
                 let mut auto: Vec<Reason> = Vec::new();
                 for item in list.split(',').filter(|s| !s.trim().is_empty()) {
                     match item.trim() {
-                        "none" | "aus" => {}
+                        "none" | "aus" | "off" => {}
                         other => match Reason::parse(other) {
                             Some(r) if !auto.contains(&r) => auto.push(r),
                             Some(_) => {}
@@ -206,5 +206,13 @@ mod tests {
         assert!(!c.wants(Reason::Login));
         let none = cfg(&[("url", "https://s"), ("auto", "aus")]).unwrap();
         assert!(none.auto.is_empty());
+        let off = cfg(&[
+            ("url", "https://s"),
+            ("auto", "off"),
+            ("internal_numbers", "hidden"),
+        ])
+        .unwrap();
+        assert!(off.auto.is_empty());
+        assert_eq!(off.internal_numbers, InternalNumbers::Hidden);
     }
 }

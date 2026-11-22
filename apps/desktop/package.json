@@ -1,6 +1,6 @@
 {
   "name": "starclx-desktop",
-  "version": "1.15.16",
+  "version": "2.0.0",
   "description": "Desktop-Oberfl\u00e4che",
   "type": "module",
   "imports": {
