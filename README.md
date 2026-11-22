@@ -175,6 +175,17 @@ verbose_log[$i]=false
 More templates in `packaging/vorlagen/etc/xdg`: `autostart/starclx.desktop` starts StarCLX
 for everyone at login, `mimeapps.list` opens `tel:` links with StarCLX for everyone (GNOME and KDE).
 
+Error reports to [StarDash](https://github.com/crazmoe/StarDash) (optional): add a group
+`[Support]` at the end of `/etc/xdg/starclxrc`. Users cannot switch it on or off; without `url=`
+StarCLX never sends anything. All values are in the template.
+
+```ini
+[Support]
+url=https://stardash.example.com
+# company key from: sudo stardash create-company "Example Ltd"
+token=...
+```
+
 ### Door cameras with RTSP
 
 StarCLX decodes door cameras with an RTSP stream (URL starts with `rtsp://`, H.264 video) with
