@@ -601,6 +601,22 @@ const TEXTS: &[(&str, [&str; 3])] = &[
         ],
     ),
     (
+        "Diese Tastenkürzel sind ungültig oder schon von einem anderen Programm belegt: {list}",
+        [
+            "These keyboard shortcuts are invalid or already taken by another program: {list}",
+            "Ces raccourcis clavier sont invalides ou déjà utilisés par un autre programme : {list}",
+            "Queste scorciatoie da tastiera non sono valide o sono già usate da un altro programma: {list}",
+        ],
+    ),
+    (
+        "Die Tastenkürzel änderst du hier in den Einstellungen.",
+        [
+            "You change the keyboard shortcuts here in the settings.",
+            "Modifiez les raccourcis clavier ici, dans les paramètres.",
+            "Le scorciatoie da tastiera si modificano qui nelle impostazioni.",
+        ],
+    ),
+    (
         "Keine Verbindung zum Desktop (D-Bus)",
         [
             "No connection to the desktop (D-Bus)",

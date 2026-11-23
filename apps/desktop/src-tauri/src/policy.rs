@@ -12,6 +12,10 @@
 //! erste Ordner in `$XDG_CONFIG_DIRS` hat Vorrang; gesperrte Werte kann ein
 //! späterer Ordner nicht mehr ändern. Als Flatpak liest die App zusätzlich
 //! `/run/host/etc/xdg` (sichtbar mit `--filesystem=host-etc:ro`).
+//!
+//! Unter Windows liegt die Datei in `%ProgramData%\StarCLX` (meist
+//! `C:\ProgramData\StarCLX\starclxrc`). Fehlt sie, gilt noch die Datei
+//! von StarCMX (`C:\ProgramData\StarCMX\starcmxrc`).
 
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -45,6 +49,8 @@ pub fn get() -> &'static Policy {
             .iter()
             .filter_map(|d| std::fs::read_to_string(d.join(FILE_NAME)).ok())
             .collect();
+        #[cfg(windows)]
+        let files = with_legacy(files);
         let policy = Policy::from_files(files.iter().map(String::as_str));
         if !policy.values.is_empty() {
             tracing::info!(
@@ -58,6 +64,38 @@ pub fn get() -> &'static Policy {
 }
 
 /// Ordner mit Vorgaben, wichtigster zuerst
+#[cfg(windows)]
+fn config_dirs() -> Vec<PathBuf> {
+    vec![program_data().join("StarCLX")]
+}
+
+#[cfg(windows)]
+fn program_data() -> PathBuf {
+    std::env::var_os("ProgramData")
+        .unwrap_or_else(|| r"C:\ProgramData".into())
+        .into()
+}
+
+/// Windows: Vorgaben aus der Zeit, als StarCLX dort StarCMX hiess
+/// (`%ProgramData%\StarCMX\starcmxrc`), gelten weiter, solange es keine
+/// neue Datei gibt.
+#[cfg(windows)]
+fn with_legacy(files: Vec<String>) -> Vec<String> {
+    if !files.is_empty() {
+        return files;
+    }
+    let old = program_data().join("StarCMX").join("starcmxrc");
+    match std::fs::read_to_string(&old) {
+        Ok(content) => {
+            tracing::info!(path = %old.display(), "Vorgaben aus dem alten StarCMX-Ordner");
+            vec![content]
+        }
+        Err(_) => files,
+    }
+}
+
+/// Ordner mit Vorgaben, wichtigster zuerst
+#[cfg(target_os = "linux")]
 fn config_dirs() -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = std::env::var("XDG_CONFIG_DIRS")
         .ok()

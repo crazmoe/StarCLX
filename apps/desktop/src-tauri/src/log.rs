@@ -27,7 +27,7 @@ const EARLY_MAX: usize = 256 * 1024;
 const NORMAL: &str = "info";
 /// Ausführlich: eigene Crates mit Anruf- und Verbindungsdetails
 const VERBOSE: &str = "info,starclx_lib=debug,sf_core=debug,sf_onehub=debug,sf_auth=debug,\
-                       sf_chat=debug,sf_sip=debug,sf_audio=debug,sf_busylight=debug,sf_headset=debug";
+                       sf_chat=debug,sf_sip=debug,sf_audio=debug,sf_busylight=debug,sf_headset=trace";
 
 enum Sink {
     Early(Vec<u8>),
@@ -150,6 +150,12 @@ fn open_in(dir: &Path) -> std::io::Result<()> {
 /// Die Firma verlangt ausführliches Protokoll (Vorgabe `[Support] verbose`)
 static FORCE_VERBOSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Ausführliches Protokoll immer an, unabhängig von der Einstellung
+pub fn force_verbose() {
+    FORCE_VERBOSE.store(true, std::sync::atomic::Ordering::Relaxed);
+    set_verbose(true);
+}
+
 /// Schaltet zwischen normalem und ausführlichem Protokoll um.
 pub fn set_verbose(verbose: bool) {
     let verbose = verbose || FORCE_VERBOSE.load(std::sync::atomic::Ordering::Relaxed);
@@ -158,13 +164,8 @@ pub fn set_verbose(verbose: bool) {
     }
 }
 
-/// Ausführliches Protokoll immer an, unabhängig von der Einstellung
-pub fn force_verbose() {
-    FORCE_VERBOSE.store(true, std::sync::atomic::Ordering::Relaxed);
-    set_verbose(true);
-}
-
 /// Betriebssystem, Version und unter Linux Distribution und Desktop
+#[cfg_attr(not(target_os = "linux"), allow(unused_mut, clippy::useless_vec))]
 pub fn system_info() -> String {
     let mut lines = vec![format!(
         "{} {}",

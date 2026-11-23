@@ -1,4 +1,6 @@
 //! Prüft das Audiosystem: Geräte auflisten, Testton, eine Sekunde Mikrofonpegel.
+//! `cargo run -p sf-audio --example audio-probe` (eigener Name: `probe` gibt es schon in sf-doorcam,
+//! beide würden unter Windows gleichzeitig nach target/debug/examples/probe.exe linken)
 use std::sync::Arc;
 
 fn main() {

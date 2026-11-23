@@ -1,4 +1,5 @@
-//! Kuando Busylight (Alpha, Omega und ältere Lync-Modelle) über `/dev/hidraw*`.
+//! Kuando Busylight (Alpha, Omega und ältere Lync-Modelle) über USB-HID
+//! (Windows: hidapi, Linux: `/dev/hidraw*`).
 //!
 //! Das Licht erwartet 64-Byte-Pakete aus bis zu sieben Schritten zu je acht
 //! Bytes (Farbe, Ein-/Auszeit, Ton) und einer Prüfsumme. Ohne Nachricht
@@ -7,11 +8,15 @@
 //! Ein eigenes Keep-Alive-Paket (Befehl 0x8_) ersetzt das laufende Programm
 //! im Gerät und liess das Licht bei jedem Senden kurz ausgehen.
 //!
-//! Zugriff auf hidraw braucht eine udev-Regel (liegt dem .deb bei).
+//! Zugriff auf hidraw braucht unter Linux eine udev-Regel (liegt dem .deb bei).
 
+#[cfg(not(windows))]
 use std::fs::OpenOptions;
+#[cfg(not(windows))]
 use std::io::Write;
-use std::path::{Path, PathBuf};
+#[cfg(not(windows))]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
@@ -64,10 +69,31 @@ pub struct Status {
 }
 
 /// Sucht angesteckte Busylights unter `/sys/class/hidraw`.
+#[cfg(not(windows))]
 pub fn find() -> Vec<PathBuf> {
     find_in(Path::new("/sys/class/hidraw"))
 }
 
+/// Sucht angesteckte Busylights (Gerätepfade von hidapi).
+#[cfg(windows)]
+pub fn find() -> Vec<PathBuf> {
+    let Ok(api) = hidapi::HidApi::new() else {
+        return Vec::new();
+    };
+    let mut out: Vec<PathBuf> = api
+        .device_list()
+        .filter(|i| {
+            let (vendor, product) = (u32::from(i.vendor_id()), u32::from(i.product_id()));
+            vendor == VENDOR_PLENOM || (vendor, product) == LEGACY
+        })
+        .map(|i| PathBuf::from(i.path().to_string_lossy().into_owned()))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+#[cfg(not(windows))]
 fn find_in(sys: &Path) -> Vec<PathBuf> {
     let Ok(dir) = std::fs::read_dir(sys) else {
         return Vec::new();
@@ -84,6 +110,7 @@ fn find_in(sys: &Path) -> Vec<PathBuf> {
 }
 
 /// Prüft `HID_ID=0003:000027BB:00003BCD` aus einer uevent-Datei.
+#[cfg(not(windows))]
 fn is_busylight(uevent: &str) -> bool {
     uevent
         .lines()
@@ -102,7 +129,7 @@ pub fn probe() -> Status {
     let devices = find();
     let error = devices
         .iter()
-        .find_map(|d| OpenOptions::new().write(true).open(d).err())
+        .find_map(|d| open(d).err())
         .map(|e| describe(&e));
     Status {
         devices: devices.iter().map(|d| d.display().to_string()).collect(),
@@ -144,11 +171,38 @@ fn finish(mut p: [u8; 64]) -> [u8; 64] {
     p
 }
 
-/// hidraw: erstes Byte ist die Report-Nummer (0 = ohne Nummern)
-fn write(dev: &Path, p: &[u8; 64]) -> std::io::Result<()> {
+#[cfg(not(windows))]
+fn open(dev: &Path) -> std::io::Result<std::fs::File> {
+    OpenOptions::new().write(true).open(dev)
+}
+
+#[cfg(windows)]
+fn open(dev: &std::path::Path) -> std::io::Result<hidapi::HidDevice> {
+    let path = std::ffi::CString::new(dev.to_string_lossy().into_owned())
+        .map_err(std::io::Error::other)?;
+    hidapi::HidApi::new()
+        .and_then(|api| api.open_path(&path))
+        .map_err(|e| std::io::Error::other(e.to_string()))
+}
+
+/// Erstes Byte ist die Report-Nummer (0 = ohne Nummern)
+fn report(p: &[u8; 64]) -> [u8; 65] {
     let mut buf = [0u8; 65];
     buf[1..].copy_from_slice(p);
-    OpenOptions::new().write(true).open(dev)?.write_all(&buf)
+    buf
+}
+
+#[cfg(not(windows))]
+fn write(dev: &Path, p: &[u8; 64]) -> std::io::Result<()> {
+    open(dev)?.write_all(&report(p))
+}
+
+#[cfg(windows)]
+fn write(dev: &std::path::Path, p: &[u8; 64]) -> std::io::Result<()> {
+    open(dev)?
+        .write(&report(p))
+        .map(|_| ())
+        .map_err(|e| std::io::Error::other(e.to_string()))
 }
 
 /// Hält den gewünschten Zustand auf allen angesteckten Busylights.
@@ -295,6 +349,7 @@ fn run(rx: &mpsc::Receiver<Msg>) {
 mod tests {
     use super::*;
 
+    #[cfg(not(windows))]
     #[test]
     fn recognises_kuando_ids() {
         assert!(is_busylight(
@@ -331,6 +386,7 @@ mod tests {
         assert_eq!(volume_code(50), 4);
     }
 
+    #[cfg(not(windows))]
     #[test]
     fn finds_devices_in_sysfs() {
         let root = std::env::temp_dir().join(format!("sf-busylight-{}", std::process::id()));

@@ -5,6 +5,8 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  # Von Hand starten, falls ein Push auf main keinen Lauf ausgelöst hat
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +22,8 @@ env:
   # Debug-Builds ohne volle Debuginfo, sonst wird der Platz auf dem Runner knapp
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # Windows: OpenSSL statisch (mit dynamischer C-Laufzeit wie Rust) aus vcpkg
+  VCPKG_TRIPLET: x64-windows-static-md
 
 jobs:
   # Formatierung, Clippy, Tests und Oberfläche; läuft parallel zum Paketbau
@@ -155,7 +159,7 @@ jobs:
               exit 1
             fi
             RELEASE=1
-          elif [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF" = refs/heads/main ] \
+          elif [[ "$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == workflow_dispatch ]] && [ "$GITHUB_REF" = refs/heads/main ] \
               && ! gh release view "v$BASE" >/dev/null 2>&1; then
             VERSION="$BASE"
             RELEASE=1
@@ -186,6 +190,119 @@ jobs:
             target/release/bundle/rpm/*.rpm
             target/release/bundle/appimage/*.AppImage
             target/release/sfctl
+
+  # Windows: Prüfungen, Tests und Setup (NSIS, pro Benutzer) in einem Lauf,
+  # damit baresip und OpenSSL nur einmal bauen. Bis 2.0 war das das eigene
+  # Repo StarCMX.
+  windows:
+    runs-on: windows-2022
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Quellen wie im Repo (LF), auch für die Patches an baresip
+      - name: Zeilenenden nicht umwandeln
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v7
+        with:
+          # baresip, re und libg722
+          submodules: true
+
+      - name: OpenSSL aus dem Cache
+        id: openssl-cache
+        uses: actions/cache@v6
+        with:
+          path: C:/vcpkg/installed/${{ env.VCPKG_TRIPLET }}
+          key: openssl-${{ env.VCPKG_TRIPLET }}-v1
+
+      - name: OpenSSL bauen (vcpkg)
+        if: steps.openssl-cache.outputs.cache-hit != 'true'
+        run: vcpkg install "openssl:$VCPKG_TRIPLET"
+
+      - name: OpenSSL bekannt machen
+        run: echo "OPENSSL_DIR=C:/vcpkg/installed/$VCPKG_TRIPLET" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: windows-2022
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Abhängigkeiten der Oberfläche
+        working-directory: apps/desktop
+        run: npm ci
+
+      # Lizenzen der Fremdkomponenten für Windows (andere Bibliotheken als
+      # unter Linux)
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      - name: Lizenzen der Fremdkomponenten
+        run: node scripts/third-party-licenses.mjs
+
+      # Formatierung und Oberfläche prüft schon der Job checks
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: Test gegen die Windows-Anmeldeinformationsverwaltung
+        run: cargo test -p sf-auth --test system_keyring -- --ignored
+
+      - name: Version setzen
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BASE=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          RELEASE=0
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$VERSION" != "$BASE" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME passt nicht zu Cargo.toml ($BASE)"
+              exit 1
+            fi
+            RELEASE=1
+          elif [[ "$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == workflow_dispatch ]] && [ "$GITHUB_REF" = refs/heads/main ] \
+              && ! gh release view "v$BASE" >/dev/null 2>&1; then
+            VERSION="$BASE"
+            RELEASE=1
+          else
+            VERSION="$BASE+${{ github.run_number }}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+          sed -i "0,/^version = \".*\"/s//version = \"$VERSION\"/" Cargo.toml
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" apps/desktop/src-tauri/tauri.conf.json
+          grep -m1 '^version' Cargo.toml
+          grep '"version"' apps/desktop/src-tauri/tauri.conf.json
+
+      - name: Setup bauen (NSIS)
+        working-directory: apps/desktop
+        run: npx tauri build --bundles nsis
+
+      - name: sfctl bauen
+        run: cargo build --release -p sfctl
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: starclx-${{ env.VERSION }}-windows-x64
+          path: |
+            target/release/bundle/nsis/*.exe
+            target/release/sfctl.exe
 
   # Flatpak aus dem eben gebauten .deb (packaging/flatpak), bei einem
   # Release auch als Datei im Release
@@ -233,9 +350,9 @@ jobs:
           path: starclx_*.flatpak
 
   # Release erst, wenn auch die Prüfungen durch sind; mit allen Paketen
-  # einschließlich Flatpak (im Flatpak-Container fehlt gh)
+  # einschließlich Flatpak (im Flatpak-Container fehlt gh) und Windows-Setup
   flatpak-release:
-    needs: [checks, build, flatpak]
+    needs: [checks, build, flatpak, windows]
     if: needs.build.outputs.release == '1'
     runs-on: ubuntu-24.04
     permissions:
@@ -252,11 +369,16 @@ jobs:
         with:
           name: starclx-${{ needs.build.outputs.version }}-flatpak
           path: dl
+      - uses: actions/download-artifact@v8
+        with:
+          name: starclx-${{ needs.build.outputs.version }}-windows-x64
+          path: dl-win
       - name: Release veröffentlichen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp dl/sfctl "sfctl-${VERSION}-linux-x86_64"
+          cp dl-win/sfctl.exe "sfctl-${VERSION}-windows-x64.exe"
           # Abschnitt dieser Version aus CHANGELOG.md als Release-Text
           awk -v v="## $VERSION" '$0 ~ "^## " {p = index($0, v) == 1} p' CHANGELOG.md > notes.md
           gh release create "v$VERSION" --latest --target "$GITHUB_SHA" --title "StarCLX $VERSION" --notes-file notes.md \
@@ -264,7 +386,9 @@ jobs:
             dl/bundle/rpm/*.rpm \
             dl/bundle/appimage/*.AppImage \
             "sfctl-${VERSION}-linux-x86_64" \
-            "dl/starclx_${VERSION}_x86_64.flatpak"
+            "dl/starclx_${VERSION}_x86_64.flatpak" \
+            dl-win/bundle/nsis/*.exe \
+            "sfctl-${VERSION}-windows-x64.exe"
 
   # Paketquellen für apt, dnf und Flatpak auf GitHub Pages (Branch gh-pages).
   # Signiert mit dem Schlüssel aus dem Secret REPO_GPG_KEY; ohne Secret wird
@@ -442,3 +566,39 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Paketquellen für $VERSION"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+
+  # Neues Release an winget melden: öffnet über den Fork crazmoe/winget-pkgs
+  # einen PR bei microsoft/winget-pkgs. Braucht das Secret WINGET_TOKEN
+  # (classic Token mit public_repo) und einen ersten, von Hand eingereichten
+  # Eintrag crazmoe.StarCLX (packaging/winget). Fehlt eins davon, wird der
+  # Schritt übersprungen; ein Fehler hier macht das Release nicht rot.
+  winget:
+    needs: [build, flatpak-release]
+    if: needs.build.outputs.release == '1'
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Kein WINGET_TOKEN
+        if: env.WINGET_TOKEN == ''
+        run: echo "::notice::Secret WINGET_TOKEN fehlt, winget wird nicht aktualisiert"
+      - name: Ersteintrag in winget-pkgs vorhanden?
+        id: known
+        if: env.WINGET_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh api repos/microsoft/winget-pkgs/contents/manifests/c/crazmoe/StarCLX --silent; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::crazmoe.StarCLX ist noch nicht in winget-pkgs aufgenommen, winget wird nicht aktualisiert"
+          fi
+      - name: winget-pkgs aktualisieren
+        if: steps.known.outputs.ok == 'true'
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
+        with:
+          identifier: crazmoe.StarCLX
+          installers-regex: '_x64-setup\.exe$'
+          release-tag: v${{ needs.build.outputs.version }}
+          token: ${{ env.WINGET_TOKEN }}

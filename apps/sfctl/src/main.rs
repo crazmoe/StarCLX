@@ -649,7 +649,7 @@ async fn say(hub: &OneHub, host: &str, wav: &std::path::Path, opts: SayOpts) -> 
         verify_server: !opts.insecure_sip,
         audio_source: format!("{},{}", IDLE_SOURCE.0, IDLE_SOURCE.1),
         // Nichts lokal abspielen; auch ohne Audiogerät (Server, Cron) lauffähig.
-        audio_player: "aufile,/dev/null".into(),
+        audio_player: format!("aufile,{}", if cfg!(windows) { "NUL" } else { "/dev/null" }),
         // Feste Quellrate, damit die Ansage-WAV ohne Umrechnung passt.
         extra: format!("ausrc_srate {}\nausrc_channels 1\n", wav::RATE),
         ..Default::default()

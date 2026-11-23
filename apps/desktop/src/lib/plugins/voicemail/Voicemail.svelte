@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import Icon from "../../Icon.svelte";
   import { phone, run, canDial } from "../call/phone.svelte";
-  import { loadVoicemails, voicemail, type Voicemail } from "./voicemail.svelte";
+  import { loadVoicemails, voicemail, type Voicemail } from "./voicemail-state.svelte";
   import { locale, t } from "../../i18n.svelte";
 
   type Folder = Voicemail["folder"];

@@ -1,5 +1,6 @@
-//! Refresh-Token im Schlüsselbund des Systems (unter Linux Secret Service,
-//! also gnome-keyring oder KWallet).
+//! Refresh-Token im Schlüsselbund des Systems (unter Windows die
+//! Anmeldeinformationsverwaltung, unter Linux Secret Service, also
+//! gnome-keyring oder KWallet).
 //!
 //! Die Aufrufe blockieren; aus async-Code heraus über
 //! `tokio::task::spawn_blocking` verwenden.
@@ -8,6 +9,11 @@ use keyring_core::Entry;
 
 use crate::Result;
 
+/// Name des Eintrags im Schlüsselbund. Bleibt aus früheren Versionen, damit
+/// niemand sich neu anmelden muss (Windows: früher StarCMX).
+#[cfg(windows)]
+const SERVICE: &str = "starcmx";
+#[cfg(not(windows))]
 const SERVICE: &str = "starface-linuxclient";
 
 /// Richtet den Schlüsselbund des Systems ein. Einmal beim Start aufrufen.
@@ -17,8 +23,14 @@ pub fn init_system_store() -> Result<()> {
     Ok(())
 }
 
-/// Windows und macOS folgen, wenn der Linux-Client vollständig ist.
-#[cfg(not(target_os = "linux"))]
+/// Windows: Anmeldeinformationsverwaltung („Generische Anmeldeinformationen“)
+#[cfg(windows)]
+pub fn init_system_store() -> Result<()> {
+    keyring_core::set_default_store(windows_native_keyring_store::Store::new()?);
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
 pub fn init_system_store() -> Result<()> {
     Err(keyring_core::Error::NoDefaultStore.into())
 }

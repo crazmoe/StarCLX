@@ -5,7 +5,7 @@
   import { getCurrentWebview } from "@tauri-apps/api/webview";
   import { onMount, tick } from "svelte";
   import Icon from "../../Icon.svelte";
-  import { acceptsFiles, chat, createRoom, fileSize, leaveRoom, nameOf, openConversation, roomOf, sendFiles, type ChatMessage, type ChatRoom, type ChatTransfer } from "./chat.svelte";
+  import { acceptsFiles, chat, createRoom, fileSize, leaveRoom, nameOf, openConversation, roomOf, sendFiles, type ChatMessage, type ChatRoom, type ChatTransfer } from "./chat-state.svelte";
   import { initials } from "../contacts/contacts";
   import { numberParts } from "../../numbers";
   import { canDial, phone, run } from "../call/phone.svelte";

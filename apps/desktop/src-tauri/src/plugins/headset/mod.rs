@@ -1,12 +1,23 @@
 //! Plugin Headset: Gesprächs- und Stummtaste von USB-Headsets (Jabra, Poly,
 //! EPOS) nehmen an, legen auf und schalten stumm. Bei einem Anruf klingelt
 //! das Headset, Gesprächs- und Stumm-LED folgen dem Softphone. Die Taste von
-//! Bluetooth-Kopfhörern und -Headsets kommt über den Medienspieler (`mpris`).
+//! Bluetooth-Kopfhörern und -Headsets kommt über den Medienspieler (`mpris`,
+//! unter Windows die Medientasten).
 //! Ist ein Headset mit Telefonietasten da, zählt Play/Pause standardmässig
 //! nicht: Manche Headsets senden beides für denselben Druck.
 //! Laufen mehrere StarCLX, bedient der Hauptclient die Headsets für alle.
 
+#[cfg(target_os = "linux")]
 mod mpris;
+
+#[cfg(windows)]
+#[path = "media_win.rs"]
+mod mpris;
+
+#[cfg(not(any(target_os = "linux", windows)))]
+mod mpris {
+    pub fn set(_app: &tauri::AppHandle, _active: bool) {}
+}
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -118,6 +129,7 @@ fn action_for(button: Button, lines: &[DeviceLine], muted: &BTreeMap<String, boo
 
 /// Zählt Play/Pause als Gesprächstaste? `mode` ist die Einstellung
 /// `play_pause_call`, `hid` ob ein Headset mit Telefonietasten offen ist.
+#[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
 fn play_pause_counts(mode: &str, hid: bool) -> bool {
     match mode {
         "always" => true,
@@ -176,6 +188,7 @@ async fn pressed(app: &AppHandle, button: Button) {
 
 /// Play/Pause bzw. Stop vom Medienspieler. Während eines Anrufs bleibt
 /// StarCLX trotzdem der Spieler, damit die Taste keine Musik startet.
+#[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
 async fn media_key(app: &AppHandle, button: Button) {
     let hid = app
         .state::<HeadsetState>()

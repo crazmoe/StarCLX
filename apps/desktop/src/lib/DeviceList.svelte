@@ -19,6 +19,13 @@
 
   const deviceKey = (name: string) => bluetoothKey(name) ?? usbKey(name);
 
+  /** Windows-Endpunkte heissen `{0.0.0.00000000}.{<GUID>}` (bzw. `{0.0.1.…}`
+   *  fürs Mikrofon) und behalten die ID über Neustarts */
+  const isEndpoint = (name: string) => /^\{0\.0\.[01]\.[0-9a-f]+\}\.\{[0-9a-f-]+\}$/i.test(name);
+
+  /** Schlüssel, unter dem der zuletzt gesehene Name gespeichert wird */
+  const nameKey = (name: string) => deviceKey(name) ?? (isEndpoint(name) ? name.toLowerCase() : null);
+
   /** Derselbe Knoten, oder dasselbe Gerät in einem anderen Profil */
   export function sameDevice(a: string, b: string) {
     const k = deviceKey(a);
@@ -43,7 +50,7 @@
     return out;
   }
 
-  // Namen von Bluetooth- und USB-Geräten, die schon einmal verbunden waren
+  // Namen von Geräten, die schon einmal verbunden waren
   const KNOWN = "starclx.bluetooth-names";
   function known(): Record<string, string> {
     try {
@@ -56,7 +63,7 @@
     const names = known();
     let changed = false;
     for (const d of devices) {
-      const k = deviceKey(d.name);
+      const k = nameKey(d.name);
       if (k && d.description && names[k] !== d.description) {
         names[k] = d.description;
         changed = true;
@@ -70,14 +77,15 @@
     }
   }
 
-  /** Name für ein Gerät, das gerade fehlt: der zuletzt gesehene, bei
-   *  Bluetooth sonst der aus dem System (gekoppelte Geräte), bei USB der
-   *  Gerätename aus dem Knotennamen */
+  /** Name für ein Gerät, das gerade fehlt: der aus dem System (Windows-
+   *  Gerätespeicher bzw. gekoppelte Bluetooth-Geräte) oder der zuletzt
+   *  gesehene, bei USB sonst der Gerätename aus dem Knotennamen */
   function absentLabel(name: string, system: Record<string, string>) {
     const bt = bluetoothKey(name);
     if (bt) return system[name] ?? known()[bt] ?? t("Bluetooth-Gerät");
     const usb = usbKey(name);
     if (usb) return known()[usb] ?? usbName(usb) ?? t("USB-Gerät");
+    if (isEndpoint(name)) return system[name] ?? known()[name.toLowerCase()] ?? t("Unbekanntes Audiogerät");
     return name;
   }
 </script>
@@ -90,12 +98,14 @@
   let selected = $state(0);
   $effect(() => rememberNames(devices));
 
-  // Namen fehlender Bluetooth-Geräte vom System
+  // Namen fehlender Geräte vom System
   let systemNames = $state<Record<string, string>>({});
   $effect(() => {
-    const missing = order.filter((n) => bluetoothKey(n) && !findDevice(n, devices));
+    const missing = order.filter(
+      (n) => (bluetoothKey(n) || isEndpoint(n)) && !findDevice(n, devices),
+    );
     if (!missing.length) return;
-    invoke<Record<string, string>>("bluetooth_names", { devices: missing }).then(
+    invoke<Record<string, string>>("device_names", { devices: missing }).then(
       (names) => (systemNames = { ...systemNames, ...names }),
       () => {},
     );

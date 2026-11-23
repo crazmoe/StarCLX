@@ -6,13 +6,24 @@
 //! Gesprächs- und Stumm-LED. Wo im Report welches Feld liegt, steht im
 //! Report-Descriptor des Geräts, deshalb braucht es keine Herstellerlisten.
 //!
-//! Zugriff auf hidraw braucht eine udev-Regel (liegt dem .deb bei).
+//! Unter Windows über die HID-Schnittstelle des Systems ([`hid`]), der
+//! Report-Descriptor wird dort aus den Angaben des Treibers nachgebaut.
+//! Unter Linux braucht der Zugriff auf hidraw eine udev-Regel (liegt dem
+//! .deb bei).
 
 pub mod descriptor;
+#[cfg(windows)]
+mod hid;
 
-use std::fs::{File, OpenOptions};
+#[cfg(windows)]
+use hid::{File, open_rw};
+#[cfg(not(windows))]
+use std::fs::File;
+#[cfg(not(windows))]
 use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+#[cfg(not(windows))]
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
@@ -68,10 +79,26 @@ struct Found {
 }
 
 /// Sucht Geräte mit Telefonietasten unter `/sys/class/hidraw`.
+#[cfg(not(windows))]
 fn find() -> Vec<Found> {
     find_in(Path::new("/sys/class/hidraw"))
 }
 
+#[cfg(windows)]
+fn find() -> Vec<Found> {
+    hid::find()
+        .into_iter()
+        .filter(|(_, _, tel)| tel.has_input(HOOK_SWITCH) || tel.has_input(PHONE_MUTE))
+        .map(|(dev, name, tel)| Found { dev, name, tel })
+        .collect()
+}
+
+#[cfg(not(windows))]
+fn open_rw(dev: &Path) -> std::io::Result<File> {
+    std::fs::OpenOptions::new().read(true).write(true).open(dev)
+}
+
+#[cfg(not(windows))]
 fn find_in(sys: &Path) -> Vec<Found> {
     let Ok(dir) = std::fs::read_dir(sys) else {
         return Vec::new();
@@ -107,7 +134,7 @@ pub fn probe() -> Status {
     let found = find();
     let error = found
         .iter()
-        .find_map(|f| OpenOptions::new().read(true).write(true).open(&f.dev).err())
+        .find_map(|f| open_rw(&f.dev).err())
         .map(|e| describe(&e));
     Status {
         devices: found.into_iter().map(|f| f.name).collect(),
@@ -348,11 +375,7 @@ impl Worker {
             if self.devices.iter().any(|d| d.dev == found.dev) {
                 continue;
             }
-            let opened = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(&found.dev)
-                .and_then(|f| Ok((f.try_clone()?, f)));
+            let opened = open_rw(&found.dev).and_then(|f| Ok((f.try_clone()?, f)));
             let (reader, file) = match opened {
                 Ok(f) => f,
                 Err(e) => {
@@ -362,6 +385,7 @@ impl Worker {
                 }
             };
             tracing::info!(name = %found.name, dev = %found.dev.display(), "Headset gefunden");
+            tracing::debug!(tel = ?found.tel, "Telefoniefelder");
             self.spawn_reader(&found, reader);
             self.devices.push(Open {
                 dev: found.dev,
@@ -386,9 +410,14 @@ impl Worker {
                 let mut buf = [0u8; 256];
                 loop {
                     let n = match file.read(&mut buf) {
-                        Ok(0) | Err(_) => break,
+                        Ok(0) => break,
+                        Err(e) => {
+                            tracing::debug!(error = %e, "Headset nicht mehr lesbar");
+                            break;
+                        }
                         Ok(n) => n,
                     };
+                    tracing::trace!(report = ?&buf[..n], "Headset-Report");
                     if stop.load(Ordering::Relaxed) {
                         return;
                     }
@@ -472,6 +501,7 @@ mod tests {
         assert_eq!(output_reports(&tel, idle_muted), vec![vec![2, 0]]);
     }
 
+    #[cfg(not(windows))]
     #[test]
     fn finds_headsets_in_sysfs() {
         let root = std::env::temp_dir().join(format!("sf-headset-{}", std::process::id()));

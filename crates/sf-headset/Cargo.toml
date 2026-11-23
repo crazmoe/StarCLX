@@ -1,9 +1,12 @@
 [package]
 name = "sf-headset"
-description = "Headset-Tasten (USB-HID-Telefonie) über hidraw: Jabra, Poly, EPOS"
+description = "Headset-Tasten (USB-HID-Telefonie): Jabra, Poly, EPOS"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 tracing.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+hidapi = { version = "2", default-features = false, features = ["windows-native"] }

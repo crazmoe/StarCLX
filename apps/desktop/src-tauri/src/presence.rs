@@ -1,10 +1,12 @@
 //! Chat-Status automatisch auf „Abwesend“: bei Inaktivität, aktivem
 //! Bildschirmschoner oder gesperrtem Bildschirm. Abgefragt wird über D-Bus
-//! (GNOME/Mutter, freedesktop-ScreenSaver als Rückfall, logind).
+//! (GNOME/Mutter, freedesktop-ScreenSaver als Rückfall, logind), unter
+//! Windows über die Win32-API.
 
 use std::time::Duration;
 
 use tauri::AppHandle;
+#[cfg(target_os = "linux")]
 use zbus::blocking::Connection;
 
 use crate::settings::{self, Prefs};
@@ -34,12 +36,14 @@ fn is_away(prefs: &Prefs, d: Desktop) -> bool {
         || (prefs.away_on_lock && d.locked)
 }
 
+#[cfg(target_os = "linux")]
 struct Probe {
     session: Option<Connection>,
     system: Option<Connection>,
     login_session: String,
 }
 
+#[cfg(target_os = "linux")]
 impl Probe {
     fn new() -> Self {
         let login_session = std::env::var("XDG_SESSION_ID").map_or_else(
@@ -127,7 +131,76 @@ impl Probe {
     }
 }
 
+#[cfg(windows)]
+struct Probe;
+
+#[cfg(windows)]
+impl Probe {
+    fn new() -> Self {
+        Self
+    }
+
+    fn read(&self, prefs: &Prefs) -> Desktop {
+        Desktop {
+            idle: prefs.away_on_idle.then(|| self.idle()).flatten(),
+            screensaver: prefs.away_on_screensaver && self.screensaver(),
+            locked: prefs.away_on_lock && self.locked(),
+        }
+    }
+
+    /// Zeit seit der letzten Eingabe in dieser Sitzung
+    fn idle(&self) -> Option<Duration> {
+        use windows::Win32::System::SystemInformation::GetTickCount;
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
+        let mut info = LASTINPUTINFO {
+            cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32,
+            dwTime: 0,
+        };
+        if !unsafe { GetLastInputInfo(&mut info) }.as_bool() {
+            return None;
+        }
+        let ms = unsafe { GetTickCount() }.wrapping_sub(info.dwTime);
+        Some(Duration::from_millis(ms.into()))
+    }
+
+    fn screensaver(&self) -> bool {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SPI_GETSCREENSAVERRUNNING, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+        };
+        let mut running = windows::core::BOOL(0);
+        unsafe {
+            SystemParametersInfoW(
+                SPI_GETSCREENSAVERRUNNING,
+                0,
+                Some((&raw mut running).cast()),
+                SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+            )
+        }
+        .is_ok()
+            && running.as_bool()
+    }
+
+    /// Gesperrt ist, wenn der Desktop für Eingaben nicht der eigene ist
+    fn locked(&self) -> bool {
+        use windows::Win32::System::StationsAndDesktops::{
+            CloseDesktop, DESKTOP_CONTROL_FLAGS, DESKTOP_SWITCHDESKTOP, OpenInputDesktop,
+            SwitchDesktop,
+        };
+        let Ok(desk) =
+            (unsafe { OpenInputDesktop(DESKTOP_CONTROL_FLAGS(0), false, DESKTOP_SWITCHDESKTOP) })
+        else {
+            return true;
+        };
+        let ours = unsafe { SwitchDesktop(desk) }.is_ok();
+        unsafe {
+            let _ = CloseDesktop(desk);
+        }
+        !ours
+    }
+}
+
 /// logind kodiert Sitzungs-IDs im Objektpfad (Ziffern/Buchstaben bleiben)
+#[cfg(target_os = "linux")]
 fn escape(id: &str) -> String {
     id.bytes()
         .map(|b| {
@@ -206,6 +279,7 @@ mod tests {
         ));
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn session_path_escaping() {
         assert_eq!(escape("2"), "2");

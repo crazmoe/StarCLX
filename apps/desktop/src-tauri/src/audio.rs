@@ -36,11 +36,49 @@ fn devices() -> Devices {
 /// wurde: (Karte, vorheriges Profil)
 static BT_SWITCHED: Mutex<Option<(String, String)>> = Mutex::new(None);
 
+/// Geräte (Wiedergabe, Aufnahme) für ein Gespräch, das gerade steht.
+#[cfg(not(windows))]
+pub fn call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
+    bluetooth_call_route(prefs)
+}
+
+/// Windows: Geräte, auf denen das Softphone Gespräche beginnt (Wiedergabe,
+/// Aufnahme; leer heisst Standardgerät für Kommunikation)
+#[cfg(windows)]
+static IN_USE: Mutex<Option<(String, String)>> = Mutex::new(None);
+
+/// Windows: Lautsprecher und Mikrofon nach der Reihenfolge in den
+/// Einstellungen, aus den jetzt vorhandenen Geräten. Ein Headset kann erst
+/// nach dem Start des Softphones verbunden (oder getrennt) worden sein.
+/// Nur wenn das von den Geräten abweicht, auf denen das Gespräch begonnen
+/// hat; diese gelten dann auch für die nächsten Gespräche (siehe
+/// [`IN_USE`]). Leer heisst Standardgerät.
+#[cfg(windows)]
+pub fn call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
+    let present = devices();
+    let want = (
+        sf_audio::pick(&prefs.speakers, &present.speakers).unwrap_or_default(),
+        sf_audio::pick(&prefs.microphones, &present.microphones).unwrap_or_default(),
+    );
+    let mut in_use = IN_USE.lock().unwrap();
+    if in_use.as_ref() == Some(&want) {
+        return None;
+    }
+    tracing::debug!(
+        player = want.0,
+        source = want.1,
+        "Geräte fürs Gespräch umgestellt"
+    );
+    *in_use = Some(want.clone());
+    Some((Some(want.0), Some(want.1)))
+}
+
 /// Ein Gespräch am Softphone steht. Ist das gewählte Gerät ein
 /// Bluetooth-Headset im Musikprofil (ohne Mikrofon), auf Telefonieren
 /// umschalten und Wiedergabe und Mikrofon des Gesprächs dorthin legen.
 /// Liefert (Wiedergabe, Aufnahme) für das Gespräch.
-pub fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
+#[cfg(not(windows))]
+fn bluetooth_call_route(prefs: &Prefs) -> Option<(Option<String>, Option<String>)> {
     let present = devices();
     // „Systemstandard“: das Standardgerät des Audioservers
     let (default_out, default_in) = sf_audio::defaults().unwrap_or_default();
@@ -124,24 +162,34 @@ pub async fn softphone_config(prefs: &Prefs) -> sf_sip::Config {
         },
         ..Default::default()
     };
+    #[cfg(windows)]
+    {
+        *IN_USE.lock().unwrap() = Some(Default::default());
+    }
     if prefs.speakers.is_empty() && prefs.microphones.is_empty() {
         return config;
     }
     let present = tauri::async_runtime::spawn_blocking(devices)
         .await
         .unwrap_or_default();
-    if let Some(dev) = sf_audio::pick(&prefs.speakers, &present.speakers) {
-        config.audio_player = format!("pipewire,{dev}");
+    let player = sf_audio::pick(&prefs.speakers, &present.speakers);
+    let source = sf_audio::pick(&prefs.microphones, &present.microphones);
+    if let Some(dev) = &player {
+        config.audio_player = sf_sip::audio_device(sf_sip::AUDIO_DRIVER, dev);
     }
-    if let Some(dev) = sf_audio::pick(&prefs.microphones, &present.microphones) {
-        config.audio_source = format!("pipewire,{dev}");
+    if let Some(dev) = &source {
+        config.audio_source = sf_sip::audio_device(sf_sip::AUDIO_DRIVER, dev);
+    }
+    #[cfg(windows)]
+    {
+        *IN_USE.lock().unwrap() = Some((player.unwrap_or_default(), source.unwrap_or_default()));
     }
     config
 }
 
 /// PCM eines Klingeltons: eingebauter Name oder Pfad einer WAV-Datei.
 fn ringtone(name: &str) -> Arc<Vec<i16>> {
-    if name.ends_with(".wav") || name.contains('/') {
+    if name.ends_with(".wav") || name.contains(['/', '\\']) {
         match sf_audio::load_wav(std::path::Path::new(name)) {
             Ok(pcm) => return Arc::new(pcm),
             Err(e) => tracing::warn!(error = %e, name, "Klingelton nicht geladen"),
@@ -235,23 +283,27 @@ fn device_arg(device: Option<String>) -> Option<String> {
     device.filter(|d| !d.is_empty() && d != sf_audio::DEFAULT_DEVICE)
 }
 
-/// Namen gekoppelter Bluetooth-Geräte, auch wenn sie gerade nicht verbunden
-/// sind, für Einträge wie `bluez_output.84_D3_52_8C_B9_D0.1`. Fragt BlueZ
-/// auf dem Systembus; was es nicht kennt, fehlt in der Antwort.
+/// Namen fehlender Geräte aus dem System: unter Windows aus dem
+/// Gerätespeicher (Einträge wie `{0.0.0.00000000}.{…}`), unter Linux die
+/// gekoppelten Bluetooth-Geräte für Einträge wie
+/// `bluez_output.84_D3_52_8C_B9_D0.1` von BlueZ. Was das System nicht
+/// kennt, fehlt in der Antwort.
 #[tauri::command]
-pub async fn bluetooth_names(devices: Vec<String>) -> HashMap<String, String> {
+pub async fn device_names(devices: Vec<String>) -> HashMap<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(windows)]
+        let mut names = sf_audio::names(&devices);
+        #[cfg(not(windows))]
+        let mut names = HashMap::new();
         let aliases = bluez_aliases().unwrap_or_else(|e| {
             tracing::debug!(error = %e, "Bluetooth-Namen nicht gelesen");
             HashMap::new()
         });
-        devices
-            .into_iter()
-            .filter_map(|d| {
-                let alias = aliases.get(&bluetooth_address(&d)?)?.clone();
-                Some((d, alias))
-            })
-            .collect()
+        names.extend(devices.into_iter().filter_map(|d| {
+            let alias = aliases.get(&bluetooth_address(&d)?)?.clone();
+            Some((d, alias))
+        }));
+        names
     })
     .await
     .unwrap_or_default()
@@ -267,6 +319,7 @@ fn bluetooth_address(device: &str) -> Option<String> {
 }
 
 /// Adresse → Name aller Geräte, die BlueZ kennt
+#[cfg(target_os = "linux")]
 fn bluez_aliases() -> zbus::Result<HashMap<String, String>> {
     let conn = zbus::blocking::Connection::system()?;
     let objects = zbus::blocking::fdo::ObjectManagerProxy::builder(&conn)
@@ -288,6 +341,12 @@ fn bluez_aliases() -> zbus::Result<HashMap<String, String>> {
             Some((addr.to_uppercase(), name))
         })
         .collect())
+}
+
+/// Unter Windows heissen die Geräte schon nach dem Headset.
+#[cfg(not(target_os = "linux"))]
+fn bluez_aliases() -> Result<HashMap<String, String>, String> {
+    Ok(HashMap::new())
 }
 
 /// Spielt einen Klingelton (oder mit `name = None` den Testton) einmal ab.

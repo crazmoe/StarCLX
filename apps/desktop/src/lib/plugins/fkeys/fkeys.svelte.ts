@@ -512,7 +512,7 @@ export async function press(k: FunctionKey) {
       return call("phone_dtmf", { callId: c.id, digits: k.dtmf ?? "" });
     }
     default:
-      fkeys.notice = t("„{label}“ lässt sich im Linux-Client noch nicht auslösen.", { label: typeInfo(k.functionKeyType).label });
+      fkeys.notice = t("„{label}“ lässt sich in StarCLX noch nicht auslösen.", { label: typeInfo(k.functionKeyType).label });
   }
 }
 

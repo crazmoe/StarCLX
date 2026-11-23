@@ -184,7 +184,11 @@ async fn watch_rtsp(
 ) -> Result<()> {
     let (program, prefix) = options.ffmpeg.split_first().ok_or(Error::NoFfmpeg)?;
     let fps = format!("fps={RTSP_FPS}");
-    let mut child = Command::new(program)
+    let mut cmd = Command::new(program);
+    // Unter Windows ohne eigenes Konsolenfenster
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000);
+    let mut child = cmd
         .args(prefix)
         .args(["-nostdin", "-hide_banner", "-loglevel", "error"])
         .args(["-fflags", "nobuffer", "-rtsp_transport", "tcp"])

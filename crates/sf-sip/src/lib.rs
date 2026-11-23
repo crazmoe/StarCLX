@@ -32,6 +32,7 @@ mod ffi {
     pub const OP_AUSRC: c_int = 10;
     pub const OP_HEADER: c_int = 11;
     pub const OP_AUPLAY: c_int = 12;
+    pub const OP_AUDEFAULT: c_int = 13;
 
     pub const EV_READY: c_int = 1;
     pub const EV_ERROR: c_int = 2;
@@ -46,6 +47,7 @@ mod ffi {
     pub const EV_AUDIO_ERROR: c_int = 11;
     pub const EV_CALL_DTMF: c_int = 12;
     pub const EV_END_OF_FILE: c_int = 13;
+    pub const EV_LOG: c_int = 14;
 
     #[repr(C)]
     pub struct Event {
@@ -57,6 +59,8 @@ mod ffi {
         pub text: *const c_char,
         pub answer_delay: c_int,
         pub outgoing: c_int,
+        /// Nur `EV_LOG`: 0 Debug, 1 Info, 2 Warnung, 3 Fehler
+        pub level: c_int,
     }
 
     pub type EventCb = unsafe extern "C" fn(ctx: *mut c_void, e: *const Event);
@@ -146,16 +150,48 @@ pub enum SipEvent {
     },
 }
 
+/// Audiomodul von baresip für Lautsprecher und Mikrofon; Gerät dahinter
+/// mit Komma, z. B. `wasapi,{0.0.0.00000000}.{…}`.
+#[cfg(windows)]
+pub const AUDIO_DRIVER: &str = "wasapi";
+#[cfg(not(windows))]
+pub const AUDIO_DRIVER: &str = "pipewire";
+
+/// Modul und Gerät für baresip. Ohne Gerät nimmt PipeWire das Standardgerät;
+/// das wasapi-Modul braucht dafür ausdrücklich `default` (sonst schlägt
+/// `GetDevice("")` fehl und es bleibt still).
+pub fn audio_device(module: &str, device: &str) -> String {
+    match device {
+        "" if module == "wasapi" => format!("{module},default"),
+        "" => module.to_owned(),
+        _ => format!("{module},{device}"),
+    }
+}
+
+/// In libbaresip einkompilierte Module, die geladen werden
+#[cfg(windows)]
+const MODULES: &[&str] = &[
+    "g711", "libg722", "srtp", "auconv", "auresamp", "stun", "netroam", "wasapi", "ausine",
+    "aubridge", "aufile",
+];
+#[cfg(not(windows))]
+const MODULES: &[&str] = &[
+    "g711", "g722", "srtp", "auconv", "auresamp", "stun", "netroam", "pipewire", "pulse", "alsa",
+    "ausine", "aubridge", "aufile",
+];
+
 /// Allgemeine Einstellungen des Softphones.
 #[derive(Debug, Clone)]
 pub struct Config {
-    /// z. B. `pipewire` oder `pulse`, optional mit Gerät: `alsa,default`.
+    /// z. B. `wasapi` oder `pipewire`, optional mit Gerät: `alsa,default`.
     pub audio_player: String,
     pub audio_source: String,
     /// Feste lokale SIP-Adresse, sonst wählt baresip freie Ports.
     pub sip_listen: Option<String>,
     /// TLS-Zertifikat der Anlage prüfen.
     pub verify_server: bool,
+    /// Zusätzliche CA-Zertifikate (PEM). Unter Windows gelten ohnehin die
+    /// Stammzertifikate des Systems; der Pfad darf keine Leerzeichen haben.
     pub ca_file: Option<String>,
     /// SHA-256-Fingerabdrücke (`AA:BB:…`) von Zertifikaten, die gelten,
     /// obwohl sie die normale Prüfung nicht bestehen (vom Benutzer bestätigt).
@@ -172,11 +208,11 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            audio_player: "pipewire".into(),
-            audio_source: "pipewire".into(),
+            audio_player: audio_device(AUDIO_DRIVER, ""),
+            audio_source: audio_device(AUDIO_DRIVER, ""),
             sip_listen: None,
             verify_server: true,
-            ca_file: Some("/etc/ssl/certs/ca-certificates.crt".into()),
+            ca_file: (!cfg!(windows)).then(|| "/etc/ssl/certs/ca-certificates.crt".into()),
             trusted_fingerprints: Vec::new(),
             extra: String::new(),
             dtmf: Some(DtmfMode::Rtp),
@@ -207,10 +243,7 @@ impl Config {
         c += &format!("audio_source {}\n", self.audio_source);
         c += &format!("audio_alert {}\n", self.audio_player);
         c += "call_max_calls 4\n";
-        for m in [
-            "g711", "g722", "srtp", "auconv", "auresamp", "stun", "netroam", "pipewire", "pulse",
-            "alsa", "ausine", "aubridge", "aufile",
-        ] {
+        for m in MODULES {
             c += &format!("module {m}.so\n");
         }
         c += &self.extra;
@@ -339,6 +372,10 @@ unsafe extern "C" fn on_event(ctx: *mut c_void, e: *const ffi::Event) {
         peer_name: opt_str(e.peer_name),
     };
     let event = match e.ev {
+        ffi::EV_LOG => {
+            log_line(e.level, &opt_str(e.text));
+            return;
+        }
         ffi::EV_READY => {
             let _ = ctx.ready.try_send(true);
             return;
@@ -392,6 +429,20 @@ unsafe extern "C" fn on_event(ctx: *mut c_void, e: *const ffi::Event) {
         _ => return,
     };
     let _ = ctx.events.send(event);
+}
+
+/// Meldung von baresip bzw. libre ins Protokoll; Debug und Info nur im
+/// ausführlichen Protokoll.
+fn log_line(level: c_int, msg: &str) {
+    let msg = msg.trim_end();
+    if msg.is_empty() {
+        return;
+    }
+    match level {
+        3 => tracing::warn!(target: "sf_sip::baresip", "Fehler: {msg}"),
+        2 => tracing::warn!(target: "sf_sip::baresip", "{msg}"),
+        _ => tracing::debug!(target: "sf_sip::baresip", "{msg}"),
+    }
 }
 
 /// Laufendes Softphone. Beim Drop wird baresip beendet.
@@ -528,7 +579,7 @@ impl Softphone {
         self.cmd(
             ffi::OP_AUSRC,
             Some(call_id),
-            Some(&format!("{module},{device}")),
+            Some(&audio_device(module, device)),
         )
     }
 
@@ -541,8 +592,23 @@ impl Softphone {
         self.cmd(
             ffi::OP_AUPLAY,
             Some(call_id),
-            Some(&format!("{module},{device}")),
+            Some(&audio_device(module, device)),
         )
+    }
+
+    /// Geräte für Gespräche, die danach beginnen (`None`: unverändert)
+    pub fn set_default_audio(
+        &self,
+        module: &str,
+        player: Option<&str>,
+        source: Option<&str>,
+    ) -> Result<()> {
+        if module.contains(',') {
+            return Err(Error::InvalidValue("module".into()));
+        }
+        let player = player.map(|d| audio_device(module, d));
+        let source = source.map(|d| audio_device(module, d));
+        self.cmd(ffi::OP_AUDEFAULT, player.as_deref(), source.as_deref())
     }
 
     /// Baut nach Standby oder Netzwechsel die SIP-Verbindungen neu auf und
@@ -583,6 +649,17 @@ mod tests {
     fn config_resolves_names_via_system() {
         let c = Config::default().render();
         assert!(c.contains("dns_getaddrinfo yes\n"));
+    }
+
+    #[test]
+    fn wasapi_needs_explicit_default() {
+        assert_eq!(audio_device("wasapi", ""), "wasapi,default");
+        assert_eq!(
+            audio_device("wasapi", "{0.0.0.1}.{x}"),
+            "wasapi,{0.0.0.1}.{x}"
+        );
+        assert_eq!(audio_device("pipewire", ""), "pipewire");
+        assert_eq!(audio_device("pipewire", "usb"), "pipewire,usb");
     }
 
     #[test]

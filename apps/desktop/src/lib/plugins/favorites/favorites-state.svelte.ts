@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { action, phone, run } from "../call/phone.svelte";
-import { openConversation } from "../chat/chat.svelte";
+import { openConversation } from "../chat/chat-state.svelte";
 import { consultAndTransfer, fkeys, type Membership, type UserState } from "../fkeys/fkeys.svelte";
 import { t } from "../../i18n.svelte";
 import { prefs, savePrefs, type FlowStep } from "../../prefs.svelte";

@@ -1,6 +1,7 @@
 # Zulässige Lizenzen der Rust-Abhängigkeiten (cargo about, siehe
 # scripts/third-party-licenses.mjs). Alle sind mit der MIT-Lizenz von
-# StarCLX vereinbar; GPL-Lizenzen stehen bewusst nicht darauf.
+# StarCLX vereinbar; GPL-Lizenzen stehen bewusst nicht darauf. Das Ziel
+# setzt das Skript je nach System (Linux oder Windows).
 targets = ["x86_64-unknown-linux-gnu"]
 accepted = [
     "MIT",

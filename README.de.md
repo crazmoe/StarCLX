@@ -2,7 +2,8 @@
 
 [English](README.md) · **Deutsch**
 
-StarCLX ist ein freier Desktop-Client für STARFACE-Telefonanlagen, mit Linux als Hauptplattform.
+StarCLX ist ein freier Desktop-Client für STARFACE-Telefonanlagen für Linux (Hauptplattform) und
+Windows.
 Er spricht dieselben Schnittstellen wie die STARFACE App für Windows (OneHub-gRPC, SIP/TLS mit SRTP,
 XMPP-Chat) und läuft mit STARFACE ab Version 10.
 
@@ -77,8 +78,8 @@ Die Quellen sind signiert; neue Versionen kommen mit dem normalen System-Update 
 
 ### Einzelne Pakete
 
-Fertige Pakete gibt es auch unter [Releases](../../releases): `.deb`, `.rpm`, AppImage, `.dmg`
-(macOS) und Installer (Windows).
+Fertige Pakete gibt es auch unter [Releases](../../releases): `.deb`, `.rpm`, AppImage, Flatpak
+und das Windows-Setup.
 
 ```sh
 sudo apt install ./starclx_<version>_amd64.deb
@@ -91,6 +92,20 @@ unter dem Namen `starface-linuxclient` und registriert die Link-Handler `starfac
 
 Zwischenstände: Jeder Build auf `main` legt unter **Actions** das Artefakt
 `starclx-<version>-linux-x86_64` ab (Version `1.0.0+<Laufnummer>`).
+
+### Windows
+
+Unter [Releases](../../releases) liegt `StarCLX_<version>_x64-setup.exe`: Installation pro
+Benutzer, ohne Administratorrechte. Das Setup ist nicht signiert; SmartScreen fragt deshalb einmal
+nach („Weitere Informationen“ › „Trotzdem ausführen“). WebView2 gehört zu Windows 10/11; fehlt es,
+lädt das Setup es nach. Unter Windows meldet sich StarCLX als Windows-App an der Anlage an
+(Telefon-Typ der STARFACE App für Windows), Audio läuft über WASAPI.
+
+Bis Version 2.0 hiess die Windows-Version **StarCMX** und hatte ein eigenes Repo
+([crazmoe/StarCMX](https://github.com/crazmoe/StarCMX), archiviert). Das StarCLX-Setup entfernt
+ein installiertes StarCMX und übernimmt Einstellungen, Konten und die gespeicherte Anmeldung.
+Verteilung im Firmennetz per GPO, Vorgabedatei `C:\ProgramData\StarCLX\starclxrc` und der Umstieg
+von StarCMX: [`packaging/windows`](packaging/windows/README.md).
 
 ### Flatpak
 
@@ -251,10 +266,10 @@ Tag `v<Version>` von Hand bewirkt dasselbe.
 | `crates/sf-nextcloud` | Nextcloud: Login Flow v2, WebDAV-Upload und Freigabelinks, CardDAV, vCard |
 | `crates/sf-core` | Sitzung, Adressbuch, Rufliste, Funktionstasten, Erreichbarkeit, Voicemail, Aufzeichnungen |
 | `crates/sf-sip` | Softphone auf Basis von libbaresip |
-| `crates/sf-audio` | Audiogeräte, Klingeltöne, Testton (PulseAudio/PipeWire) |
+| `crates/sf-audio` | Audiogeräte, Klingeltöne, Testton (PulseAudio/PipeWire, unter Windows WASAPI) |
 | `crates/sf-chat` | XMPP-Chat |
-| `crates/sf-busylight` | Kuando Busylight über hidraw |
-| `crates/sf-headset` | Headset-Tasten (USB-HID-Telefonie) über hidraw |
+| `crates/sf-busylight` | Kuando Busylight über hidraw bzw. hidapi (Windows) |
+| `crates/sf-headset` | Headset-Tasten (USB-HID-Telefonie) über hidraw bzw. die HID-Schnittstelle von Windows |
 | `crates/sf-doorcam` | Türkameras: RTSP (über ffmpeg), Motion JPEG, Einzelbild |
 | `apps/desktop` | Desktop-App: Tauri 2, Oberfläche in Svelte 5 / TypeScript |
 | `apps/sfctl` | Kommandozeile für Skripte, siehe [README](apps/sfctl/README.md) |
@@ -269,6 +284,21 @@ Voraussetzungen: Rust (stable), Node 22, unter Debian/Ubuntu
 cargo test --workspace
 cd apps/desktop && npm install && npm run tauri dev
 ```
+
+Unter Windows (MSVC) braucht es zusätzlich CMake, die Visual Studio Build Tools und OpenSSL aus
+vcpkg:
+
+```powershell
+git clone --recurse-submodules https://github.com/crazmoe/StarCLX
+vcpkg install openssl:x64-windows-static-md
+$env:OPENSSL_DIR = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static-md"
+cd apps\desktop; npm ci; npx tauri build --bundles nsis
+```
+
+Plattformteile liegen neben dem gemeinsamen Code mit derselben Schnittstelle
+(`shortcuts_win.rs`, `instances_pipe.rs`, `plugins/headset/media_win.rs`, `sf-audio/src/wasapi.rs`,
+`sf-headset/src/hid.rs`); was nur unter einem System gilt, steht hinter `#[cfg(windows)]` bzw.
+`#[cfg(target_os = "linux")]`. Die CI prüft und baut jede Änderung auf beiden Systemen.
 
 Texte der Oberfläche laufen über `t()` (deutscher Text als Schlüssel); Übersetzungen stehen in
 `apps/desktop/src/lib/i18n/`. `npm run i18n:check` meldet fehlende Einträge.

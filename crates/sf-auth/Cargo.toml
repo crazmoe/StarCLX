@@ -24,6 +24,9 @@ keyring-core = "1"
 # Desktop-Benachrichtigung über tauri-plugin-notification).
 zbus-secret-service-keyring-store = { version = "1", features = ["rt-async-io-crypto-rust"] }
 
+[target.'cfg(windows)'.dependencies]
+windows-native-keyring-store = "1"
+
 [dev-dependencies]
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt"] }

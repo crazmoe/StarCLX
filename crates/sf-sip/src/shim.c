@@ -12,10 +12,17 @@
 #include <string.h>
 #include <re.h>
 #include <baresip.h>
+/* re_dbg.h verlangt beides; MSVC kennt #warning nicht */
+#define DEBUG_MODULE "sfsip"
+#define DEBUG_LEVEL 7
 #include <re_dbg.h>
 #include <openssl/evp.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <wincrypt.h>
+#endif
 
 /* Aus libre (src/tls/openssl/tls.h), dort nicht öffentlich deklariert */
 SSL_CTX *tls_ssl_ctx(const struct tls *tls);
@@ -33,6 +40,7 @@ enum sfsip_op {
 	SFSIP_OP_AUSRC,
 	SFSIP_OP_HEADER,
 	SFSIP_OP_AUPLAY,
+	SFSIP_OP_AUDEFAULT,
 };
 
 /* Stabile Ereigniscodes für Rust (unabhängig von enum bevent_ev) */
@@ -50,6 +58,7 @@ enum {
 	SFSIP_EV_AUDIO_ERROR,
 	SFSIP_EV_CALL_DTMF,
 	SFSIP_EV_END_OF_FILE,
+	SFSIP_EV_LOG,
 };
 
 struct sfsip_event {
@@ -61,6 +70,8 @@ struct sfsip_event {
 	const char *text;
 	int answer_delay;
 	int outgoing;
+	/* Nur SFSIP_EV_LOG: 0 Debug, 1 Info, 2 Warnung, 3 Fehler */
+	int level;
 };
 
 typedef void (sfsip_event_cb)(void *ctx, const struct sfsip_event *e);
@@ -164,6 +175,32 @@ static int pin_verify(X509_STORE_CTX *ctx, void *arg)
 	return 0;
 }
 
+#ifdef _WIN32
+/* OpenSSL kennt unter Windows keine Systemzertifikate: die
+ * Stammzertifikate aus dem Zertifikatspeicher des Systems übernehmen. */
+static void load_windows_roots(SSL_CTX *ctx)
+{
+	X509_STORE *store = SSL_CTX_get_cert_store(ctx);
+	HCERTSTORE sys = CertOpenSystemStoreA(0, "ROOT");
+	PCCERT_CONTEXT cert = NULL;
+
+	if (!store || !sys)
+		return;
+
+	while ((cert = CertEnumCertificatesInStore(sys, cert)) != NULL) {
+		const unsigned char *der = cert->pbCertEncoded;
+		X509 *x = d2i_X509(NULL, &der, (long)cert->cbCertEncoded);
+
+		if (x) {
+			(void)X509_STORE_add_cert(store, x);
+			X509_free(x);
+		}
+	}
+
+	CertCloseStore(sys, 0);
+}
+#endif
+
 static void emit(int ev, struct ua *ua, struct call *call, const char *text)
 {
 	struct sfsip_event e;
@@ -188,6 +225,41 @@ static void emit(int ev, struct ua *ua, struct call *call, const char *text)
 
 	if (event_cb)
 		event_cb(event_ctx, &e);
+}
+
+/* Meldungen von baresip und libre an Rust geben (sonst landen sie auf
+ * stdout, das eine Windows-App nicht hat). Kommt aus beliebigen Threads. */
+static void emit_log(int level, const char *msg)
+{
+	struct sfsip_event e;
+
+	memset(&e, 0, sizeof(e));
+	e.ev = SFSIP_EV_LOG;
+	e.text = msg;
+	e.answer_delay = -1;
+	e.level = level;
+	if (event_cb)
+		event_cb(event_ctx, &e);
+}
+
+static void log_handler(uint32_t level, const char *msg)
+{
+	emit_log((int)level, msg);
+}
+
+static struct log log_sink = { .h = log_handler };
+
+static void dbg_handler(int level, const char *p, size_t len, void *arg)
+{
+	char buf[512];
+	(void)arg;
+
+	if (len >= sizeof(buf))
+		len = sizeof(buf) - 1;
+	memcpy(buf, p, len);
+	buf[len] = '\0';
+	/* libre: DBG_WARNING 4, DBG_ERR 3 und darunter schwerer */
+	emit_log(level <= DBG_ERR ? 3 : level <= DBG_WARNING ? 2 : 0, buf);
 }
 
 static void bevent_handler(enum bevent_ev ev, struct bevent *event, void *arg)
@@ -257,6 +329,21 @@ static struct ua *find_ua_for_call(const char *id, bool incoming_only,
 	}
 
 	return NULL;
+}
+
+/* "modul,gerät" in die Standardeinstellung kopieren */
+static void set_default(char *v, char *mod, size_t mod_sz, char *dev,
+			size_t dev_sz)
+{
+	char *d;
+
+	if (!v)
+		return;
+	d = strchr(v, ',');
+	if (d)
+		*d++ = '\0';
+	str_ncpy(mod, v, mod_sz);
+	str_ncpy(dev, d ? d : "", dev_sz);
 }
 
 static void mqueue_handler(int id, void *data, void *arg)
@@ -332,6 +419,19 @@ static void mqueue_handler(int id, void *data, void *arg)
 				*dev++ = '\0';
 			err = audio_set_player(call_audio(call), c->b, dev);
 		}
+		break;
+
+	case SFSIP_OP_AUDEFAULT:
+		/* a: Wiedergabe, b: Aufnahme, je "modul,gerät" oder NULL; gilt
+		 * für Gespräche, die danach beginnen */
+		set_default(c->a, conf_config()->audio.play_mod,
+			    sizeof(conf_config()->audio.play_mod),
+			    conf_config()->audio.play_dev,
+			    sizeof(conf_config()->audio.play_dev));
+		set_default(c->b, conf_config()->audio.src_mod,
+			    sizeof(conf_config()->audio.src_mod),
+			    conf_config()->audio.src_dev,
+			    sizeof(conf_config()->audio.src_dev));
 		break;
 
 	case SFSIP_OP_HEADER:
@@ -431,6 +531,8 @@ int sfsip_run(const char *config, const char *software, const char *pinlist,
 		dbg_init(DBG_WARNING, DBG_NONE);
 		log_enable_stdout(false);
 	}
+	dbg_handler_set(dbg_handler, NULL);
+	log_register_handler(&log_sink);
 
 	err = conf_configure_buf((const uint8_t *)config, strlen(config));
 	if (err)
@@ -448,9 +550,13 @@ int sfsip_run(const char *config, const char *software, const char *pinlist,
 	err = str_dup(&pins, pinlist ? pinlist : "");
 	if (err)
 		goto out;
-	if (uag_tls() && tls_ssl_ctx(uag_tls()))
+	if (uag_tls() && tls_ssl_ctx(uag_tls())) {
+#ifdef _WIN32
+		load_windows_roots(tls_ssl_ctx(uag_tls()));
+#endif
 		SSL_CTX_set_cert_verify_callback(tls_ssl_ctx(uag_tls()),
 						 pin_verify, NULL);
+	}
 
 	err = conf_modules();
 	if (err)
@@ -482,6 +588,8 @@ int sfsip_run(const char *config, const char *software, const char *pinlist,
 	mod_close();
 	re_thread_async_close();
 	libre_close();
+	log_unregister_handler(&log_sink);
+	dbg_handler_set(NULL, NULL);
 
 	event_cb = NULL;
 	event_ctx = NULL;

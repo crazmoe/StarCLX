@@ -2,6 +2,11 @@
 cmake_minimum_required(VERSION 3.18)
 project(sfsip C)
 
+# Pfade von build.rs können unter Windows Backslashes enthalten
+foreach(var SFSIP_SHIM RE_INCLUDE BARESIP_INCLUDE)
+  file(TO_CMAKE_PATH "${${var}}" ${var})
+endforeach()
+
 find_package(re CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 add_compile_definitions(${RE_DEFINITIONS})

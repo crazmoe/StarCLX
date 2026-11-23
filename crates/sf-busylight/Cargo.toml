@@ -1,9 +1,12 @@
 [package]
 name = "sf-busylight"
-description = "Kuando Busylight über hidraw: Farbe, Blinken und Klingelton"
+description = "Kuando Busylight über USB-HID: Farbe, Blinken und Klingelton"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 tracing.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+hidapi = { version = "2", default-features = false, features = ["windows-native"] }

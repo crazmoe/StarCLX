@@ -285,10 +285,15 @@ impl Phone {
         app_version: &str,
         events: mpsc::UnboundedSender<PhoneEvent>,
     ) -> PhoneResult<Self> {
-        let creds = match hub
-            .register_sip_device(sf_onehub::SIP_DEVICE_ID, app_version)
-            .await
-        {
+        // Zum Vergleichen lässt sich das App-Telefon wie bei sfctl wählen
+        let device = std::env::var("SF_SIP_DEVICE_ID")
+            .ok()
+            .filter(|d| !d.trim().is_empty());
+        let device = device
+            .as_deref()
+            .map_or(sf_onehub::SIP_DEVICE_ID, str::trim);
+        tracing::info!(device, "App-Telefon anmelden");
+        let creds = match hub.register_sip_device(device, app_version).await {
             Ok(c) => c,
             // Ohne Recht/Lizenz uci_autoprovisioning gibt die Anlage kein
             // App-Telefon heraus. Bewusst kein Ausweichen auf die Geräte-ID
@@ -494,6 +499,14 @@ impl Phone {
         Ok(false)
     }
 
+    /// Geräte, auf denen die nächsten Gespräche beginnen; `None` lässt die
+    /// Seite, wie sie ist, leer heisst Standardgerät.
+    pub fn set_default_audio(&self, player: Option<&str>, source: Option<&str>) -> PhoneResult<()> {
+        self.sip()?
+            .set_default_audio(sf_sip::AUDIO_DRIVER, player, source)?;
+        Ok(())
+    }
+
     /// Lenkt Wiedergabe und Aufnahme eines laufenden SIP-Anrufs auf andere
     /// Geräte (PipeWire-Knotennamen); `None` lässt die Seite, wie sie ist.
     pub fn set_call_audio(
@@ -504,10 +517,10 @@ impl Phone {
     ) -> PhoneResult<()> {
         let sip = self.sip()?;
         if let Some(dev) = player {
-            sip.set_player(sip_call_id, "pipewire", dev)?;
+            sip.set_player(sip_call_id, sf_sip::AUDIO_DRIVER, dev)?;
         }
         if let Some(dev) = source {
-            sip.set_source(sip_call_id, "pipewire", dev)?;
+            sip.set_source(sip_call_id, sf_sip::AUDIO_DRIVER, dev)?;
         }
         Ok(())
     }

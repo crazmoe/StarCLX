@@ -6,12 +6,16 @@
 //! `_NET_WM_STRUT_PARTIAL`, unter Wayland als layer-shell-Fläche mit
 //! exklusiver Zone. gtk-layer-shell wird zur Laufzeit geladen; fehlt es oder
 //! kann der Compositor es nicht (GNOME), bleibt es ein normales Fenster.
+//! Unter Windows meldet „Immer sichtbar“ die Leiste als AppBar an, damit
+//! andere Fenster wie bei der Taskleiste Platz machen.
 //! „Einfahren“ lässt nur einen schmalen Streifen am Rand stehen; berührt
 //! die Maus ihn, fährt die Oberfläche das Fenster über `quick_dock_expand`
 //! wieder aus.
 
 use crate::settings::Prefs;
 use std::sync::Mutex;
+#[cfg(windows)]
+use std::sync::atomic::AtomicU32;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Manager};
 
@@ -20,6 +24,10 @@ static STATE: Mutex<(String, bool)> = Mutex::new((String::new(), false));
 
 /// Gewählter Bildschirm (Name wie von Tauri gemeldet; leer = Hauptbildschirm)
 static MONITOR: Mutex<String> = Mutex::new(String::new());
+
+/// Windows: Wartezeit in ms, bis die eingefahrene Leiste bei Maus am Rand ausfährt
+#[cfg(windows)]
+static EXPAND_DELAY: AtomicU32 = AtomicU32::new(1000);
 
 /// Bildschirm zum Andocken: der gewählte, sonst der Hauptbildschirm
 fn pick_monitor(w: &tauri::WebviewWindow) -> Option<tauri::Monitor> {
@@ -52,6 +60,8 @@ pub fn apply(app: &AppHandle, prefs: &Prefs) {
     };
     let next = (edge, prefs.quick_dock_autohide);
     *MONITOR.lock().unwrap() = prefs.quick_dock_monitor.clone();
+    #[cfg(windows)]
+    EXPAND_DELAY.store(prefs.quick_expand_delay, Ordering::Relaxed);
     let changed = {
         let mut s = STATE.lock().unwrap();
         let changed = *s != next;
@@ -431,7 +441,277 @@ mod imp {
     pub fn release(_: &AppHandle) {}
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(windows)]
+mod imp {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
+    use windows::Win32::Foundation::{HWND, POINT, RECT};
+    use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
+    use windows::Win32::UI::Shell::{
+        ABE_LEFT, ABE_RIGHT, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA,
+        SHAppBarMessage,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetClassNameW, GetCursorPos, GetForegroundWindow, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE,
+        SWP_NOSIZE, SWP_SHOWWINDOW, SetWindowPos,
+    };
+
+    /// Breite der ausgefahrenen Leiste (logische Pixel)
+    const WIDTH: f64 = 300.0;
+    /// Breite des Streifens im eingefahrenen Zustand (physische Pixel)
+    const STRIP: u32 = 6;
+
+    /// Fenster ist als AppBar angemeldet
+    static APPBAR: AtomicBool = AtomicBool::new(false);
+    /// Lage der Leiste zuletzt (links, oben, rechts, unten) und ob ausgefahren
+    static LAST: std::sync::Mutex<(RECT, bool)> = std::sync::Mutex::new((
+        RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        },
+        false,
+    ));
+    static WATCHING: AtomicBool = AtomicBool::new(false);
+
+    /// Leiste zuoberst legen, ohne ihr den Fokus zu geben. Das einmal gesetzte
+    /// „immer im Vordergrund“ reicht nicht: Andere Programme, die selbst
+    /// zuoberst liegen wollen, schieben sich sonst darüber.
+    fn raise(hwnd: HWND) {
+        let _ = unsafe {
+            SetWindowPos(
+                hwnd,
+                Some(HWND_TOPMOST),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+            )
+        };
+    }
+
+    /// Fenster der Windows-Oberfläche (Taskleiste, ihre Kontextmenüs und
+    /// Sprunglisten, Startmenü, Suche, Infobereich, Desktop): Wird eines davon
+    /// aktiv, die Leiste nicht darüber legen, sonst verdeckt sie deren Menüs.
+    fn shell_window(hwnd: HWND) -> bool {
+        const SHELL: &[&str] = &[
+            "Shell_TrayWnd",
+            "Shell_SecondaryTrayWnd",
+            "NotifyIconOverflowWindow",
+            "TopLevelWindowForOverflowXamlIsland",
+            "Windows.UI.Core.CoreWindow",
+            "Xaml_WindowedPopupClass",
+            "DV2ControlHost",
+            "#32768",
+            "Progman",
+            "WorkerW",
+        ];
+        let mut buf = [0u16; 128];
+        let n = unsafe { GetClassNameW(hwnd, &mut buf) };
+        if n <= 0 {
+            return false;
+        }
+        let class = String::from_utf16_lossy(&buf[..n as usize]);
+        SHELL.contains(&class.as_str())
+    }
+
+    /// Mausposition am Rand selbst prüfen: Die Webansicht im schmalen
+    /// Streifen meldet das Überfahren nicht zuverlässig. Wechselt das aktive
+    /// Fenster, die Leiste wieder nach oben holen.
+    fn watch(app: &AppHandle) {
+        if WATCHING.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        let app = app.clone();
+        std::thread::spawn(move || {
+            let mut outside_since: Option<std::time::Instant> = None;
+            // Maus am Rand der eingefahrenen Leiste seit; erst nach der
+            // eingestellten Wartezeit ausfahren (kurz drüber hinaus fahren öffnet nicht)
+            let mut inside_since: Option<std::time::Instant> = None;
+            let mut foreground = 0isize;
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(120));
+                let (edge, autohide) = super::STATE.lock().unwrap().clone();
+                if !edge.is_empty() {
+                    let fg_hwnd = unsafe { GetForegroundWindow() };
+                    let fg = fg_hwnd.0 as isize;
+                    if fg != foreground {
+                        foreground = fg;
+                        if !shell_window(fg_hwnd)
+                            && let Some(Ok(raw)) = app.get_webview_window("quick").map(|w| w.hwnd())
+                        {
+                            raise(HWND(raw.0 as _));
+                        }
+                    }
+                }
+                if edge.is_empty() || !autohide {
+                    outside_since = None;
+                    inside_since = None;
+                    continue;
+                }
+                let mut pt = POINT::default();
+                if unsafe { GetCursorPos(&mut pt) }.is_err() {
+                    continue;
+                }
+                let (rc, open) = *LAST.lock().unwrap();
+                let inside =
+                    pt.x >= rc.left && pt.x < rc.right && pt.y >= rc.top && pt.y < rc.bottom;
+                if !open {
+                    if !inside {
+                        inside_since = None;
+                        continue;
+                    }
+                    let delay = super::EXPAND_DELAY.load(Ordering::Relaxed);
+                    if inside_since
+                        .get_or_insert_with(std::time::Instant::now)
+                        .elapsed()
+                        >= std::time::Duration::from_millis(delay as u64)
+                    {
+                        inside_since = None;
+                        dock(&app, &edge, true, true);
+                    }
+                    continue;
+                }
+                inside_since = None;
+                // Nicht einfahren, solange die Maustaste gedrückt ist (Gespräch ziehen)
+                let pressed = unsafe { GetAsyncKeyState(VK_LBUTTON.0 as i32) } as u16 & 0x8000 != 0;
+                if inside || pressed {
+                    outside_since = None;
+                } else if outside_since
+                    .get_or_insert_with(std::time::Instant::now)
+                    .elapsed()
+                    > std::time::Duration::from_millis(700)
+                {
+                    outside_since = None;
+                    dock(&app, &edge, true, false);
+                }
+            }
+        });
+    }
+
+    fn appbar(hwnd: HWND, edge: u32, rc: RECT, msg: u32) -> RECT {
+        let mut abd = APPBARDATA {
+            cbSize: std::mem::size_of::<APPBARDATA>() as u32,
+            hWnd: hwnd,
+            uEdge: edge,
+            rc,
+            ..Default::default()
+        };
+        unsafe { SHAppBarMessage(msg, &mut abd) };
+        abd.rc
+    }
+
+    fn remove_appbar(hwnd: HWND) {
+        if APPBAR.swap(false, Ordering::SeqCst) {
+            appbar(hwnd, 0, RECT::default(), ABM_REMOVE);
+        }
+    }
+
+    /// `reserve`: als AppBar Platz freihalten; `open`: ausgefahren
+    pub fn dock(app: &AppHandle, edge: &str, autohide: bool, open: bool) {
+        let Some(w) = app.get_webview_window("quick") else {
+            return;
+        };
+        let Ok(raw) = w.hwnd() else {
+            return;
+        };
+        let hwnd = HWND(raw.0 as _);
+        let Some(mon) = super::pick_monitor(&w) else {
+            return;
+        };
+        let left = edge == "left";
+        let width = (WIDTH * mon.scale_factor()).round() as u32;
+        let width = if open { width } else { STRIP };
+        let _ = w.set_decorations(false);
+        // Ohne Schatten und runde Ecken liegt die Leiste bündig am Rand.
+        let _ = w.set_shadow(false);
+        let _ = w.set_skip_taskbar(true);
+        let _ = w.set_always_on_top(true);
+        let _ = w.set_resizable(false);
+        let _ = w.set_min_size(None::<PhysicalSize<u32>>);
+
+        let area = mon.work_area();
+        let mut rc = RECT {
+            left: area.position.x,
+            top: area.position.y,
+            right: area.position.x + area.size.width as i32,
+            bottom: area.position.y + area.size.height as i32,
+        };
+        if !autohide {
+            // Als AppBar anmelden; Windows rückt den Arbeitsbereich zurecht.
+            let ab_edge = if left { ABE_LEFT } else { ABE_RIGHT };
+            if !APPBAR.swap(true, Ordering::SeqCst) {
+                appbar(hwnd, ab_edge, rc, ABM_NEW);
+            }
+            let m = mon.position();
+            let s = mon.size();
+            rc = RECT {
+                left: m.x,
+                top: m.y,
+                right: m.x + s.width as i32,
+                bottom: m.y + s.height as i32,
+            };
+            rc = appbar(hwnd, ab_edge, rc, ABM_QUERYPOS);
+            if left {
+                rc.right = rc.left + width as i32;
+            } else {
+                rc.left = rc.right - width as i32;
+            }
+            rc = appbar(hwnd, ab_edge, rc, ABM_SETPOS);
+        } else {
+            remove_appbar(hwnd);
+            // Waagrecht vom Bildschirmrand aus: Der Arbeitsbereich enthält
+            // den eben freigegebenen AppBar-Platz unter Umständen noch.
+            let m = mon.position();
+            let s = mon.size();
+            if left {
+                rc.left = m.x;
+                rc.right = m.x + width as i32;
+            } else {
+                rc.right = m.x + s.width as i32;
+                rc.left = rc.right - width as i32;
+            }
+        }
+        let _ = w.set_size(PhysicalSize::new(
+            (rc.right - rc.left) as u32,
+            (rc.bottom - rc.top) as u32,
+        ));
+        let _ = w.set_position(PhysicalPosition::new(rc.left, rc.top));
+        *LAST.lock().unwrap() = (rc, open);
+        watch(app);
+        let _ = w.show();
+        raise(hwnd);
+    }
+
+    pub fn undock(app: &AppHandle) {
+        let Some(w) = app.get_webview_window("quick") else {
+            return;
+        };
+        if let Ok(raw) = w.hwnd() {
+            remove_appbar(HWND(raw.0 as _));
+        }
+        let _ = w.set_always_on_top(false);
+        let _ = w.set_skip_taskbar(false);
+        let _ = w.set_decorations(true);
+        let _ = w.set_shadow(true);
+        let _ = w.set_resizable(true);
+        let _ = w.set_min_size(Some(tauri::LogicalSize::new(260.0, 240.0)));
+        let _ = w.set_size(tauri::LogicalSize::new(340.0, 480.0));
+        let _ = w.center();
+        let _ = w.hide();
+    }
+
+    /// Beim Beenden den reservierten Platz freigeben
+    pub fn release(app: &AppHandle) {
+        if let Some(Ok(raw)) = app.get_webview_window("quick").map(|w| w.hwnd()) {
+            remove_appbar(HWND(raw.0 as _));
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "linux", windows)))]
 mod imp {
     use tauri::AppHandle;
     pub fn dock(_: &AppHandle, _: &str, _: bool, _: bool) {}

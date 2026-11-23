@@ -8,7 +8,7 @@
   import Icon from "../../Icon.svelte";
   import { phone, run, canDial } from "../call/phone.svelte";
   import { initials, type Contact, type Folder } from "./contacts";
-  import { contactEdit, editContact, newContact } from "./contactform.svelte";
+  import { contactEdit, editContact, newContact } from "./contactform-state.svelte";
   import { t } from "../../i18n.svelte";
 
   let folders = $state<Folder[]>([]);

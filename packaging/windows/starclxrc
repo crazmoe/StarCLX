@@ -1,0 +1,124 @@
+# Alle Vorgaben für StarCLX unter Windows
+# Ablage: C:\ProgramData\StarCLX\starclxrc  (Dateiname ohne Endung)
+# Diese erste Zeile muss ein Kommentar bleiben.
+#
+#   schluessel=wert       Startwert: gilt, bis der Benutzer die Einstellung selbst ändert
+#   schluessel[$i]=wert   gesperrt: gilt immer, in StarCLX ausgegraut
+#   [General][$i]         sperrt alle Einträge dieser Gruppe
+#
+# Ja/Nein-Werte: true/false. Listen als JSON.
+# StarCLX liest die Datei nur beim Start (ganz beenden über das Symbol bei der Uhr).
+# Zum Benutzen das "#" vor der gewünschten Zeile entfernen.
+
+[General]
+
+## Anmeldung
+#server=https://pbx.firma.ch
+#server[$i]=https://pbx.firma.ch
+
+## Softphone
+#softphone=true
+# Softphone bei der Anmeldung bzw. bei Rufannahme als primäres Telefon wählen
+#primary_on_login=false
+#primary_on_answer=false
+# Tastentöne: rtp (Standard), info, auto oder pbx
+#dtmf_mode=rtp
+# Bevorzugte Audiogeräte (Namen wie in Windows), leer: Windows-Standard
+#speakers=[]
+#microphones=[]
+#ring_devices=[]
+
+## Benachrichtigungen und Klingeltöne
+#notify_missed=true
+#notify_missed_group=true
+#ringtone=true
+#ringtone_internal=Klassisch
+#ringtone_external=Klassisch
+# Bei eingehendem Anruf StarCLX in den Vordergrund holen
+#bring_to_front=true
+
+## Busylight und Headset
+#busylight=false
+# 0 bis 100
+#busylight_volume=50
+#headset=true
+# Play/Pause-Taste (Bluetooth) als Gesprächstaste: auto, always oder never
+#play_pause_call=auto
+
+## Chat und Abwesenheit
+#chat_notify=true
+#chat_sound=true
+# Ordner für empfangene Dateien, leer: Downloads
+#download_dir=
+#away_on_idle=true
+#away_on_screensaver=true
+#away_on_lock=true
+#away_text=Bin gleich zurück
+#offline_text=Feierabend
+
+## Darstellung
+# system, dark oder light
+#theme=system
+# Akzentfarbe als #rrggbb, leer = Orange
+#accent=
+# de, en, fr oder it
+#language=de
+# tabs (Reiter) oder free (frei angeordnete Kacheln)
+#workspace=tabs
+#fkey_columns=3
+
+## Windows-Integration
+#autostart=true
+#start_minimized=false
+#minimize_to_tray=false
+#always_on_top=false
+# tel:/callto:/sip:-Links mit StarCLX öffnen
+#handle_tel_links=true
+# Landesvorwahl ohne "+" (41 Schweiz, 49 Deutschland, 43 Österreich)
+#default_country_code=41
+
+## Schnellwahlleiste
+# am Bildschirmrand andocken: left, right oder leer (nicht angedockt)
+#quick_dock=
+#quick_dock_autohide=false
+# eingefahrene Leiste erst nach so vielen Millisekunden am Rand ausfahren (0 = sofort)
+#quick_expand_delay=1000
+# Inhalt: fkeys (Funktionstasten), favorites oder leer = beides
+#quick_content=
+# Gespräch auf Kollegen ziehen: leer = Rückfrage, direct = direkt vermitteln, ask = jedes Mal fragen
+#drag_transfer=
+
+## URL oder Programm bei Anruf (Liste, JSON)
+# trigger: ringing, answered oder outgoing; $(callerid) steht für die Rufnummer
+#call_actions=[{"enabled":true,"trigger":"ringing","filter":"","external_only":true,"target":"https://crm.firma.ch/suche?nr=$(callerid)"}]
+
+## Türkameras (Liste, JSON)
+#door_cams=[{"name":"Eingang","url":"rtsp://kamera.firma.ch/stream"}]
+
+## Nextcloud (nur wenn der Benutzer Nextcloud verbindet)
+#nextcloud_folder=StarCLX
+# Geteilte Links laufen nach so vielen Tagen ab, 0 = nie
+#nextcloud_link_days=7
+#nextcloud_link_password=false
+#nextcloud_caller_names=true
+
+## Protokoll
+#verbose_log=false
+
+## Fehlerberichte an StarDash (https://github.com/crazmoe/StarDash)
+# Eigene Gruppe am Ende der Datei; gilt nur hier, Benutzer können es weder
+# ein- noch ausschalten. Ohne url= sendet StarCLX nie etwas.
+#[Support]
+# Adresse von StarDash und Firmen-Schlüssel (stardash firma-anlegen <Name>)
+#url=https://stardash.firma.ch
+#token=
+# Automatisch senden bei: crash, sip, login, wake (Komma-Liste; aus = nie)
+# Send automatically on: crash, sip, login, wake (comma list; off = never)
+#auto=crash,sip,login,wake
+# Ausführliches Protokoll immer an
+#verbose=true
+# Statusmeldung alle x Minuten (0 = aus)
+#heartbeat=15
+# Interne Nummern (bis 6 Stellen): klar oder unkenntlich
+# Internal numbers (up to 6 digits): clear or hidden
+#internal_numbers=klar
