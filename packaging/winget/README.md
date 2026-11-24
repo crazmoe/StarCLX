@@ -7,10 +7,10 @@ Paket-ID `crazmoe.StarCLX`. Danach installiert man StarCLX unter Windows mit
 winget install crazmoe.StarCLX
 ```
 
-Bis Version 2.0 hiess die Windows-Version StarCMX (`crazmoe.StarCMX`). Dieser Eintrag ist in
-winget-pkgs aufgenommen, wird aber nicht weitergeführt: StarCLX bekommt die neue ID
-`crazmoe.StarCLX`. Das StarCLX-Setup entfernt ein installiertes StarCMX selbst und übernimmt
-Einstellungen und Anmeldung. Der alte Eintrag lässt sich danach entfernen (siehe unten).
+Bis Version 2.0 hiess die Windows-Version StarCMX (`crazmoe.StarCMX`). Dieser Eintrag wurde nie
+in winget-pkgs aufgenommen (der PR dazu wird geschlossen); StarCLX wird direkt als
+`crazmoe.StarCLX` eingereicht. Das StarCLX-Setup entfernt ein installiertes StarCMX selbst und
+übernimmt Einstellungen und Anmeldung.
 
 ## Erste Einreichung (einmalig, von Hand)
 
@@ -24,7 +24,9 @@ wingetcreate submit --token <token> packaging\winget\manifests\c\crazmoe\StarCLX
 
 Alternativ im Fork `crazmoe/winget-pkgs` einen Branch anlegen, den Ordner an dieselbe Stelle
 hochladen und einen PR gegen `microsoft/winget-pkgs` öffnen. Die Prüfung von Microsoft
-(Installation in einer Test-VM, Virenscan) dauert meist ein bis drei Tage.
+(Installation in einer Test-VM, Virenscan) dauert meist ein bis drei Tage. Beim ersten PR
+verlangt der Bot die Microsoft-CLA: im PR mit `@microsoft-github-policy-service agree`
+antworten, sonst bleibt er mit dem Label `Needs-CLA` liegen.
 
 Vor dem Einreichen lokal prüfen:
 
@@ -48,15 +50,3 @@ Voraussetzungen:
 Ohne Secret, oder solange `crazmoe.StarCLX` in winget-pkgs noch nicht aufgenommen ist, überspringt
 die CI den Schritt. Ein Release aus dieser Zeit lässt sich nach der Aufnahme nachmelden, indem man
 den Job `winget` seines Laufs neu startet.
-
-## Alten Eintrag crazmoe.StarCMX entfernen
-
-Erst wenn `crazmoe.StarCLX` aufgenommen ist, damit Benutzer nicht ohne Paket dastehen:
-
-```
-winget show crazmoe.StarCMX --versions
-wingetcreate delete crazmoe.StarCMX --version <version> --reason "Renamed to crazmoe.StarCLX" --token <token>
-```
-
-Für jede aufgeführte Version einmal. Bereits installierte StarCMX laufen weiter; ein
-`winget install crazmoe.StarCLX` ersetzt sie.
