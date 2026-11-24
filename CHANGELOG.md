@@ -1,5 +1,9 @@
 # Änderungen
 
+## 2.1.1 – 2026-11-24
+
+- Profilmenü → Primäres Telefon: App-Telefone erscheinen mit lesbarem Namen statt der Kennung der Anlage, z. B. „Softphone Windows“ statt „1004.WinClient“, „Softphone Linux“ statt „1004.LnxClient“, dazu Softphone Mac, iPhone, iPad, Android, Webbrowser, Microsoft Teams und Mobiltelefon (iFMC). Unbekannte Telefone (z. B. Tischtelefone) behalten ihren Namen. Gibt es einen Typ mehrfach, steht die Kennung in Klammern dahinter; beim Darüberfahren zeigt ein Hinweis immer den Originalnamen
+
 ## 2.1.0 – 2026-11-24
 
 StarCLX gibt es jetzt auch für Windows. Die bisherige Windows-Version StarCMX ist in StarCLX aufgegangen: ein Programm, eine Versionsnummer, ein Release mit allen Paketen. Das Repo crazmoe/StarCMX wird archiviert.
