@@ -144,7 +144,40 @@
       await loadRedirects();
     });
   // Telefone ohne das technische „SIP/“ davor, wie in der STARFACE-App
-  const phoneName = (p: PhoneView) => p.name.replace(/^SIP\//, "");
+  const rawPhoneName = (p: PhoneView) => p.name.replace(/^SIP\//, "");
+  // App-Telefone heissen auf der Anlage „<Nummer>.<Typ>“ (z. B. 1004.WinClient).
+  // Für bekannte Typen einen lesbaren Namen zeigen, sonst den Originalnamen.
+  // Typen aus dem Anlagen-Code (StarfaceType, PhoneType), ältere Schreibweisen inklusive
+  const phoneKinds: Record<string, string> = {
+    winclient: "Softphone Windows",
+    macclient: "Softphone Mac",
+    linuxclient: "Softphone Linux",
+    lnxclient: "Softphone Linux",
+    sfiphone: "iPhone",
+    iphoneclient: "iPhone",
+    iphone: "iPhone",
+    sfipad: "iPad",
+    ipad: "iPad",
+    sfandroid: "Android",
+    androidclient: "Android",
+    android: "Android",
+    webrtc: "Webbrowser",
+    teams: "Microsoft Teams",
+    sfteams: "Microsoft Teams",
+    ifmc: "Mobiltelefon (iFMC)",
+    fmc: "Mobiltelefon (iFMC)",
+  };
+  const readableName = (p: PhoneView) => {
+    const kind = rawPhoneName(p).match(/[._-]([A-Za-z]+)$/)?.[1]?.toLowerCase();
+    return kind && phoneKinds[kind] ? t(phoneKinds[kind]) : null;
+  };
+  // Gibt es denselben Typ mehrfach, hilft der Originalname beim Unterscheiden
+  const phoneName = (p: PhoneView) => {
+    const name = readableName(p);
+    if (!name) return rawPhoneName(p);
+    const twin = phones.some((o) => o.id !== p.id && readableName(o) === name);
+    return twin ? `${name} (${rawPhoneName(p)})` : name;
+  };
   const numberLabel = (n: SignalingNumber) => (n.suppressed ? t("Rufnummer unterdrücken") : n.number);
 </script>
 
@@ -213,7 +246,7 @@
       {:else if sub === "phone"}
         <span class="title">{t("Primäres Telefon auswählen")}</span>
         {#each phones as p (p.id)}
-          <button class="opt" class:sel={p.primary} onclick={() => setPrimary(p.id)}>{phoneName(p)}{#if p.primary}<span class="tick"><Icon name="check" size={16} /></span>{/if}</button>
+          <button class="opt" class:sel={p.primary} title={rawPhoneName(p)} onclick={() => setPrimary(p.id)}>{phoneName(p)}{#if p.primary}<span class="tick"><Icon name="check" size={16} /></span>{/if}</button>
         {:else}<span class="muted pad">{t("Keine Telefone")}</span>{/each}
         <span class="muted pad">{t("Das Wählen erfolgt über dieses Telefon.")}</span>
       {:else if sub === "number"}
