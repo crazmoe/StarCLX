@@ -18,7 +18,8 @@ pub enum Event {
     /// Anrufzustand irgendeiner Instanz geändert (nur im Hauptclient), siehe
     /// [`crate::instances::devices`]
     Devices,
-    /// Diese Instanz ist Hauptclient geworden
+    /// Diese Instanz ist Hauptclient geworden (nur mit mehreren Instanzen)
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Role,
 }
 

@@ -282,7 +282,7 @@
   <div class="dialog" role="dialog" aria-label={t("Funktionstaste bearbeiten")}>
     <h4>{k.id ? typeInfo(k.functionKeyType).label : t("{typ} hinzufügen", { typ: typeInfo(k.functionKeyType).label })}</h4>
     {#if !typeInfo(k.functionKeyType).usable}
-      <p class="small muted">{t("Diese Taste wirkt auf Tischtelefonen; im Linux-Client wird sie nur angezeigt.")}</p>
+      <p class="small muted">{t("Diese Taste wirkt auf Tischtelefonen; in StarCLX wird sie nur angezeigt.")}</p>
     {/if}
     {#if k.functionKeyType !== "SEPARATOR"}
       <label class="row"><span>{t("Bezeichnung")}</span><input type="text" bind:value={k.name} placeholder={defaultName(k)} /></label>

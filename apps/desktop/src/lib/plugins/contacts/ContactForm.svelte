@@ -3,7 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import Icon from "../../Icon.svelte";
   import type { Folder } from "./contacts";
-  import { contactEdit, PHONE_KEYS, type ContactField } from "./contactform.svelte";
+  import { contactEdit, PHONE_KEYS, type ContactField } from "./contactform-state.svelte";
   import { t } from "../../i18n.svelte";
 
   let fields = $state<ContactField[]>([]);

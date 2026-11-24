@@ -48,10 +48,11 @@
     { id: "favorites", x: 0, y: 30, w: 12, h: 7, visible: true },
   ];
 
-  /** Gespeicherte Kacheln, ergänzt um neue und ohne unbekannte */
-  export function tilesOf(saved: Tile[] | null | undefined): Tile[] {
+  /** Gespeicherte Kacheln, ergänzt um neue und ohne unbekannte.
+   *  hideNew: neu hinzugekommene Kacheln ausgeblendet ergänzen (eigene Ansichten) */
+  export function tilesOf(saved: Tile[] | null | undefined, hideNew = false): Tile[] {
     const list = (saved ?? []).filter((t) => DEFAULT_TILES.some((d) => d.id === t.id));
-    for (const d of DEFAULT_TILES) if (!list.some((t) => t.id === d.id)) list.push({ ...d });
+    for (const d of DEFAULT_TILES) if (!list.some((t) => t.id === d.id)) list.push({ ...d, visible: d.visible && !hideNew });
     return list.map((t) => ({ ...t }));
   }
 
@@ -59,7 +60,7 @@
   export function viewsOf(saved: View[] | null | undefined, legacy: Tile[] | null | undefined): View[] {
     const list = (saved ?? []).filter((v) => v && typeof v.id === "string");
     if (!list.length) return [{ id: "main", name: "", icon: "workspace", tiles: tilesOf(legacy) }];
-    return list.map((v) => ({ id: v.id, name: v.name ?? "", icon: v.icon || "workspace", tiles: tilesOf(v.tiles) }));
+    return list.map((v) => ({ id: v.id, name: v.name ?? "", icon: v.icon || "workspace", tiles: tilesOf(v.tiles, v.id !== "main") }));
   }
 
   /** Neue, leere Ansicht: alle Kacheln da, aber ausgeblendet */

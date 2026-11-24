@@ -17,5 +17,6 @@ rcgen = "0.14"
 sf-tls = { path = "../sf-tls" }
 
 [build-dependencies]
+cc = "1"
 cmake = "0.1"
 pkg-config = "0.3"

@@ -1,6 +1,9 @@
-//! Desktop-App. Anmeldung im Systembrowser mit Rückkehr über
-//! `starface-app://login`, stilles Wiederanmelden mit dem Refresh-Token aus
-//! dem Schlüsselbund, ein Tray-Symbol und das Softphone.
+//! Desktop-App. Anmeldung im eigenen Anmeldefenster, das die Rückkehr über
+//! `starface-app://login` abfängt, stilles Wiederanmelden mit dem
+//! Refresh-Token aus dem Schlüsselbund, ein Tray-Symbol und das Softphone.
+//!
+//! Linux und Windows teilen sich den Code; wo es nicht geht, gibt es je eine
+//! Variante mit derselben Schnittstelle (`instances`, `shortcuts`, `flatpak`).
 
 mod audio;
 mod bus;
@@ -8,6 +11,10 @@ mod certs;
 mod connection;
 mod desktop;
 mod dock;
+#[cfg(target_os = "linux")]
+mod flatpak;
+#[cfg(not(target_os = "linux"))]
+#[path = "flatpak_none.rs"]
 mod flatpak;
 mod i18n;
 mod instances;
@@ -17,6 +24,10 @@ mod plugins;
 mod policy;
 mod presence;
 mod settings;
+#[cfg(target_os = "linux")]
+mod shortcuts;
+#[cfg(windows)]
+#[path = "shortcuts_win.rs"]
 mod shortcuts;
 mod support;
 mod wake;
@@ -29,7 +40,7 @@ use serde::Serialize;
 use settings::Prefs;
 use sf_core::{Session, SessionEvent};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
@@ -716,26 +727,18 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .enumerate()
         .filter(|(_, a)| server_allowed(&a.server))
         .collect();
+    type Item<'a> = &'a dyn tauri::menu::IsMenuItem<tauri::Wry>;
+    let mut top: Vec<Item> = vec![&header, &separator, &open];
     // Angedockt steht die Schnellwahl ohnehin am Bildschirmrand.
-    let without_quick = |menu: Menu<tauri::Wry>| -> tauri::Result<Menu<tauri::Wry>> {
-        if dock::docked() {
-            menu.remove(&quick)?;
-        }
-        Ok(menu)
-    };
+    if !dock::docked() {
+        top.push(&quick);
+    }
+    if instances::MULTI {
+        top.push(&another);
+    }
+    let bottom: [Item; 2] = [&logout_item, &quit];
     if accounts.len() < 2 {
-        return without_quick(Menu::with_items(
-            app,
-            &[
-                &header,
-                &separator,
-                &open,
-                &quick,
-                &another,
-                &logout_item,
-                &quit,
-            ],
-        )?);
+        return Menu::with_items(app, &[top, bottom.to_vec()].concat());
     }
     let items = accounts
         .iter()
@@ -756,19 +759,8 @@ fn tray_menu(app: &AppHandle, session: Option<&Session>) -> tauri::Result<Menu<t
         .map(|i| i as &dyn tauri::menu::IsMenuItem<tauri::Wry>)
         .collect();
     let switch = Submenu::with_items(app, t("Konto wechseln"), true, &refs)?;
-    without_quick(Menu::with_items(
-        app,
-        &[
-            &header,
-            &separator,
-            &open,
-            &quick,
-            &another,
-            &switch,
-            &logout_item,
-            &quit,
-        ],
-    )?)
+    top.push(&switch);
+    Menu::with_items(app, &[top, bottom.to_vec()].concat())
 }
 
 /// Rechnername der Anlage, sonst die Adresse, wie sie ist
@@ -814,6 +806,17 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let mut tray = TrayIconBuilder::with_id(instances::tray_id())
         .tooltip(t("StarCLX: abgemeldet"))
         .menu(&menu)
+        // Menü mit rechts, Doppelklick links öffnet das Hauptfenster
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        })
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => show_main_window(app),
             "quick" => show_quick_window(app),
@@ -861,8 +864,8 @@ pub fn run() {
         tracing::error!(error = %e, "Schlüsselbund nicht verfügbar; Anmeldung wird nicht gespeichert");
     }
 
-    // Unter Linux startet der Browser für starface-app:// einen zweiten
-    // Prozess; der reicht die URL an den Hauptclient weiter und endet.
+    // Ein Link (starface-app://, tel: …) startet einen zweiten Prozess; der
+    // reicht die URL an den Hauptclient weiter und endet.
     // Tastenkürzel kommen als `--action …` über denselben Weg.
     if !instances::init() {
         return;
@@ -870,7 +873,11 @@ pub fn run() {
 
     let (events_tx, mut events_rx) = mpsc::unbounded_channel();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Unter Windows meldet die App die Kürzel selbst systemweit an.
+    #[cfg(windows)]
+    let builder = builder.plugin(tauri_plugin_global_shortcut::Builder::new().build());
+    builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -918,6 +925,9 @@ pub fn run() {
             // Desktop-Anbindung nur im Hauptclient; weitere Instanzen
             // startet er selbst wieder.
             if instances::is_main() {
+                // Unter Windows hiess StarCLX früher StarCMX
+                #[cfg(windows)]
+                desktop::remove_starcmx_leftovers();
                 // Tastenkürzel neu eintragen, damit sie nach einem Update
                 // oder der Umbenennung auf das aktuelle Programm zeigen.
                 if prefs.hotkeys.enabled
@@ -1161,7 +1171,7 @@ pub fn run() {
             support::support_send,
             audio::audio_info,
             audio::audio_preview,
-            audio::bluetooth_names,
+            audio::device_names,
             audio::audio_stop,
             audio::mic_test,
             audio::pick_ringtone

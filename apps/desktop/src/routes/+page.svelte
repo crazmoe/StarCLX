@@ -1,7 +1,7 @@
 <script lang="ts">
   import logo from "#lib/assets/logo.png";
   import ContactForm from "#lib/plugins/contacts/ContactForm.svelte";
-  import { contactEdit } from "#lib/plugins/contacts/contactform.svelte.ts";
+  import { contactEdit } from "#lib/plugins/contacts/contactform-state.svelte.ts";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onMount, tick, untrack } from "svelte";
@@ -21,10 +21,10 @@
   import { initQueues, queues, waitingCalls } from "#lib/plugins/queue/queue.svelte.ts";
   import ConferenceForm from "#lib/plugins/conference/ConferenceForm.svelte";
   import { activeConferences, conferenceEdit, conferences, initConferences, loadConferences } from "#lib/plugins/conference/conference.svelte.ts";
-  import { initVoicemail, loadVoicemails, unheard, voicemail } from "#lib/plugins/voicemail/voicemail.svelte.ts";
-  import { initRecordings, loadRecordings, recordings } from "#lib/plugins/recordings/recordings.svelte.ts";
+  import { initVoicemail, loadVoicemails, unheard, voicemail } from "#lib/plugins/voicemail/voicemail-state.svelte.ts";
+  import { initRecordings, loadRecordings, recordings } from "#lib/plugins/recordings/recordings-state.svelte.ts";
   import { initNextcloud } from "#lib/plugins/nextcloud/nextcloud.svelte.ts";
-  import { initChat, unreadTotal } from "#lib/plugins/chat/chat.svelte.ts";
+  import { initChat, unreadTotal } from "#lib/plugins/chat/chat-state.svelte.ts";
   import Icon, { type IconName } from "#lib/Icon.svelte";
   import Settings from "#lib/Settings.svelte";
   import MeMenu from "#lib/MeMenu.svelte";

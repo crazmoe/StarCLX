@@ -12,6 +12,12 @@
 //! der Bus ihn an die älteste weiter, und diese übernimmt seine Aufgaben.
 //!
 //! Laufen zwei oder mehr, zeigen Fenstertitel und Tray die Anlage.
+//!
+//! Unter Windows übernehmen Named Pipes die Rolle des Busses
+//! (`instances_pipe.rs`): je Instanz eine Pipe, der Hauptclient hat
+//! zusätzlich die des Hauptclients. Wer Hauptclient ist, entscheidet ein
+//! benannter Mutex; endet sein Besitzer, bekommt ihn die nächste wartende
+//! Instanz.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
@@ -19,27 +25,46 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "linux")]
 use enumflags2::BitFlags;
 use serde::{Deserialize, Serialize};
 use sf_core::phone::{CallPhase, CallView};
 use tauri::{AppHandle, Emitter, Manager};
+#[cfg(target_os = "linux")]
 use zbus::blocking::Connection;
+#[cfg(target_os = "linux")]
 use zbus::blocking::fdo::DBusProxy;
+#[cfg(target_os = "linux")]
 use zbus::fdo::{RequestNameFlags, RequestNameReply};
 
 use crate::bus::{self, Event};
 use crate::i18n::{t, tf};
 
+#[cfg(windows)]
+#[path = "instances_pipe.rs"]
+mod pipe;
+
+#[cfg(target_os = "linux")]
 const PATH: &str = "/ch/crazmoe/StarCLX";
+#[cfg(target_os = "linux")]
 const IFACE: &str = "ch.crazmoe.StarCLX.Instance";
-/// Wie `identifier` in tauri.conf.json; der Name des Hauptclients bleibt
-/// derselbe wie mit tauri-plugin-single-instance.
+/// Wie `identifier` in tauri.conf.json bzw. tauri.windows.conf.json; der
+/// Name des Hauptclients bleibt derselbe wie mit
+/// tauri-plugin-single-instance.
+#[cfg(not(windows))]
 const IDENTIFIER: &str = "ch.crazmoe.starface-linuxclient";
+/// Unter Windows die Kennung aus der Zeit als StarCMX (Datenordner bleiben)
+#[cfg(windows)]
+const IDENTIFIER: &str = "ch.crazmoe.starcmx";
+/// Mehrere Anlagen gleichzeitig („Weitere Anlage öffnen“)
+pub const MULTI: bool = true;
 /// So lange wartet „Alle beenden“ auf die anderen Instanzen
 const QUIT_WAIT: Duration = Duration::from_secs(15);
 
 static PROFILE: OnceLock<String> = OnceLock::new();
+#[cfg(target_os = "linux")]
 static NAMES: OnceLock<Names> = OnceLock::new();
+#[cfg(target_os = "linux")]
 static CONN: OnceLock<Connection> = OnceLock::new();
 static IS_MAIN: AtomicBool = AtomicBool::new(true);
 static APP: OnceLock<AppHandle> = OnceLock::new();
@@ -67,12 +92,14 @@ static REPORTS: Mutex<Reports> = Mutex::new(Reports {
     next: 0,
 });
 
+#[cfg(target_os = "linux")]
 struct Names {
     main: String,
     /// `<id>.Instance.`
     prefix: String,
 }
 
+#[cfg(target_os = "linux")]
 impl Names {
     fn new(base: &str) -> Self {
         Self {
@@ -91,7 +118,7 @@ impl Names {
     }
 }
 
-/// Teil des Bus-Namens: darf nicht mit einer Ziffer beginnen
+/// Teil des Bus- bzw. Pipe-Namens: darf nicht mit einer Ziffer beginnen
 fn element(profile: &str) -> String {
     if profile.is_empty() {
         "Default".into()
@@ -270,6 +297,7 @@ pub fn set_icon(app: &AppHandle, window: &tauri::WebviewWindow) {
 
 /// Vor dem Start von Tauri: Profil bestimmen, Namen auf dem Bus belegen.
 /// `false` heisst: Eine andere Instanz hat übernommen, dieser Prozess endet.
+#[cfg(target_os = "linux")]
 pub fn init() -> bool {
     let args: Vec<String> = std::env::args().collect();
     let profile = match profile_from_args(&args) {
@@ -365,12 +393,59 @@ pub fn init() -> bool {
     true
 }
 
+/// Vor dem Start von Tauri: Profil bestimmen, Pipe und ggf. den Platz des
+/// Hauptclients belegen. `false` heisst: Eine andere Instanz hat
+/// übernommen, dieser Prozess endet.
+#[cfg(windows)]
+pub fn init() -> bool {
+    let args: Vec<String> = std::env::args().collect();
+    let profile = match profile_from_args(&args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(2);
+        }
+    };
+    let _ = PROFILE.set(profile.clone());
+    if for_main(&args) && pipe::call(&pipe::Target::Main, "Activate", &args).is_ok() {
+        return false;
+    }
+    match pipe::serve_own(&profile) {
+        Ok(()) => {}
+        Err(pipe::ServeError::Taken) => {
+            // Profil läuft schon: dessen Fenster zeigen
+            let _ = pipe::call(&pipe::Target::Profile(profile), "Activate", &args);
+            return false;
+        }
+        Err(pipe::ServeError::Other(e)) => {
+            // Ohne Pipe wie früher: einfach starten
+            tracing::warn!(error = %e, "Instanz-Pipe nicht angelegt; mehrere Instanzen nicht abgestimmt");
+            return true;
+        }
+    }
+    *OTHERS.lock().unwrap() = pipe::running()
+        .into_iter()
+        .filter(|p| *p != profile)
+        .collect();
+    IS_MAIN.store(pipe::claim_main(), Ordering::SeqCst);
+    tracing::info!(
+        profile,
+        main = is_main(),
+        others = others(),
+        "Instanz gestartet"
+    );
+    pipe::watch_others();
+    true
+}
+
+#[cfg(target_os = "linux")]
 fn connect() -> zbus::Result<Connection> {
     zbus::blocking::connection::Builder::session()?
         .serve_at(PATH, Iface)?
         .build()
 }
 
+#[cfg(target_os = "linux")]
 fn call<B>(conn: &Connection, dest: &str, method: &str, body: &B) -> zbus::Result<()>
 where
     B: Serialize + zbus::zvariant::DynamicType,
@@ -380,6 +455,7 @@ where
 }
 
 /// Ruft eine andere Instanz auf, ohne den Aufrufer aufzuhalten.
+#[cfg(target_os = "linux")]
 fn send<B>(dest: String, method: &'static str, body: B)
 where
     B: Serialize + zbus::zvariant::DynamicType + Send + 'static,
@@ -394,6 +470,7 @@ where
     });
 }
 
+#[cfg(target_os = "linux")]
 fn send_main<B>(method: &'static str, body: B)
 where
     B: Serialize + zbus::zvariant::DynamicType + Send + 'static,
@@ -403,6 +480,7 @@ where
     }
 }
 
+#[cfg(target_os = "linux")]
 fn send_profile<B>(profile: &str, method: &'static str, body: B)
 where
     B: Serialize + zbus::zvariant::DynamicType + Send + 'static,
@@ -412,7 +490,18 @@ where
     }
 }
 
+#[cfg(windows)]
+fn send_main<B: Serialize>(method: &'static str, body: B) {
+    pipe::send(pipe::Target::Main, method, &body);
+}
+
+#[cfg(windows)]
+fn send_profile<B: Serialize>(profile: &str, method: &'static str, body: B) {
+    pipe::send(pipe::Target::Profile(profile.to_owned()), method, &body);
+}
+
 /// Eine Instanz kommt oder geht, oder der Hauptclient wechselt.
+#[cfg(target_os = "linux")]
 fn owner_changed(name: &str, new_owner: Option<&str>, own: Option<&str>) {
     let Some(names) = NAMES.get() else {
         return;
@@ -430,15 +519,20 @@ fn owner_changed(name: &str, new_owner: Option<&str>, own: Option<&str>) {
     if p == profile() {
         return;
     }
+    other_changed(p, new_owner.is_some());
+}
+
+/// Eine andere Instanz kommt (`running`) oder geht.
+fn other_changed(p: String, running: bool) {
     {
         let mut others = OTHERS.lock().unwrap();
-        if new_owner.is_some() {
+        if running {
             others.insert(p.clone());
         } else {
             others.remove(&p);
         }
     }
-    if new_owner.is_none() {
+    if !running {
         REPORTS.lock().unwrap().remove(&p);
         BUSY.lock().unwrap().remove(&p);
     }
@@ -446,8 +540,10 @@ fn owner_changed(name: &str, new_owner: Option<&str>, own: Option<&str>) {
 }
 
 /// Auf dem Bus erreichbare Methoden; dieselben in jeder Instanz.
+#[cfg(target_os = "linux")]
 struct Iface;
 
+#[cfg(target_os = "linux")]
 #[zbus::interface(name = "ch.crazmoe.StarCLX.Instance")]
 impl Iface {
     /// Kommandozeile eines weiteren Starts (Link, Tastenkürzel oder nur
@@ -489,6 +585,34 @@ impl Iface {
     /// Eine andere Instanz beginnt oder beendet ein Gespräch
     fn busy(&self, profile: String, host: String, talking: bool) {
         dispatch(Request::Busy(profile, host, talking));
+    }
+}
+
+/// Aufruf über eine Pipe, wie die Methoden von `Iface`
+#[cfg(windows)]
+fn receive(method: &str, body: serde_json::Value) {
+    use serde_json::from_value;
+    let request = match method {
+        "Activate" => from_value(body).map(Request::Activate),
+        "Quit" => Ok(Request::Quit),
+        "Report" => from_value::<(String, String)>(body)
+            .and_then(|(p, r)| serde_json::from_str(&r).map(|r| Request::Report(p, r))),
+        "HeadsetAction" => {
+            from_value::<String>(body).and_then(|a| serde_json::from_str(&a).map(Request::Headset))
+        }
+        "HeadsetTest" => Ok(Request::HeadsetTest),
+        "BusylightTest" => from_value(body).map(|(s, v)| Request::BusylightTest(s, v)),
+        "Busy" => from_value(body).map(|(p, h, t)| Request::Busy(p, h, t)),
+        // Unter Linux meldet der Bus den Wechsel
+        "MainChanged" => Ok(Request::MainChanged),
+        _ => {
+            tracing::warn!(method, "Unbekannter Aufruf einer anderen Instanz");
+            return;
+        }
+    };
+    match request {
+        Ok(r) => dispatch(r),
+        Err(e) => tracing::warn!(error = %e, method, "Ungültiger Aufruf einer anderen Instanz"),
     }
 }
 
@@ -868,6 +992,7 @@ pub fn set_label(app: &AppHandle, label: Option<(String, String)>) {
 /// Name, unter dem sich weitere Profile beim Desktop melden (Wayland
 /// `app_id`, unter X11 `WM_CLASS`); das Standardprofil bleibt `starclx`.
 /// Als Flatpak bestimmt die Sandbox die ID, dort geht das nicht.
+#[cfg(target_os = "linux")]
 fn desktop_id(profile: &str) -> Option<String> {
     (!profile.is_empty() && crate::flatpak::app_id().is_none())
         .then(|| format!("starclx-p{profile}"))
@@ -877,6 +1002,7 @@ fn desktop_id(profile: &str) -> Option<String> {
 /// `app_id`, nicht vom Fenster. Weitere Profile bekommen deshalb einen
 /// eigenen, im Menü versteckten Eintrag mit ihrem farbigen Symbol. Muss vor
 /// dem ersten Fenster liegen, sonst ordnet der Desktop es nicht zu.
+#[cfg(target_os = "linux")]
 pub fn install_desktop_entry(app: &AppHandle, host: Option<&str>) {
     let Some(id) = desktop_id(profile()) else {
         return;
@@ -919,6 +1045,11 @@ pub fn install_desktop_entry(app: &AppHandle, host: Option<&str>) {
     }
 }
 
+/// Unter Windows nimmt die Taskleiste das Symbol vom Fenster.
+#[cfg(windows)]
+pub fn install_desktop_entry(_app: &AppHandle, _host: Option<&str>) {}
+
+#[cfg(target_os = "linux")]
 fn desktop_entry(id: &str, profile: &str, host: Option<&str>, program: &str, icon: &str) -> String {
     let name = match host {
         Some(h) => format!("StarCLX – {h}"),
@@ -935,6 +1066,7 @@ fn desktop_entry(id: &str, profile: &str, host: Option<&str>, program: &str, ico
 }
 
 /// Grosses Symbol (256 px) in der Farbe des Profils als PNG
+#[cfg(target_os = "linux")]
 fn save_icon(path: &std::path::Path) -> Result<(), String> {
     use gtk::gdk_pixbuf::{Colorspace, Pixbuf};
     use gtk::gio::{Cancellable, MemoryInputStream};
@@ -1056,11 +1188,18 @@ pub fn quit(app: &AppHandle) {
 /// Beendet zuerst die anderen Instanzen, dann diese.
 fn quit_all(app: &AppHandle) {
     let others = OTHERS.lock().unwrap().clone();
+    #[cfg(target_os = "linux")]
     if let (Some(conn), Some(names)) = (CONN.get(), NAMES.get()) {
         for p in &others {
             if let Err(e) = call(conn, &names.instance(p), "Quit", &()) {
                 tracing::warn!(error = %e, profile = p, "Instanz nicht beendet");
             }
+        }
+    }
+    #[cfg(windows)]
+    for p in &others {
+        if let Err(e) = pipe::call(&pipe::Target::Profile(p.clone()), "Quit", &()) {
+            tracing::warn!(error = %e, profile = p, "Instanz nicht beendet");
         }
     }
     let until = Instant::now() + QUIT_WAIT;
@@ -1178,6 +1317,7 @@ mod tests {
         assert!(profile_from_args(&args(&["sf", "--profile"])).is_err());
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn bus_names() {
         let n = Names::new("ch.crazmoe.starface-linuxclient");
@@ -1307,6 +1447,7 @@ mod tests {
         assert_eq!(hues.len(), 6);
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn desktop_entries() {
         let e = desktop_entry(

@@ -5,7 +5,7 @@
   import "@fontsource-variable/inter";
   let { children } = $props();
 
-  // Kein Browser-Menü (Zurück, Neu laden …) auf Rechtsklick.
+  // Kein Browser-Menü (Zurück, Aktualisieren, Drucken …) auf Rechtsklick.
   // In Eingabefeldern und bei markiertem Text bleibt es für Kopieren/Einfügen.
   function oncontextmenu(e: MouseEvent) {
     if (e.defaultPrevented) return;

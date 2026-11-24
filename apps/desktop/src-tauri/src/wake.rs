@@ -3,9 +3,11 @@
 //! Softphone neu starten und die Oberfläche neu laden lassen (Event
 //! "resumed").
 //!
-//! Erkennung: Unter Linux meldet logind das Aufwachen (Signal
-//! `PrepareForSleep`). Zusätzlich, und auf den anderen Systemen allein, ein
-//! Vergleich der Uhren: Die monotone Uhr steht während des Standbys (Linux,
+//! Erkennung: Unter Windows meldet das System Standby und Ruhezustand
+//! (`PowerRegisterSuspendResumeNotification`), unter Linux logind (Signal
+//! `PrepareForSleep`). Die monotone Uhr von Windows läuft im Standby weiter,
+//! der Uhrvergleich erkennt dort also nichts. Zusätzlich, und auf den anderen
+//! Systemen allein, ein Vergleich der Uhren: Die monotone Uhr steht während des Standbys (Linux,
 //! macOS) bzw. läuft anders als die Wanduhr. Springt die Wanduhr zwischen
 //! zwei Prüfungen deutlich weiter als die monotone Uhr, hat der Rechner
 //! geschlafen.
@@ -48,6 +50,8 @@ fn slept(wall: Duration, mono: Duration) -> Option<Duration> {
 pub fn start(app: &AppHandle) {
     #[cfg(target_os = "linux")]
     logind::watch(app);
+    #[cfg(windows)]
+    power::watch(app);
 
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -197,6 +201,65 @@ mod logind {
             }
         }
         Ok(())
+    }
+}
+
+/// Standby- und Ruhezustand-Meldungen von Windows
+#[cfg(windows)]
+mod power {
+    use std::ffi::c_void;
+    use std::sync::OnceLock;
+
+    use tauri::AppHandle;
+    use windows::Win32::Foundation::{ERROR_SUCCESS, HANDLE};
+    use windows::Win32::System::Power::{
+        DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS, PowerRegisterSuspendResumeNotification,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{
+        DEVICE_NOTIFY_CALLBACK, PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND, PBT_APMSUSPEND,
+    };
+
+    static APP: OnceLock<AppHandle> = OnceLock::new();
+
+    pub fn watch(app: &AppHandle) {
+        if APP.set(app.clone()).is_err() {
+            return;
+        }
+        // Windows hält den Zeiger, solange die Anmeldung besteht, also für
+        // die ganze Laufzeit
+        let params = Box::leak(Box::new(DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS {
+            Callback: Some(callback),
+            Context: std::ptr::null_mut(),
+        }));
+        let mut handle: *mut c_void = std::ptr::null_mut();
+        let err = unsafe {
+            PowerRegisterSuspendResumeNotification(
+                DEVICE_NOTIFY_CALLBACK,
+                HANDLE(params as *mut DEVICE_NOTIFY_SUBSCRIBE_PARAMETERS as *mut c_void),
+                &mut handle,
+            )
+        };
+        if err != ERROR_SUCCESS {
+            tracing::info!(
+                code = err.0,
+                "Standby-Meldungen von Windows nicht verfügbar"
+            );
+        }
+    }
+
+    unsafe extern "system" fn callback(_: *const c_void, kind: u32, _: *const c_void) -> u32 {
+        match kind {
+            PBT_APMSUSPEND => super::going_to_sleep(),
+            // AUTOMATIC kommt bei jedem Aufwachen, RESUMESUSPEND zusätzlich,
+            // wenn jemand am Rechner ist; doppelt zählt nur einmal
+            PBT_APMRESUMEAUTOMATIC | PBT_APMRESUMESUSPEND => {
+                if let Some(app) = APP.get() {
+                    super::woke(app, "Windows");
+                }
+            }
+            _ => {}
+        }
+        ERROR_SUCCESS.0
     }
 }
 

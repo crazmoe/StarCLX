@@ -2,7 +2,8 @@
 
 **English** · [Deutsch](README.de.md)
 
-StarCLX is a free desktop client for STARFACE phone systems, with Linux as its main platform.
+StarCLX is a free desktop client for STARFACE phone systems for Linux (main platform) and
+Windows.
 It speaks the same interfaces as the STARFACE App for Windows (OneHub gRPC, SIP/TLS with SRTP,
 XMPP chat) and works with STARFACE 10 and later.
 
@@ -79,7 +80,7 @@ The repositories are signed; new versions arrive with the regular system update 
 ### Individual packages
 
 Ready-made packages are also available under [Releases](../../releases): `.deb`, `.rpm`, AppImage,
-`.dmg` (macOS) and an installer (Windows).
+Flatpak and the Windows setup.
 
 ```sh
 sudo apt install ./starclx_<version>_amd64.deb
@@ -92,6 +93,20 @@ named `starface-linuxclient` and registers the link handlers `starface-app://`
 
 Development builds: every build on `main` stores the artifact `starclx-<version>-linux-x86_64`
 under **Actions** (version `1.0.0+<run number>`).
+
+### Windows
+
+[Releases](../../releases) contain `StarCLX_<version>_x64-setup.exe`: per-user installation, no
+administrator rights needed. The setup is not signed, so SmartScreen asks once ("More info" ›
+"Run anyway"). WebView2 ships with Windows 10/11; if it is missing, the setup downloads it. On
+Windows, StarCLX registers with the phone system as the Windows app (phone type of the STARFACE
+App for Windows); audio uses WASAPI.
+
+Up to version 2.0 the Windows version was called **StarCMX** and had its own repository
+([crazmoe/StarCMX](https://github.com/crazmoe/StarCMX), archived). The StarCLX setup removes an
+installed StarCMX and keeps settings, accounts and the saved sign-in. Company rollout via GPO,
+the defaults file `C:\ProgramData\StarCLX\starclxrc` and switching over from StarCMX:
+[`packaging/windows`](packaging/windows/README.md) (German).
 
 ### Flatpak
 

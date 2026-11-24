@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Erzeugt apps/desktop/src-tauri/THIRD-PARTY-LICENSES.txt: die Lizenzen aller
 // Fremdkomponenten, die in StarCLX stecken. Das Programm zeigt die Datei unter
-// Einstellungen → Konto → Lizenz, die Pakete legen sie unter
-// /usr/share/doc/starclx/ ab. Die CI erzeugt sie vor jedem Paketbau neu.
+// Einstellungen → Konto → Lizenz, die Linux-Pakete legen sie unter
+// /usr/share/doc/starclx/ ab, das Windows-Setup neben das Programm. Die CI
+// erzeugt sie vor jedem Paketbau neu, für das System, auf dem sie läuft
+// (unter Windows andere Rust-Bibliotheken und C-Bibliotheken als unter Linux).
 //
 // Braucht: cargo-about (cargo install --locked cargo-about --features cli) und
 // installierte npm-Abhängigkeiten (npm ci in apps/desktop).
@@ -10,7 +12,8 @@
 //   node scripts/third-party-licenses.mjs
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,22 +22,30 @@ const desktop = join(root, "apps/desktop");
 const out = join(desktop, "src-tauri/THIRD-PARTY-LICENSES.txt");
 const lic = (f) => readFileSync(join(root, "packaging/licenses", f), "utf8");
 const line = "=".repeat(80);
+const windows = process.platform === "win32";
 
 // C-Bibliotheken, die fest in StarCLX einkompiliert sind
 const native = [
   ["libre (Baresip Foundation)", "BSD-3-Clause", "https://github.com/baresip/re", lic("libre.txt")],
   ["baresip (Baresip Foundation)", "BSD-3-Clause", "https://github.com/baresip/baresip", lic("baresip.txt")],
-  [
-    "spandsp (Steve Underwood), nur G.722",
-    "LGPL-2.1",
-    "https://github.com/freeswitch/spandsp",
-    "spandsp ist statisch eingebunden. Der vollständige Quelltext von StarCLX steht unter\n" +
-      "https://github.com/crazmoe/StarCLX bereit; damit lässt sich StarCLX mit einer\n" +
-      "geänderten spandsp-Version neu bauen (LGPL-2.1, Abschnitt 6).\n" +
-      "spandsp is linked statically. The complete source of StarCLX is available at the\n" +
-      "address above, so StarCLX can be rebuilt with a modified spandsp (LGPL-2.1, section 6).\n\n" +
-      lic("LGPL-2.1.txt"),
-  ],
+  ...(windows
+    ? [
+        ["libg722 (CMU, Steve Underwood, Sippy Software)", "Public Domain / frei", "https://github.com/sippy/libg722", lic("libg722.txt")],
+        ["OpenSSL (OpenSSL Project), statisch über vcpkg", "Apache-2.0", "https://www.openssl.org", lic("Apache-2.0.txt")],
+      ]
+    : [
+        [
+          "spandsp (Steve Underwood), nur G.722",
+          "LGPL-2.1",
+          "https://github.com/freeswitch/spandsp",
+          "spandsp ist statisch eingebunden. Der vollständige Quelltext von StarCLX steht unter\n" +
+            "https://github.com/crazmoe/StarCLX bereit; damit lässt sich StarCLX mit einer\n" +
+            "geänderten spandsp-Version neu bauen (LGPL-2.1, Abschnitt 6).\n" +
+            "spandsp is linked statically. The complete source of StarCLX is available at the\n" +
+            "address above, so StarCLX can be rebuilt with a modified spandsp (LGPL-2.1, section 6).\n\n" +
+            lic("LGPL-2.1.txt"),
+        ],
+      ]),
 ];
 
 // Oberfläche: Laufzeit-Abhängigkeiten plus Svelte (dessen Laufzeit steckt im
@@ -60,20 +71,32 @@ function npmPackages() {
   return [...seen].sort(([a], [b]) => a.localeCompare(b));
 }
 
+// about.toml gilt für beide Systeme; nur das Ziel wird hier gesetzt
+const target = windows ? "x86_64-pc-windows-msvc" : "x86_64-unknown-linux-gnu";
+const tmp = mkdtempSync(join(tmpdir(), "about-"));
+const config = join(tmp, "about.toml");
+writeFileSync(
+  config,
+  readFileSync(join(root, "about.toml"), "utf8").replace(/^targets = .*$/m, `targets = ["${target}"]`),
+);
 const rust = execFileSync(
   "cargo",
-  ["about", "generate", "--fail", "-c", join(root, "about.toml"), "-m", join(desktop, "src-tauri/Cargo.toml"), join(root, "about.hbs")],
+  ["about", "generate", "--fail", "-c", config, "-m", join(desktop, "src-tauri/Cargo.toml"), join(root, "about.hbs")],
   { cwd: root, encoding: "utf8", maxBuffer: 64 << 20 },
 );
+rmSync(tmp, { recursive: true, force: true });
 
 let text =
   "StarCLX – Lizenzen der verwendeten Komponenten / Third-party licences\n\n" +
   "StarCLX selbst steht unter der MIT-Lizenz (siehe LICENSE). Es enthält die folgenden\n" +
   "Komponenten anderer Urheber unter deren Lizenzen.\n" +
   "StarCLX itself is MIT licensed. It contains the following third-party components.\n\n" +
-  "Systembibliotheken wie WebKitGTK, GTK, OpenSSL, zlib, PipeWire, PulseAudio und ALSA\n" +
-  "werden zur Laufzeit vom System geladen (im AppImage teils mitgeliefert) und stehen\n" +
-  "unter ihren eigenen Lizenzen (u. a. LGPL-2.1, Apache-2.0, Zlib).\n\n";
+  (windows
+    ? "Microsoft Edge WebView2 wird zur Laufzeit von Windows geladen und steht unter den\n" +
+      "Lizenzbedingungen von Microsoft.\n\n"
+    : "Systembibliotheken wie WebKitGTK, GTK, OpenSSL, zlib, PipeWire, PulseAudio und ALSA\n" +
+      "werden zur Laufzeit vom System geladen (im AppImage teils mitgeliefert) und stehen\n" +
+      "unter ihren eigenen Lizenzen (u. a. LGPL-2.1, Apache-2.0, Zlib).\n\n");
 
 text += `${line}\nC-BIBLIOTHEKEN / NATIVE LIBRARIES\n`;
 for (const [name, id, url, body] of native) {

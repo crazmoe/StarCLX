@@ -116,7 +116,7 @@
     { key: "hangup", label: t("Aktuellen Anruf beenden") },
     { key: "toggle_view", label: t("Ansicht umschalten") },
   ]);
-  let desktop = $state({ wayland: false, gnome: false, portal: false, command: "" });
+  let desktop = $state({ wayland: false, gnome: false, portal: false, windows: false, command: "" });
   let recording = $state<string | null>(null);
 
   /** `<Control><Shift>w` → `Strg+Umschalt+W` */
@@ -639,7 +639,7 @@
             </select>
           </label>
           <!-- GNOME unter Wayland lässt Fenster nicht andocken (kein layer-shell) -->
-          {#if !(desktop.wayland && desktop.gnome)}
+          {#if desktop.windows || !(desktop.wayland && desktop.gnome)}
             <label class="field">
               <span>{t("Schnellwahl am Bildschirmrand")}</span>
               <select bind:value={draft.quick_dock} disabled={lk("quick_dock")}>
@@ -695,7 +695,10 @@
       <section id="hotkeys">
         <h3>{t("Hotkeys")}</h3>
         <div class="card">
-          {#if desktop.gnome}
+          {#if desktop.windows}
+            <Toggle bind:checked={draft.hotkeys.enabled} disabled={lk("hotkeys")} label={t("Tastenkürzel systemweit anmelden")} />
+            <p class="small muted">{t("Die Kürzel wirken in allen Programmen, solange StarCLX läuft. Ist eine Kombination schon von einem anderen Programm belegt, meldet StarCLX das beim Speichern.")}</p>
+          {:else if desktop.gnome}
             <Toggle bind:checked={draft.hotkeys.enabled} disabled={lk("hotkeys")} label={t("Tastenkürzel systemweit in GNOME eintragen")} />
             <p class="small muted">{t("Die Kürzel gelten dann in allen Programmen und überschreiben dort gleiche Kombinationen. Andere eigene Tastenkürzel bleiben unverändert.")}</p>
           {:else if desktop.portal}
@@ -709,7 +712,7 @@
             <code>{desktop.command}</code>
             <p class="small muted">{t("Aktionen:")} dial-selection, dial-clipboard, answer, hangup, toggle-view</p>
           {/if}
-          <div class="keys" class:off={(desktop.gnome || desktop.portal) && !draft.hotkeys.enabled}>
+          <div class="keys" class:off={(desktop.windows || desktop.gnome || desktop.portal) && !draft.hotkeys.enabled}>
             {#each hotkeyRows as r}
               <div class="keyrow">
                 <span>{r.label}</span>
