@@ -14,6 +14,9 @@ StarCLX gibt es jetzt auch für Windows. Die bisherige Windows-Version StarCMX i
 ### Linux
 - Meldungen von baresip (Softphone) stehen jetzt im Protokoll von StarCLX statt auf der Konsole
 
+### Alle
+- „Frei anordnen“: Eigene Ansichten bekommen neu hinzugekommene Kacheln (z. B. Favoriten) nur noch ausgeblendet. Bisher tauchten sie ungefragt in Ansichten auf, die vor der Funktion angelegt worden waren
+
 ## 2.0.0 – 2026-11-22
 
 Ab dieser Version eignet sich StarCLX für Firmennetze: Fehlerberichte und Statusmeldungen gehen auf Wunsch an [StarDash](https://github.com/crazmoe/StarDash), die Support-Übersicht, die eine Firma auf ihrem eigenen Server betreibt.
