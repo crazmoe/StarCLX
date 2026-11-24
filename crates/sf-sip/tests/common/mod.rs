@@ -12,23 +12,43 @@ pub fn own_ip() -> IpAddr {
     probe.local_addr().unwrap().ip()
 }
 
+/// Ist `port` (UDP und TCP) und der Folgeport (TLS) gerade frei?
+fn ports_free(ip: IpAddr, port: u16) -> bool {
+    [port, port + 1].iter().all(|&p| {
+        std::net::UdpSocket::bind((ip, p)).is_ok() && std::net::TcpListener::bind((ip, p)).is_ok()
+    })
+}
+
 /// Startet baresip auf einem gerade freien Port und gibt diesen mit zurück.
 ///
-/// baresip belegt den Port für UDP und TCP und den nächsten für TLS. Der
-/// Test kann nur den ersten vorab prüfen, der Rest kann zwischendurch belegt
-/// sein (etwa von einer Verbindung des vorigen Laufs). Dann scheitert der
-/// Start, und es geht mit einem neuen Port weiter.
+/// baresip belegt den Port für UDP und TCP und den nächsten für TLS. Die
+/// Ports kommen bewusst nicht aus dem Bereich, den das System für ausgehende
+/// Verbindungen vergibt: Unter Windows liegen dort reservierte Blöcke
+/// (Hyper-V/WinNAT), in denen der Folgeport nicht nutzbar ist, und weil das
+/// System fortlaufend vergibt, landete jeder neue Versuch im selben Block.
+/// Stattdessen ein zufälliger Port zwischen 20000 und 39998, vorab geprüft.
+/// Scheitert der Start trotzdem, geht es mit einem anderen Port weiter.
 pub fn start_on_free_port(
     ip: IpAddr,
     config: impl Fn(u16) -> Config,
 ) -> (Softphone, UnboundedReceiver<SipEvent>, u16) {
-    const ATTEMPTS: usize = 5;
+    const ATTEMPTS: usize = 20;
+    // Startwert ohne zusätzliche Abhängigkeit: Prozess-ID und Uhrzeit
+    let mut seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0)
+        ^ std::process::id().wrapping_mul(2_654_435_761)
+        | 1;
     for attempt in 1..=ATTEMPTS {
-        let port = std::net::UdpSocket::bind((ip, 0))
-            .unwrap()
-            .local_addr()
-            .unwrap()
-            .port();
+        // xorshift32
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        let port = 20000 + (seed % 19999) as u16;
+        if !ports_free(ip, port) {
+            continue;
+        }
         match Softphone::start(&config(port), "sf-sip-test") {
             Ok((phone, rx)) => return (phone, rx, port),
             Err(Error::StartFailed) if attempt < ATTEMPTS => {
@@ -37,5 +57,5 @@ pub fn start_on_free_port(
             Err(e) => panic!("Softphone startet nicht: {e}"),
         }
     }
-    unreachable!()
+    panic!("Softphone startet nicht: kein freier Port gefunden")
 }
