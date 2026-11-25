@@ -252,6 +252,7 @@ async fn start_phone(app: AppHandle, hub: sf_onehub::OneHub, host: String) {
                 let _ = app.emit("phone-error", message);
             }
             PhoneEvent::SipEstablished { sip_call_id } => {
+                crate::plugins::headset::audio_started();
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     let prefs = settings::load(&app).prefs;
@@ -263,6 +264,8 @@ async fn start_phone(app: AppHandle, hub: sf_onehub::OneHub, host: String) {
                     if let Some((player, source)) = route
                         && (player.is_some() || source.is_some())
                     {
+                        // Headset eben umgeschaltet: seine Pause gilt nicht
+                        crate::plugins::headset::audio_started();
                         let state = app.state::<CallState>();
                         let result = with_phone(&state, async |p| {
                             p.set_call_audio(&sip_call_id, player.as_deref(), source.as_deref())?;

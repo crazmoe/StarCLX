@@ -21,6 +21,7 @@ mod mpris {
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use sf_headset::{Button, Headset, State};
@@ -41,6 +42,23 @@ struct Inner {
     headset: Option<Headset>,
     /// Test aus den Einstellungen läuft; Anrufzustand wird danach gesetzt
     testing: bool,
+}
+
+/// So lange nach dem Beginn des Gesprächs zählt Play/Pause nicht: Ein
+/// Bluetooth-Headset, das dann ins Telefonie-Profil wechselt (AirPods u. a.),
+/// schickt dabei oft selbst Pause, und das legte sofort wieder auf.
+const MEDIA_KEY_QUIET: Duration = Duration::from_secs(2);
+
+/// Seit wann das Gespräch am Softphone steht bzw. sein Audio umgelegt wurde
+static AUDIO_SINCE: Mutex<Option<Instant>> = Mutex::new(None);
+
+/// Das Softphone hat Audio für ein Gespräch geöffnet oder umgelegt
+pub fn audio_started() {
+    *AUDIO_SINCE.lock().unwrap() = Some(Instant::now());
+}
+
+fn media_key_quiet(since: Option<Instant>, now: Instant) -> bool {
+    since.is_some_and(|s| now.saturating_duration_since(s) < MEDIA_KEY_QUIET)
 }
 
 /// Anrufe fürs Headset: ohne die, die an einem anderen eigenen Telefon
@@ -190,6 +208,10 @@ async fn pressed(app: &AppHandle, button: Button) {
 /// StarCLX trotzdem der Spieler, damit die Taste keine Musik startet.
 #[cfg_attr(not(any(target_os = "linux", windows)), allow(dead_code))]
 async fn media_key(app: &AppHandle, button: Button) {
+    if media_key_quiet(*AUDIO_SINCE.lock().unwrap(), Instant::now()) {
+        tracing::debug!(?button, "Play/Pause kurz nach Gesprächsbeginn ignoriert");
+        return;
+    }
     let hid = app
         .state::<HeadsetState>()
         .inner
@@ -392,6 +414,20 @@ mod tests {
         assert!(!play_pause_counts("never", false));
         // Unbekannter Wert wie "auto"
         assert!(!play_pause_counts("", true));
+    }
+
+    #[test]
+    fn media_key_quiet_right_after_call_start() {
+        let start = Instant::now();
+        assert!(!media_key_quiet(None, start));
+        assert!(media_key_quiet(Some(start), start));
+        assert!(media_key_quiet(
+            Some(start),
+            start + Duration::from_millis(600)
+        ));
+        assert!(!media_key_quiet(Some(start), start + MEDIA_KEY_QUIET));
+        // Uhr läuft nicht rückwärts in die Sperre
+        assert!(media_key_quiet(Some(start + Duration::from_secs(1)), start));
     }
 
     #[test]
