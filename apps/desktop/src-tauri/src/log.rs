@@ -19,6 +19,8 @@ use tracing_subscriber::{EnvFilter, Layer, fmt, reload};
 use crate::i18n::t;
 
 const FILE: &str = "starclx.log";
+/// Erste Meldung jeder Sitzung (siehe [`open`])
+const STARTED: &str = "StarCLX gestartet";
 const PREVIOUS: &str = "starclx.1.log";
 const MAX_SIZE: u64 = 5 * 1024 * 1024;
 /// Obergrenze für den Puffer bis zum Öffnen der Datei
@@ -107,8 +109,59 @@ pub fn init() {
     }));
 }
 
+/// Beginn und letzte Meldung der vorigen Sitzung, aus dem Protokoll
+#[derive(Debug, PartialEq)]
+pub struct Session {
+    /// Zeitstempel der Meldung „StarCLX gestartet“ (UTC)
+    pub started: Option<String>,
+    /// Zeitstempel der letzten Meldung (UTC)
+    pub last_time: Option<String>,
+    /// Letzte Zeile der Sitzung
+    pub last: String,
+}
+
+static PREVIOUS_SESSION: OnceLock<Session> = OnceLock::new();
+
+/// Die vorige Sitzung laut Protokoll, beim Öffnen gelesen. Hilft bei
+/// „nicht sauber beendet“: wann sie lief und was zuletzt geschah.
+pub fn previous_session() -> Option<&'static Session> {
+    PREVIOUS_SESSION.get()
+}
+
+/// Zeitstempel am Zeilenanfang, auf Sekunden gekürzt
+fn stamp(line: &str) -> Option<String> {
+    let token = line.split_whitespace().next()?;
+    (token.len() >= 19 && token.as_bytes()[0].is_ascii_digit() && token.as_bytes()[10] == b'T')
+        .then(|| format!("{}Z", &token[..19]))
+}
+
+fn last_session(text: &str) -> Option<Session> {
+    let last = text
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())?
+        .trim_end();
+    let started = text
+        .lines()
+        .rev()
+        .find(|l| l.contains(STARTED))
+        .and_then(stamp);
+    let last_time = text.lines().rev().find_map(stamp);
+    Some(Session {
+        started,
+        last_time,
+        last: last.chars().take(500).collect(),
+    })
+}
+
 /// Öffnet die Datei im Log-Ordner der App und schreibt den Puffer hinein.
 pub fn open(app: &AppHandle) {
+    if let Ok(dir) = dir(app)
+        && let Ok(old) = std::fs::read(dir.join(FILE))
+        && let Some(session) = last_session(&String::from_utf8_lossy(&old))
+    {
+        let _ = PREVIOUS_SESSION.set(session);
+    }
     let result =
         dir(app).and_then(|dir| open_in(&dir).map_err(|e| format!("{}: {e}", dir.display())));
     if let Err(e) = result {
@@ -264,6 +317,25 @@ pub fn log_open_dir(app: AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_previous_session() {
+        assert_eq!(last_session(""), None);
+        let log = "2026-11-26T01:47:22.1Z  INFO starclx_lib::log: StarCLX gestartet version=2.1.2\n\
+                   2026-11-26T01:48:00.5Z  INFO x: beendet\n\
+                   2026-11-26T01:49:16.5Z  INFO starclx_lib::log: StarCLX gestartet version=2.1.2\n\
+                   2026-11-26T01:50:58.9Z  WARN sf_sip: weg\n\
+                   Fortsetzung ohne Zeit\n\n";
+        assert_eq!(
+            last_session(log),
+            Some(Session {
+                started: Some("2026-11-26T01:49:16Z".into()),
+                last_time: Some("2026-11-26T01:50:58Z".into()),
+                last: "Fortsetzung ohne Zeit".into(),
+            })
+        );
+        assert_eq!(stamp("kein Zeitstempel"), None);
+    }
 
     #[test]
     fn rotate_keeps_previous_file() {

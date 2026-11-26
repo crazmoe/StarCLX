@@ -1,5 +1,10 @@
 # Änderungen
 
+## 2.1.3 – 2026-11-26
+
+- Fehlerberichte an StarDash: Abmelden und Herunterfahren gelten jetzt als sauberes Beenden und lösen keinen Bericht „Letzte Sitzung nicht sauber beendet“ mehr aus. Unter Windows auch, wenn ein Setup StarCLX über den Neustart-Manager schliesst; unter Linux beenden SIGTERM und SIGHUP StarCLX sauber (Softphone wird abgegeben). Beenden über den Task-Manager oder `kill -9` zählt weiter als nicht sauber (#216)
+- Der Bericht „Letzte Sitzung nicht sauber beendet“ nennt jetzt, wann die abgebrochene Sitzung gestartet wurde und wann ihre letzte Meldung war; die letzte Protokollzeile erscheint als Warnung unter „Fehler und Warnungen“. Das Protokoll vermerkt „StarCLX beendet“ beim sauberen Beenden
+
 ## 2.1.2 – 2026-11-26
 
 - Bluetooth-Headsets (z. B. AirPods): Gespräche endeten nach etwa einer Sekunde. Beim Wechsel ins Telefonie-Profil schickt das Headset selbst „Pause“, und das galt als Auflegen. In den ersten 2 Sekunden nach Gesprächsbeginn bzw. nach dem Umlegen aufs Bluetooth-Headset zählt Play/Pause jetzt nicht. Annehmen beim Klingeln ist nicht betroffen (Beitrag von @custosonlinux, #214)

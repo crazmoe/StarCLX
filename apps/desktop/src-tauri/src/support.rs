@@ -71,6 +71,20 @@ pub fn start(app: &AppHandle) {
         Some((support, crashed))
     });
     let crashed = support.as_ref().is_some_and(|(_, c)| *c);
+    let mut summary = String::from("Letzte Sitzung nicht sauber beendet");
+    if crashed && let Some(prev) = log::previous_session() {
+        let unknown = || "?".to_string();
+        tracing::warn!(
+            started = prev.started.clone().unwrap_or_else(unknown),
+            last = prev.last,
+            "Vorige Sitzung nicht sauber beendet (Absturz oder hart beendet)"
+        );
+        summary = format!(
+            "{summary} (gestartet {}, letzte Meldung {})",
+            prev.started.clone().unwrap_or_else(unknown),
+            prev.last_time.clone().unwrap_or_else(unknown)
+        );
+    }
     let _ = SUPPORT.set(support.map(|(s, _)| s));
     let Some(s) = get() else {
         return;
@@ -79,7 +93,7 @@ pub fn start(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         if crashed {
-            auto(&app, Reason::Crash, "Letzte Sitzung nicht sauber beendet").await;
+            auto(&app, Reason::Crash, &summary).await;
         } else {
             s.sender.flush(&s.spool).await;
         }

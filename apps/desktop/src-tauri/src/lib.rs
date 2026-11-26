@@ -93,6 +93,29 @@ impl From<&sf_core::SessionInfo> for SessionInfo {
     }
 }
 
+/// SIGTERM/SIGHUP (Abmelden, Herunterfahren, `kill`) beenden die App
+/// sauber: Softphone abgeben, Markierung für Fehlerberichte entfernen.
+#[cfg(unix)]
+fn quit_on_signal(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        use tokio::signal::unix::{SignalKind, signal};
+        let (Ok(mut term), Ok(mut hup)) = (
+            signal(SignalKind::terminate()),
+            signal(SignalKind::hangup()),
+        ) else {
+            tracing::warn!("Signale zum Beenden nicht abgefangen");
+            return;
+        };
+        let name = tokio::select! {
+            _ = term.recv() => "SIGTERM",
+            _ = hup.recv() => "SIGHUP",
+        };
+        tracing::info!(signal = name, "Signal zum Beenden erhalten");
+        app.exit(0);
+    });
+}
+
 pub(crate) fn show_main_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         // Erst den Minimiert-Zustand aufheben, dann zeigen: GTK zeigt ein
@@ -917,6 +940,8 @@ pub fn run() {
             wake::start(app.handle());
             connection::start(app.handle());
             support::start(app.handle());
+            #[cfg(unix)]
+            quit_on_signal(app.handle());
             let prefs = settings::load(app.handle()).prefs;
             log::set_verbose(prefs.verbose_log);
             i18n::set_language(&prefs.language);
@@ -1179,6 +1204,14 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("Tauri-App konnte nicht starten")
         .run(|app, event| {
+            // Ende der Ereignisschleife, auch beim Abmelden/Herunterfahren
+            // von Windows (WM_ENDSESSION), wo kein ExitRequested kommt und
+            // der Prozess gleich danach endet: als sauber beendet vermerken.
+            if let tauri::RunEvent::Exit = event {
+                tracing::info!("StarCLX beendet");
+                support::stop();
+                return;
+            }
             // Vor dem Beenden das Softphone abgeben, damit es nicht primäres
             // Telefon bleibt; danach wirklich beenden.
             if let tauri::RunEvent::ExitRequested { code, api, .. } = event
