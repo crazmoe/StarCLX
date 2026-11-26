@@ -1,0 +1,42 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Thu, 26 Nov 2026 02:50:57 +0000
+Label: StarCLX
+Origin: StarCLX
+Suite: stable
+MD5Sum:
+ d207eae2f35ae25ecf34bbe2e66e7375              138 Release
+ 5907b1990f9cb4129000169b3054cb1e             2739 main/binary-amd64/Packages
+ fc35003752996641ed12b6df5c7b5709             1022 main/binary-amd64/Packages.gz
+SHA1:
+ 535b558dba203f7cac698f84c51122b6e1b46e20              138 Release
+ 275e0922d1c1000f7f9be1edaa71b7bceee354cd             2739 main/binary-amd64/Packages
+ 5eea39f25226211c9debfc3d3105fafeffaa530f             1022 main/binary-amd64/Packages.gz
+SHA256:
+ 349db2e471899f4d05ab7d9cf395ab211a4aa4a16b1fdb76979a805a13bf0c1a              138 Release
+ b558dc3c7630cbd5ab22a2f8d289743cdb61e521d0b7244dc2e27bac62e9bda2             2739 main/binary-amd64/Packages
+ ded9a5e03db1de85a99c97c23685ed916d8e6f3b5845a6ea1128dee50dd4fac6             1022 main/binary-amd64/Packages.gz
+SHA512:
+ f8c67723ba82f987106fc7cc570c8e855d45fa675399f02f9cfc208252c3f34636a31997b91c5c5e6b84ce340f23efe747c05b9b5ea6fcf49f4bece5878a09d8              138 Release
+ e73e5a4b0792016c542f1d058e743945499c8b16bb17865059ad3b2c5b09eea8c02a552c6d8dc7f01c4b4ba23a1b8264c9dccaa37bcc29683bd3ea85e0f26b1f             2739 main/binary-amd64/Packages
+ d09f4f4e7e028c80b96bbe10769032e481f9161176b764a434051b35c4feca8402c3ed7cc8792baf3d7f4ffa8c2b715d3905ef426787017b7f995a4225d9d2c1             1022 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIyBAEBCgAdFiEEBVBU+NvGrWfgmNPWP1MLX5W/c0EFAmsHnpEACgkQP1MLX5W/
+c0HzEQ/2Nt6NMFIkm5t7A5DUP2IQHSvMXNM10qYgqjt95RX22XLIPrpqw0/UWLH9
+Iz5pH5viJrvPfeEkV6/+oKqc+RL/xwQul/Vl+q+uKKiDLPWXDQEIaJechGDzA2Cm
+4WwL/2RojYBEIYodgzdNGJmQY327CjQvyr6cs21xgA6h3nqrdr8hE2NQklHPrsKu
+9ax+Ugt6pPj8oX9G0y3DpnPttUtfPQ8Tc7vUS7bWR93whi08L9aSHEA0UkdM5lBl
+xgmQBT3yKVWPimsUxneR0K0YFWjPA3y4QNwTsz4Jzn9qaf5FRphkNROloVLtD21G
+zWmhnrZXFwQa1FIwoFKLhzxnDyviXbE/0sdIMUWRAmWAgY5nuSwXibfl2+G8ZVhb
+kK6F/TLYrhY5QiRdWstX9PgrU4yLxIj69MhiUTVUiKyxaSbxefkPp9U+fLCb3+FA
+mI1hhNobbRZ9r6rkCnHiFhDFwEYFHi02uKBZ1+4gOpPFXNzn0obmjB8oJh0zjlY4
+79+OYtRladM3BfQjljrmEpGPkGMFhrgCWeiZ8q57a3KMWHN+yWyXqf0u9O70GDhW
+un44Ow5/Iy4CT+ndQyIchpPNK2oE5ag/htUnL14cO9oYSQV51TxuDO1Hcamvgy/2
+J87fXSVGP3uxDaHIYRCFe9ViuIjkqsTvBVPZAou0sCDV4gvT5Q==
+=lugx
+-----END PGP SIGNATURE-----
